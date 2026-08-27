@@ -1,4 +1,4 @@
 commit-msg:
   jobs:
     - name: commitlint
-      run: pnpm exec commitlint --verbose --edit {1}
+      run: ./node_modules/.bin/commitlint --verbose --edit {1}

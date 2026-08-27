@@ -6,13 +6,53 @@
 
 | Measure | Count | Composition |
 | --- | --- | --- |
-| C (content) | 0 | validated B 0 · answered Q 0 · accepted D 0 |
+| C (content) | 4 | validated B 0 · answered Q 0 · accepted D 4 |
 | V (uncertainty) | 0 | open Q 0 · pending B 0 · W below DoR 0 |
+
+## Areas
+
+| Area | Title | C (content) | V (uncertainty) | Composition |
+| --- | --- | --- | --- | --- |
+| A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 4; V: open Q 0 · pending B 0 · W below DoR 0 |
+
+> Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
+
+## Goals
+
+| ID | Outcome | Fitness function | Status |
+| --- | --- | --- | --- |
+| G-01 | Repository has a reproducible local development loop | count; current=1 target=1 | verified |
+
+## Work items
+
+| ID | Type | Title | Goals | Cynefin | DoR | Status | Critical |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| W-01 | feature | Establish the monorepo walking skeleton | G-01 | complicated | ⊤ | done |  |
+
+## Decisions
+
+| ID | Title | Status | Supersedes |
+| --- | --- | --- | --- |
+| D-01 | Use the five-workspace monorepo layout | accepted |  |
+| D-02 | Use Devbox and Corepack for local runtimes | accepted |  |
+| D-03 | Keep Vitest configuration package-local | accepted |  |
+| D-04 | Enforce dependency direction with Turbo Boundaries | accepted |  |
 
 ## Dependency graph
 
 ```mermaid
 graph TD
+  G_01["G-01: Repository has a reproducible local development loop"]:::goal
+  W_01["W-01: Establish the monorepo walking skeleton"]:::done
+  D_01["D-01: Use the five-workspace monorepo layout"]:::decision
+  D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
+  D_03["D-03: Keep Vitest configuration package-local"]:::decision
+  D_04["D-04: Enforce dependency direction with Turbo Boundaries"]:::decision
+  A_01["A-01: Repository foundation"]:::area
+  W_01 -->|implements| D_01
+  W_01 -->|implements| D_02
+  W_01 -->|implements| D_03
+  W_01 -->|implements| D_04
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff

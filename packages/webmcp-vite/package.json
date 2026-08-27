@@ -1,0 +1,35 @@
+{
+  "name": "@ayme-dev/webmcp-vite",
+  "version": "0.1.0",
+  "description": "Vite integration for WebMCP.",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "lint": "eslint src --max-warnings 0",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ayme-dev/webmcp": "workspace:*"
+  },
+  "devDependencies": {
+    "@ayme-dev/eslint-config": "workspace:*",
+    "@ayme-dev/typescript-config": "workspace:*",
+    "eslint": "^10.9.1",
+    "tsdown": "^0.22.14",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.11"
+  }
+}
