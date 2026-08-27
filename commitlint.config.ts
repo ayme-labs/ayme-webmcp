@@ -1,12 +1,12 @@
-import { existsSync, readdirSync, statSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { existsSync, readdirSync, statSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-import type { UserConfig } from '@commitlint/types';
-import { RuleConfigSeverity } from '@commitlint/types';
+import type { UserConfig } from "@commitlint/types";
+import { RuleConfigSeverity } from "@commitlint/types";
 
 const repoRoot = dirname(fileURLToPath(import.meta.url));
-const workspaceScopeRoots = ['apps', 'packages'] as const;
+const workspaceScopeRoots = ["apps", "packages"] as const;
 const scopePattern = /^[a-z0-9-]+$/;
 
 function loadWorkspaceScopes(): string[] {
@@ -24,20 +24,20 @@ function loadWorkspaceScopes(): string[] {
         continue;
       }
 
-      const packageJsonPath = join(absoluteRoot, entry.name, 'package.json');
+      const packageJsonPath = join(absoluteRoot, entry.name, "package.json");
       if (!existsSync(packageJsonPath)) {
         continue;
       }
 
       if (!scopePattern.test(entry.name)) {
         throw new Error(
-          `commitlint: workspace directory "${workspaceRoot}/${entry.name}" cannot be used as a scope. Use lowercase letters, numbers, and hyphens.`,
+          `commitlint: workspace directory "${workspaceRoot}/${entry.name}" cannot be used as a scope. Use lowercase letters, numbers, and hyphens.`
         );
       }
 
       if (scopes.has(entry.name)) {
         throw new Error(
-          `commitlint: duplicate workspace scope "${entry.name}" found under apps/ and packages/.`,
+          `commitlint: duplicate workspace scope "${entry.name}" found under apps/ and packages/.`
         );
       }
 
@@ -49,43 +49,43 @@ function loadWorkspaceScopes(): string[] {
 }
 
 const allowedTypes = [
-  'build',
-  'chore',
-  'ci',
-  'devex',
-  'docs',
-  'feat',
-  'fix',
-  'refactor',
-  'style',
-  'test',
+  "build",
+  "chore",
+  "ci",
+  "devex",
+  "docs",
+  "feat",
+  "fix",
+  "refactor",
+  "style",
+  "test",
 ];
 const workspaceScopes = loadWorkspaceScopes();
-const scopeRules: UserConfig['rules'] =
+const scopeRules: UserConfig["rules"] =
   workspaceScopes.length === 0
     ? {
-        'scope-empty': [RuleConfigSeverity.Error, 'always'],
+        "scope-empty": [RuleConfigSeverity.Error, "always"],
       }
     : {
-        'scope-enum': [RuleConfigSeverity.Error, 'always', workspaceScopes],
+        "scope-enum": [RuleConfigSeverity.Error, "always", workspaceScopes],
       };
 
 const config: UserConfig = {
   parserPreset: {
     parserOpts: {
-      headerCorrespondence: ['type', 'scope', 'breaking', 'subject'],
+      headerCorrespondence: ["type", "scope", "breaking", "subject"],
       headerPattern: /^([a-z]+)(?:\(([a-z0-9-]+)\))?(!)?: (.+)$/,
     },
   },
   rules: {
-    'header-max-length': [RuleConfigSeverity.Error, 'always', 100],
-    'header-trim': [RuleConfigSeverity.Error, 'always'],
-    'scope-case': [RuleConfigSeverity.Error, 'always', 'kebab-case'],
+    "header-max-length": [RuleConfigSeverity.Error, "always", 100],
+    "header-trim": [RuleConfigSeverity.Error, "always"],
+    "scope-case": [RuleConfigSeverity.Error, "always", "kebab-case"],
     ...scopeRules,
-    'subject-empty': [RuleConfigSeverity.Error, 'never'],
-    'subject-full-stop': [RuleConfigSeverity.Error, 'never', '.'],
-    'type-case': [RuleConfigSeverity.Error, 'always', 'lower-case'],
-    'type-enum': [RuleConfigSeverity.Error, 'always', allowedTypes],
+    "subject-empty": [RuleConfigSeverity.Error, "never"],
+    "subject-full-stop": [RuleConfigSeverity.Error, "never", "."],
+    "type-case": [RuleConfigSeverity.Error, "always", "lower-case"],
+    "type-enum": [RuleConfigSeverity.Error, "always", allowedTypes],
   },
 };
 

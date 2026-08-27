@@ -1,0 +1,11 @@
+# Local tool state
+/.devbox/
+/.grove/
+/.scratch/
+/.pnpm-store/
+
+# Generated build and test output
+node_modules/
+.turbo/
+dist/
+test-results/

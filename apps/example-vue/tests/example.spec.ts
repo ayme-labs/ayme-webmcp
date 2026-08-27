@@ -1,7 +1,9 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from "@playwright/test";
 
-test('shows the WebMCP heading', async ({ page }) => {
-  await page.goto('/');
+test("shows the WebMCP heading", async ({ page }) => {
+  await page.goto("/");
 
-  await expect(page.getByRole('heading', { name: 'Ayme WebMCP' })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Ayme WebMCP" })
+  ).toBeVisible();
 });

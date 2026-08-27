@@ -84,7 +84,6 @@ This page is the minimal safe contract; the pages below are depth, opened when t
 - Never ship a plan of only G and W nodes; surface unknowns as Q/B and choices as D first.
 - Never leave a goal without `fitness_kind` + `fitness_target` or a work item without full DoR fields at creation.
 
-
 ---
 
 # 1. Formal model
@@ -97,17 +96,17 @@ Development state is the tuple:
 Σ ≜ (G, W, D, Q, B, T, Y, A, E)
 ```
 
-| Set | Symbol | Meaning | ID prefix |
-| --- | --- | --- | --- |
-| Goals | G | Outcome / requirement; has fitness function. | `G-NN` |
-| Work items | W | Executable unit with DoR + DoD. | `W-NN` |
-| Decisions | D | ADR; long-lived design choice. | `D-NN` |
-| Questions | Q | Open unknown. | `Q-NN` |
-| Assumptions | B | Falsifiable assumption with validation method and result. | `B-NN` |
-| Artifacts (themes) | T | Grouping of related W (optional). | `T-NN` |
-| Discoveries | Y | Curated invariant distilled from process records; never archived. | `Y-NN` |
-| Areas | A | Permanent scope skeleton above goals; owns goals; no lifecycle. | `A-NN` |
-| Edges | E ⊆ N × LabelE × N | Typed graph edges (§1.3). | – |
+| Set                | Symbol             | Meaning                                                           | ID prefix |
+| ------------------ | ------------------ | ----------------------------------------------------------------- | --------- |
+| Goals              | G                  | Outcome / requirement; has fitness function.                      | `G-NN`    |
+| Work items         | W                  | Executable unit with DoR + DoD.                                   | `W-NN`    |
+| Decisions          | D                  | ADR; long-lived design choice.                                    | `D-NN`    |
+| Questions          | Q                  | Open unknown.                                                     | `Q-NN`    |
+| Assumptions        | B                  | Falsifiable assumption with validation method and result.         | `B-NN`    |
+| Artifacts (themes) | T                  | Grouping of related W (optional).                                 | `T-NN`    |
+| Discoveries        | Y                  | Curated invariant distilled from process records; never archived. | `Y-NN`    |
+| Areas              | A                  | Permanent scope skeleton above goals; owns goals; no lifecycle.   | `A-NN`    |
+| Edges              | E ⊆ N × LabelE × N | Typed graph edges (§1.3).                                         | –         |
 
 with N ≜ G ∪ W ∪ D ∪ Q ∪ B ∪ T ∪ Y ∪ A.
 
@@ -130,17 +129,17 @@ type(w) ∈ { feature, refactor, bug, spike }
 LabelE = { blocks, causes, implements, asks, tests, supersedes, produces, targets, distills }
 ```
 
-| Label | Domain → Codomain | Meaning |
-| --- | --- | --- |
-| `blocks` | N → W | Predecessor must be terminal before successor may start. |
-| `causes` | T → W (refactor/bug) | Root cause to symptom. |
-| `implements` | W → D | Work item realises an accepted decision. |
-| `asks` | Q → N | Open question is raised against the target node. |
-| `tests` | B → Q | Assumption operationalises a question into falsifiable validation. |
-| `targets` | B → W | Assumption is required by a work item (defines `assumptions(w)`). |
-| `produces` | W → D ∪ Q ∪ B ∪ Y | Work item (typically a spike) produced this record. |
-| `supersedes` | D → D, Y → Y | New record replaces the old one. |
-| `distills` | Y → D ∪ Q ∪ B | Discovery distills content from this process record. |
+| Label        | Domain → Codomain    | Meaning                                                            |
+| ------------ | -------------------- | ------------------------------------------------------------------ |
+| `blocks`     | N → W                | Predecessor must be terminal before successor may start.           |
+| `causes`     | T → W (refactor/bug) | Root cause to symptom.                                             |
+| `implements` | W → D                | Work item realises an accepted decision.                           |
+| `asks`       | Q → N                | Open question is raised against the target node.                   |
+| `tests`      | B → Q                | Assumption operationalises a question into falsifiable validation. |
+| `targets`    | B → W                | Assumption is required by a work item (defines `assumptions(w)`).  |
+| `produces`   | W → D ∪ Q ∪ B ∪ Y    | Work item (typically a spike) produced this record.                |
+| `supersedes` | D → D, Y → Y         | New record replaces the old one.                                   |
+| `distills`   | Y → D ∪ Q ∪ B        | Discovery distills content from this process record.               |
 
 The graph (N, E) is acyclic on `blocks`. Cycles on other labels are allowed.
 
@@ -305,12 +304,11 @@ Attribution of content to an area comes in two tiers over these sets:
   goals counts in none, and the project totals in Content health stay primary.
 - **Hard tier** (reserved for gates, not yet consumed by any gate): surface ∩
   alone. A Discovery is a coverage donor for area a iff `surface(Discovery) ∩ surface(a) ≠
-  ∅`; tags ∩ and cone ∩ never feed a gate (D14).
+∅`; tags ∩ and cone ∩ never feed a gate (D14).
 
 The dashboard renders one row per area (including dormant ones) under
 **Areas**, restricting the Content health components to `nodes(a)` and adding
 the area's soft-attributed active Discoveries to C.
-
 
 ---
 
@@ -434,7 +432,6 @@ Next options:
   3. Your call.
 ```
 
-
 ---
 
 # 3. Planning
@@ -447,12 +444,12 @@ Every artifact of planning - a design choice, an open question, a hypothesis, a 
 
 If you catch yourself drafting a plan as a markdown file, stop and decompose it into nodes instead:
 
-| You were about to write | Create instead |
-| --- | --- |
+| You were about to write         | Create instead                                                                    |
+| ------------------------------- | --------------------------------------------------------------------------------- |
 | "We choose A over B because..." | `grove add d` with `context`, `options`, `decision`, `consequences`, `validation` |
-| "We don't know whether X..." | `grove add q` (+ `asks` edges to the nodes it blocks) |
-| "We believe Y is true..." | `grove add b` with a validation method (+ `targets` / `tests` edges) |
-| "Open question for later..." | `grove add q` (deferred is a status, not a file) |
+| "We don't know whether X..."    | `grove add q` (+ `asks` edges to the nodes it blocks)                             |
+| "We believe Y is true..."       | `grove add b` with a validation method (+ `targets` / `tests` edges)              |
+| "Open question for later..."    | `grove add q` (deferred is a status, not a file)                                  |
 
 The only exception is a document the user explicitly asked for. Even then, the operative decisions belong in D records; the document is a view, not the source.
 
@@ -521,7 +518,6 @@ Practical serialization:
 
 `index.md` is the minimal safe contract - it is short by design and complete for operation. The other pages are depth, not prerequisites for every action: open them when the task actually touches their topic. `cli.md` is a reference, not a tutorial; when unsure of a command's shape, run it - every refusal (`add g: --area is required`, `DoR ≢ ⊤; see grove dor W-NN`) is a precise instruction. The CLI's invariants are the last line of defense: partial reading degrades process quality, never state integrity.
 
-
 ---
 
 # 4. CLI reference
@@ -532,14 +528,14 @@ The CLI reads and writes `.grove/state.lock` and `.grove/index.md` under a proje
 
 ## 3.1 Exit codes
 
-| Code | Meaning |
-| --- | --- |
-| 0 | Success. |
-| 1 | Generic error (bad args, file missing). |
-| 2 | Lock checksum mismatch. Use `grove repair --confirm`. |
-| 3 | Invariant violation (`grove check`). |
-| 4 | Guard failure (DoR, WIP, evidence missing, etc.). |
-| 5 | Not found (unknown ID). |
+| Code | Meaning                                               |
+| ---- | ----------------------------------------------------- |
+| 0    | Success.                                              |
+| 1    | Generic error (bad args, file missing).               |
+| 2    | Lock checksum mismatch. Use `grove repair --confirm`. |
+| 3    | Invariant violation (`grove check`).                  |
+| 4    | Guard failure (DoR, WIP, evidence missing, etc.).     |
+| 5    | Not found (unknown ID).                               |
 
 ## 3.2 Read commands
 
@@ -653,7 +649,7 @@ non-mutations: `grove undo` skips them (never inverts, never truncates) and
 non-terminal W by where discovery effort is most needed, from mechanical
 signals only. One tab-separated row per W, columns `W  cov  χ  fragile
 suggestion`: `cov` is the share of the W's declared `surface` covered by
-*active* Discovery surfaces (`0.00` when none declared), `χ` counts open Q among
+_active_ Discovery surfaces (`0.00` when none declared), `χ` counts open Q among
 `asks(w)` + BChain entries not yet `validated` / `invalidated_acceptable` +
 failed DoR conjuncts, `fragile` is `yes` when any goal has ≤ 1 vertex-disjoint
 `blocks`-path into the W. Sorted by coverage ascending, then χ descending,
@@ -723,16 +719,16 @@ Optional allocation tuning (persisted once in the optional `# @grove-id stride=�
 
 **`grove add <kind> [...]`:** kind ∈ `g w d q b t y a`.
 
-| Kind | Required flags | Optional |
-| --- | --- | --- |
-| `g` | `--title="…"`, `--area=A-NN`, fitness spec (`--fitness-kind=count\|ratio\|boolean\|metric\|manual`) | `--fitness-target=…` (required for `count` / `metric` / `ratio`), `--status=unverified` |
-| `w` | `--title="…"`, `--type=feature\|refactor\|bug\|spike`, `--cynefin=…` | `--goals=G-01,G-02`, `--theme=T-01`, `--surface=p1,p2` (declared estimate, feeds coverage), `--status=proposed` |
-| `d` | `--title="…"` | `--supersedes=D-01`, `--status=proposed` |
-| `q` | `--title="…"`, `--cynefin=…` | `--targets=W-01`, `--status=open` |
-| `b` | `--title="…"`, `--cynefin=…` | `--tests=Q-01`, `--targets=W-01`, `--status=proposed` |
-| `t` | `--title="…"` | `--status=open` |
-| `y` | `--title="…"`, `--tags=<t1,t2>` (≥1 glossary term), `--from=<W-NN\|D-NN\|Q-NN\|B-NN>` (≥1 provenance record), `--surface=<p1,p2>` xor `--why="…"` | – |
-| `a` | `--title="…"` | `--surface=p1,p2` |
+| Kind | Required flags                                                                                                                                    | Optional                                                                                                        |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `g`  | `--title="…"`, `--area=A-NN`, fitness spec (`--fitness-kind=count\|ratio\|boolean\|metric\|manual`)                                               | `--fitness-target=…` (required for `count` / `metric` / `ratio`), `--status=unverified`                         |
+| `w`  | `--title="…"`, `--type=feature\|refactor\|bug\|spike`, `--cynefin=…`                                                                              | `--goals=G-01,G-02`, `--theme=T-01`, `--surface=p1,p2` (declared estimate, feeds coverage), `--status=proposed` |
+| `d`  | `--title="…"`                                                                                                                                     | `--supersedes=D-01`, `--status=proposed`                                                                        |
+| `q`  | `--title="…"`, `--cynefin=…`                                                                                                                      | `--targets=W-01`, `--status=open`                                                                               |
+| `b`  | `--title="…"`, `--cynefin=…`                                                                                                                      | `--tests=Q-01`, `--targets=W-01`, `--status=proposed`                                                           |
+| `t`  | `--title="…"`                                                                                                                                     | `--status=open`                                                                                                 |
+| `y`  | `--title="…"`, `--tags=<t1,t2>` (≥1 glossary term), `--from=<W-NN\|D-NN\|Q-NN\|B-NN>` (≥1 provenance record), `--surface=<p1,p2>` xor `--why="…"` | –                                                                                                               |
+| `a`  | `--title="…"`                                                                                                                                     | `--surface=p1,p2`                                                                                               |
 
 `y` starts `proposed`; `--from=W-NN` wires a `produces` edge, `--from=D/Q/B` wires `distills` edges. The CLI prints the assigned ID. CSV list options (`--tags`, `--surface`, `--goals`) refuse duplicate entries (compared after trimming surrounding whitespace) at capture.
 
@@ -793,27 +789,27 @@ Every goal belongs to exactly one area (I₁₃): `add g` refuses a missing or u
 
 Each response is a single JSON object. Types: **string**, **bool**, **array**, **object** (string keys).
 
-| Subcommand | Extra keys (besides `command`) |
-| --- | --- |
-| `ready` | `items`: array of `{ id, title, critical }`. |
-| `next` | `work`, `packet_markdown`. |
-| `packet` | `work`, `packet_markdown`; with `--cone` also `cone`: `{ backward, order, forward, fragility: [{ goal, paths }], relevant_discoveries, truncated, depth, max }`. |
-| `deps` | `id`, `predecessors` (strings, topological order). |
-| `impact` | `id`, `successors`. |
-| `path` | `chain` (W ids on critical path). |
-| `dor` | `work`, `conjuncts`: `[{ label, ok, detail }]`, `dor` (bool, overall ⊤/⊥). |
-| `show` | `record`: `{ kind, id, title, status, archived?, type?, cynefin?, attrs: { … }, fields: { … } }` (present `fields` keys follow the lockfile catalog; prose/reflists are JSON arrays of strings). |
-| `list` | `kind`, `rows`: `[{ id, status, title, cynefin? }]`, optional `filter_*`. |
-| `graph` | `mermaid` (full mermaid block text). |
-| `log` | `limit`, `rows`: `[{ ts, sort, line }]`, optional `id_filter`. |
-| `gate` | `baseline` (`{ ts, tw, dones }` or null), `tw_now`, `tw_delta`, `dones`, `due`, `overflows`: `[{ w, paths }]`, `invalidated`: `[{ id, title, status }]`, `accepted`: `[{ id, title }]`, `empty`, `theta`, `n`. |
-| `triage` | `rows`: `[{ w, title, coverage, declared, uncertainty, fragile, suggestion }]`, sorted as above. |
-| `distill` | `goal`, `precondition_met`, `linked_das`, `null_attested`, `candidates`: `[{ id, kind, title, skeleton }]`; with `--null`: `goal`, `null`, `empty`. |
-| `check` | `ok`, `errors` (strings; empty when `ok`). |
-| `stats` | `records`, `mutations`, `cycle_time` (`by_cynefin` per-class `{ n, mean_hours, median_hours, max_hours }`, `durations_seconds`), `dor` (`reject_events`, `reject_per_node`, `progress_entries`, `first_pass`, `first_pass_rate`, `first_pass_split`: `{ no_reject, reject_discovery, reject_plain, discovery_rate }`), `bets` (`validated`, `invalidated_acceptable`, `invalidated_blocking`, `ratio`), `discovery` (`stale_entries`, `revalidations`, `gate_runs`, `gate_empty`, `gate_overflow_events`, `gate_invalidated_events`), `gates` (`[{ ts, tw, dones, empty, overflow_events, overflow_paths, invalidated_events }]`, oldest first; `overflow_paths` null on legacy records without `overflow_counts`), `undo` (`undo_events`, `undone_steps`, `undos_per_100_mutations`), `audit` (`sessions`: `{ count, per_session: [{ session, commands }], mean, median, max }`, `checkpoint_latency`: `{ dor, discovery }` each `{ n, mean_hours, median_hours, max_hours }`, `post_approval_invalidation`: `{ invalidated, ever_validated, rate }`), `rework` (`covered` / `uncovered`: `{ w, rejects, mean_rejects, per_w: [{ id, rejects }] }`), `distill_yield` (`goals_with_real`, `goals_null_attested`, `goals_without`, `goals`: `[{ goal, status, discoveries }]`), `surprise` (`total`, `done_w`, `per_done`), `surprise_series` (`[{ id, ts, delta, c }]`, chronological), `cv_series` (`[{ ts, c, v }]`, oldest first), `replay_failures` (null for undefined rates). |
-| `status` | `progress`: session rows; `alignment_triggers`; `invariants`: `{ ok, messages }`. |
-| `diff` | `since` (git ref), `semantic_change`, `nodes` (per-kind `added` / `removed` / `changed`), `edges`: `{ added, removed }` with `{ from, label, to }`; same semantic rules as textual diff (`lock_structural_lines`). |
-| `projects` | `projects`: `[{ name, path, created, last_opened }]` from the registry. |
+| Subcommand | Extra keys (besides `command`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ready`    | `items`: array of `{ id, title, critical }`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `next`     | `work`, `packet_markdown`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `packet`   | `work`, `packet_markdown`; with `--cone` also `cone`: `{ backward, order, forward, fragility: [{ goal, paths }], relevant_discoveries, truncated, depth, max }`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `deps`     | `id`, `predecessors` (strings, topological order).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `impact`   | `id`, `successors`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `path`     | `chain` (W ids on critical path).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `dor`      | `work`, `conjuncts`: `[{ label, ok, detail }]`, `dor` (bool, overall ⊤/⊥).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `show`     | `record`: `{ kind, id, title, status, archived?, type?, cynefin?, attrs: { … }, fields: { … } }` (present `fields` keys follow the lockfile catalog; prose/reflists are JSON arrays of strings).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `list`     | `kind`, `rows`: `[{ id, status, title, cynefin? }]`, optional `filter_*`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `graph`    | `mermaid` (full mermaid block text).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `log`      | `limit`, `rows`: `[{ ts, sort, line }]`, optional `id_filter`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `gate`     | `baseline` (`{ ts, tw, dones }` or null), `tw_now`, `tw_delta`, `dones`, `due`, `overflows`: `[{ w, paths }]`, `invalidated`: `[{ id, title, status }]`, `accepted`: `[{ id, title }]`, `empty`, `theta`, `n`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `triage`   | `rows`: `[{ w, title, coverage, declared, uncertainty, fragile, suggestion }]`, sorted as above.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `distill`  | `goal`, `precondition_met`, `linked_das`, `null_attested`, `candidates`: `[{ id, kind, title, skeleton }]`; with `--null`: `goal`, `null`, `empty`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `check`    | `ok`, `errors` (strings; empty when `ok`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `stats`    | `records`, `mutations`, `cycle_time` (`by_cynefin` per-class `{ n, mean_hours, median_hours, max_hours }`, `durations_seconds`), `dor` (`reject_events`, `reject_per_node`, `progress_entries`, `first_pass`, `first_pass_rate`, `first_pass_split`: `{ no_reject, reject_discovery, reject_plain, discovery_rate }`), `bets` (`validated`, `invalidated_acceptable`, `invalidated_blocking`, `ratio`), `discovery` (`stale_entries`, `revalidations`, `gate_runs`, `gate_empty`, `gate_overflow_events`, `gate_invalidated_events`), `gates` (`[{ ts, tw, dones, empty, overflow_events, overflow_paths, invalidated_events }]`, oldest first; `overflow_paths` null on legacy records without `overflow_counts`), `undo` (`undo_events`, `undone_steps`, `undos_per_100_mutations`), `audit` (`sessions`: `{ count, per_session: [{ session, commands }], mean, median, max }`, `checkpoint_latency`: `{ dor, discovery }` each `{ n, mean_hours, median_hours, max_hours }`, `post_approval_invalidation`: `{ invalidated, ever_validated, rate }`), `rework` (`covered` / `uncovered`: `{ w, rejects, mean_rejects, per_w: [{ id, rejects }] }`), `distill_yield` (`goals_with_real`, `goals_null_attested`, `goals_without`, `goals`: `[{ goal, status, discoveries }]`), `surprise` (`total`, `done_w`, `per_done`), `surprise_series` (`[{ id, ts, delta, c }]`, chronological), `cv_series` (`[{ ts, c, v }]`, oldest first), `replay_failures` (null for undefined rates). |
+| `status`   | `progress`: session rows; `alignment_triggers`; `invariants`: `{ ok, messages }`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `diff`     | `since` (git ref), `semantic_change`, `nodes` (per-kind `added` / `removed` / `changed`), `edges`: `{ added, removed }` with `{ from, label, to }`; same semantic rules as textual diff (`lock_structural_lines`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `projects` | `projects`: `[{ name, path, created, last_opened }]` from the registry.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 ## 3.5 Examples
 
@@ -843,8 +839,6 @@ grove check
 Note the order: stage `fitness` before `evidence` before `status=done`. The
 `done` transition is the single atomic point that applies everything.
 
-
-
 ---
 
 # 5. Evidence (Definition of Done)
@@ -862,7 +856,7 @@ Preference order:
 1. **Dynamic tests.** Runner output. If tests for the touched module do not
    exist, write them in the project's existing style and run them.
 2. **Type-check.** Language type checker clean on touched files.
-4. **Interface contract trace.** Every caller of a changed signature listed
+3. **Interface contract trace.** Every caller of a changed signature listed
    explicitly in the `evidence` field.
 4. **Build success.** Full project compile.
 
@@ -874,9 +868,9 @@ insufficient.
 Negative-evidence-first:
 
 1. **Failing test added.** A test that reproduces the defect, committed
-   *before* the fix, in the same chain. Record commit SHA.
+   _before_ the fix, in the same chain. Record commit SHA.
 2. **Test passes after fix.** Same test green, after-fix commit SHA recorded.
-4. **No regression.** Adjacent test suite for the module remains green.
+3. **No regression.** Adjacent test suite for the module remains green.
 
 Skipping (1) is allowed only when the defect is structurally unreachable to
 test (e.g. build-system bug); record the reason in `why_no_repro_test`.
@@ -889,7 +883,7 @@ Behaviour-preservation evidence:
    Both runs recorded.
 2. **No new public API surface.** Diff of exported symbols is empty or
    shrinking; record the diff command and output.
-4. **Causation closed.** The `T → causes → W` theme's symptom is no longer
+3. **Causation closed.** The `T → causes → W` theme's symptom is no longer
    reproducible (if symptom-bearing).
 
 If pre-existing tests are insufficient, the refactor depends on a prior
@@ -926,7 +920,6 @@ Multiple calls append; entries are line-separated and preserved verbatim.
 
 `grove evidence` does not validate content. Auditing is via `grove check`
 heuristics (presence of commit SHAs, test runner names) plus distillation.
-
 
 ---
 
@@ -1028,7 +1021,6 @@ julia --project=path/to/grove/packages/grove path/to/grove/bin/grove.jl check ||
 
 This blocks commits with broken invariants or stale `index.md`.
 
-
 ---
 
 # 7. Lockfile specification
@@ -1090,23 +1082,23 @@ archive    = ":archive" NL { record }
 ```
 
 `text` inside a prose line is any UTF-8 sequence excluding NL. No escaping is
-performed; the `    | ` (four spaces, pipe, space) prefix is the unambiguous
+performed; the `   |` (four spaces, pipe, space) prefix is the unambiguous
 delimiter. Raw `|`, `\`, `"` are literal inside prose lines.
 
 `bareWord` matches `[a-zA-Z_][a-zA-Z0-9_-]*`. Quoted strings are required for any value that contains whitespace, `"`, or `\`. The CLI always quotes titles.
 
 ## 6.4 Header attributes per kind
 
-| Kind | Required attrs | Optional attrs | Trailing title |
-| --- | --- | --- | --- |
-| `g` | `status` | `fitness_kind`, `requires_coverage` | yes |
-| `w` | `type`, `status`, `cynefin` | `session`, `session_at` | yes |
-| `d` | `status` | – | yes |
-| `q` | `status`, `cynefin` | – | yes |
-| `b` | `status`, `cynefin` | – | yes |
-| `t` | `status` | `requires_coverage` | yes |
-| `y` | `status` | – | yes |
-| `a` | `status` (fixed `present`) | – | yes |
+| Kind | Required attrs              | Optional attrs                      | Trailing title |
+| ---- | --------------------------- | ----------------------------------- | -------------- |
+| `g`  | `status`                    | `fitness_kind`, `requires_coverage` | yes            |
+| `w`  | `type`, `status`, `cynefin` | `session`, `session_at`             | yes            |
+| `d`  | `status`                    | –                                   | yes            |
+| `q`  | `status`, `cynefin`         | –                                   | yes            |
+| `b`  | `status`, `cynefin`         | –                                   | yes            |
+| `t`  | `status`                    | `requires_coverage`                 | yes            |
+| `y`  | `status`                    | –                                   | yes            |
+| `a`  | `status` (fixed `present`)  | –                                   | yes            |
 
 Every node also carries `t_created` and `t_updated` (ISO-8601 attrs). Every
 edge carries `t_created`. The CLI assigns and updates these; agents do not
@@ -1134,57 +1126,57 @@ Recognised fields per node kind. Unknown fields are a parse error.
 
 **`w` (work item):**
 
-| Field | Form | Meaning |
-| --- | --- | --- |
-| `goals` | list of `G-NN` | Targeted goals. |
-| `theme` | single `T-NN` | Membership in a theme. |
-| `fitness` | list of `G-NN=±N` | Per-goal fitness deltas (staged for I₁₀). |
-| `surface` | list of paths | Declared estimate of files the W reads or writes; refined by the work itself. |
-| `ac` | prose | Acceptance criteria, one per `\|` line. |
-| `hypothesis` | prose | HDD statement (`feature` only). |
-| `repro` | prose | Reproducer (`bug` only). |
-| `exit` | prose | Exit criteria (`spike` only). |
-| `evidence_strategy` | prose | Plan for collecting evidence. |
-| `evidence` | prose | Actual evidence (filled before `done`). |
-| `plan` | prose | Approach notes. |
-| `why` | prose | Why this work item exists. |
+| Field               | Form              | Meaning                                                                       |
+| ------------------- | ----------------- | ----------------------------------------------------------------------------- |
+| `goals`             | list of `G-NN`    | Targeted goals.                                                               |
+| `theme`             | single `T-NN`     | Membership in a theme.                                                        |
+| `fitness`           | list of `G-NN=±N` | Per-goal fitness deltas (staged for I₁₀).                                     |
+| `surface`           | list of paths     | Declared estimate of files the W reads or writes; refined by the work itself. |
+| `ac`                | prose             | Acceptance criteria, one per `\|` line.                                       |
+| `hypothesis`        | prose             | HDD statement (`feature` only).                                               |
+| `repro`             | prose             | Reproducer (`bug` only).                                                      |
+| `exit`              | prose             | Exit criteria (`spike` only).                                                 |
+| `evidence_strategy` | prose             | Plan for collecting evidence.                                                 |
+| `evidence`          | prose             | Actual evidence (filled before `done`).                                       |
+| `plan`              | prose             | Approach notes.                                                               |
+| `why`               | prose             | Why this work item exists.                                                    |
 
 **`d` (decision):**
 
-| Field | Form | Meaning |
-| --- | --- | --- |
-| `context` | prose | – |
-| `options` | prose | One option per line, prefixed `OC1:`, `OC2:`, … |
-| `decision` | prose | – |
-| `consequences` | prose | – |
-| `validation` | prose | – |
+| Field          | Form  | Meaning                                         |
+| -------------- | ----- | ----------------------------------------------- |
+| `context`      | prose | –                                               |
+| `options`      | prose | One option per line, prefixed `OC1:`, `OC2:`, … |
+| `decision`     | prose | –                                               |
+| `consequences` | prose | –                                               |
+| `validation`   | prose | –                                               |
 
 **`q` (question):**
 
-| Field | Form | Meaning |
-| --- | --- | --- |
-| `why` | prose | – |
-| `hypothesis` | prose | Optional. |
-| `exit` | prose | Exit criteria. |
-| `log` | prose | Investigation log. |
-| `outcome` | prose | – |
+| Field        | Form  | Meaning            |
+| ------------ | ----- | ------------------ |
+| `why`        | prose | –                  |
+| `hypothesis` | prose | Optional.          |
+| `exit`       | prose | Exit criteria.     |
+| `log`        | prose | Investigation log. |
+| `outcome`    | prose | –                  |
 
 **`b` (assumption):**
 
-| Field | Form | Meaning |
-| --- | --- | --- |
-| `vm` | prose | Validation method. |
+| Field       | Form  | Meaning               |
+| ----------- | ----- | --------------------- |
+| `vm`        | prose | Validation method.    |
 | `threshold` | prose | Acceptance threshold. |
-| `result` | prose | – |
+| `result`    | prose | –                     |
 
 **`g` (goal):**
 
-| Field | Form | Meaning |
-| --- | --- | --- |
-| `area` | single `A-NN` | Owning area; mandatory (I13), enforced at `grove add g`; re-partition via `grove set G-NN area=A-NN`. |
-| `fitness_target` | single line | Threshold / notation; semantics depend on header **`fitness_kind`** (§6.5.1). |
-| `fitness_current` | single line | CLI-derived sums for structured kinds (**except `manual`**); user-authored only for **`manual`**. |
-| `notes` | prose | Any goal notes; a line containing **`--distill-deferred`** suppresses the post-`done` lazy-distill stderr hint ([rules.md](#6-rules)). |
+| Field             | Form          | Meaning                                                                                                                                |
+| ----------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `area`            | single `A-NN` | Owning area; mandatory (I13), enforced at `grove add g`; re-partition via `grove set G-NN area=A-NN`.                                  |
+| `fitness_target`  | single line   | Threshold / notation; semantics depend on header **`fitness_kind`** (§6.5.1).                                                          |
+| `fitness_current` | single line   | CLI-derived sums for structured kinds (**except `manual`**); user-authored only for **`manual`**.                                      |
+| `notes`           | prose         | Any goal notes; a line containing **`--distill-deferred`** suppresses the post-`done` lazy-distill stderr hint ([rules.md](#6-rules)). |
 
 ### 6.5.1 Structured fitness (goals)
 
@@ -1192,13 +1184,13 @@ Optional header attr **`fitness_kind`** ∈ **`count` \| `ratio` \| `boolean` \|
 
 With **`fitness_kind`**, **`fitness_target`** and **`fitness_current`** are single-string fields (**§6** `single` form). **`grove fitness W-NN G-NN ±δ`** still stages on **`W`**; when **`W`** becomes **`done`**, the CLI refreshes each linked goal’s **`fitness_current`** (except **`manual`**) and may update **`status(g)`**.
 
-| `fitness_kind` | `fitness_target` | Auto `status(g)` from sum of done deltas |
-| --- | --- | --- |
-| `count` | Non‑negative integer **N** | **`verified`** if **sum ≥ N**; **`partial`** if **0 \< sum \< N** (only when **N** parsed). |
-| `ratio` | `a/b` or plain integer | Same as **`count`** (denominator of `a/b`, else integer). |
-| `boolean` | (ignored) | **`verified`** if **sum ≥ 1**. |
-| `metric` | Non‑negative integer **N** | Same inequality as **`count`**. |
-| `manual` | Optional label | **Never** auto-derived; use **`grove set G-NN status=…`**. |
+| `fitness_kind` | `fitness_target`           | Auto `status(g)` from sum of done deltas                                                    |
+| -------------- | -------------------------- | ------------------------------------------------------------------------------------------- |
+| `count`        | Non‑negative integer **N** | **`verified`** if **sum ≥ N**; **`partial`** if **0 \< sum \< N** (only when **N** parsed). |
+| `ratio`        | `a/b` or plain integer     | Same as **`count`** (denominator of `a/b`, else integer).                                   |
+| `boolean`      | (ignored)                  | **`verified`** if **sum ≥ 1**.                                                              |
+| `metric`       | Non‑negative integer **N** | Same inequality as **`count`**.                                                             |
+| `manual`       | Optional label             | **Never** auto-derived; use **`grove set G-NN status=…`**.                                  |
 
 **`grove field G-NN fitness_target`** and **`grove set G-NN fitness_target=…`** on a structured goal trigger a refresh. **`grove field G-NN fitness_current`** is **rejected** unless **`fitness_kind=manual`**.
 
@@ -1206,22 +1198,22 @@ The legacy header **`fitness="…"`** string is read-path only: old locks keep w
 
 **`y` (discovery):**
 
-| Field | Form | Meaning |
-| --- | --- | --- |
-| `surface` | list of paths | File anchor, diffable evidence of origin. Absent = the `none` form, which mandates `why` prose; such Discoveries never feed coverage. |
-| `invariant` | prose | The distilled content (the curated axiom). |
-| `why` | prose | Mandatory when `surface` is absent; origin / rationale. |
-| `skill_updates` | prose | Process learning carried over from the goal's work. |
-| `glossary_updates` | prose | Term changes prompted by the distillation. |
-| `revalidation` | prose | Log of revalidation events (one line per `grove revalidate`). |
+| Field              | Form          | Meaning                                                                                                                               |
+| ------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `surface`          | list of paths | File anchor, diffable evidence of origin. Absent = the `none` form, which mandates `why` prose; such Discoveries never feed coverage. |
+| `invariant`        | prose         | The distilled content (the curated axiom).                                                                                            |
+| `why`              | prose         | Mandatory when `surface` is absent; origin / rationale.                                                                               |
+| `skill_updates`    | prose         | Process learning carried over from the goal's work.                                                                                   |
+| `glossary_updates` | prose         | Term changes prompted by the distillation.                                                                                            |
+| `revalidation`     | prose         | Log of revalidation events (one line per `grove revalidate`).                                                                         |
 
 **`t` (theme):** `notes` (prose) only. Title is set on creation; status
 is derived (I₆).
 
 **`a` (area):**
 
-| Field | Form | Meaning |
-| --- | --- | --- |
+| Field     | Form          | Meaning                                                                                                                                   |
+| --------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `surface` | list of paths | Declared path anchor of the scope (same form as on `y` and `w`); the only gate-grade attribution anchor ([model §1.10](#1-formal-model)). |
 
 ALL edge labels (`blocks`, `causes`, `implements`, `asks`, `tests`, `targets`,
@@ -1234,7 +1226,7 @@ on read. `produces` runs `W → D ∪ Q ∪ B ∪ Y`; `distills` runs `Y → D �
 
 This is the single normalisation rule: **edges are edges, fields are fields.**
 A field that names another node by ID exists only when it carries
-information *beyond* the edge (e.g., `goals` on W carries semantic targeting
+information _beyond_ the edge (e.g., `goals` on W carries semantic targeting
 that drives DoR; `theme` is a single-T membership that affects derivation
 I₆; `fitness` carries deltas, not a relationship). Any pure relationship
 (B tests Q, B targets W, D supersedes D) is an edge.
@@ -1313,7 +1305,13 @@ e W-12 implements D-02 t_created=2026-04-02T09:31:00Z
 `.grove/journal.log` is an append-only JSON-lines log, one record per line:
 
 ```json
-{"v":1,"ts":"2026-07-19T12:35:19Z","cmd":"set","inv":{"op":"set_status_plain","id":"B-01","old_status":"testing"},"session":"host:0123456789abcdef"}
+{
+  "v": 1,
+  "ts": "2026-07-19T12:35:19Z",
+  "cmd": "set",
+  "inv": { "op": "set_status_plain", "id": "B-01", "old_status": "testing" },
+  "session": "host:0123456789abcdef"
+}
 ```
 
 - `v`: record format version (`1`). `ts`: UTC timestamp, second precision.
@@ -1334,7 +1332,6 @@ e W-12 implements D-02 t_created=2026-04-02T09:31:00Z
   not undoable - applying it as an inverse fails like any other non-mutation
   op.
 
-
 ---
 
 # 8. Typography
@@ -1342,6 +1339,7 @@ e W-12 implements D-02 t_created=2026-04-02T09:31:00Z
 Applies to this skill and to anything the agent writes into `.grove/glossary.md` or evidence/prose fields of `state.lock`.
 
 **Definitions:**
+
 - **Prose bullet/numbered item:** Full sentences in markdown lists (`- …` or `1. …`) that end with punctuation.
 - **Phrase:** Short noun or gerund phrases used as titles, labels, or in structured data (e.g. glossary entries, state lock fields).
 
@@ -1366,7 +1364,6 @@ Applies to this skill and to anything the agent writes into `.grove/glossary.md`
 10. **Short main phrase.** The part before the parenthesis should be a noun phrase or gerund phrase of at most eight words. If you need more words, the item is probably two items.
 
 11. **Field values that are not titles.** Short identifier-like fields (IDs, status values, cynefin tags, edge labels) follow their own grammar defined in `lockfile.md` and are exempt from the rules above.
-
 
 ---
 
@@ -1397,11 +1394,9 @@ Manual items the CLI cannot check:
 - [ ] Plans are not G+W-only: blocking unknowns have Q nodes, unverified beliefs have B nodes, long-lived choices have D nodes.
 - [ ] Every goal created this session has `fitness_kind` + `fitness_target` (no accidental `n/a`); every work item created this session has full DoR fields.
 
-
 ---
 
 # 10. Diagrams
-
 
 ## Dual-track loops
 
@@ -1435,7 +1430,6 @@ graph LR
   classDef feature fill:#1e4a4a,color:#fff
   classDef done fill:#2d5a27,color:#fff
 ```
-
 
 ## `index.md` mermaid template
 
@@ -1483,7 +1477,6 @@ graph TD
 The longest unfinished `blocks` chain is annotated `:::critical`. When multiple work items are `ready`, `grove next` picks from this set first.
 
 **Edge link styles (automatic):** thick `==>|blocks|`; dotted `-.->|targets|`; plain arrow `-->|label|` for all other labels (`produces`, `causes`, `asks`, …).
-
 
 ## Top-level session workflow
 

@@ -1,4 +1,10 @@
 {
   "extends": "@ayme-dev/typescript-config/vue.json",
-  "include": ["src/**/*.ts", "src/**/*.vue", "vite.config.ts", "vitest.config.ts", "playwright.config.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.vue",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "playwright.config.ts"
+  ]
 }
