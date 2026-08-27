@@ -12,6 +12,12 @@ Use the default triage label vocabulary. See `docs/agents/triage-labels.md`.
 
 This repository uses a single-context domain-doc layout. See `docs/agents/domain.md`.
 
+Treat `CONTEXT.md` as the canonical domain glossary. When a canonical domain term appears in `.grove/glossary.md`, preserve Grove's table structure and reference `CONTEXT.md` instead of copying its definition.
+
+Grove-only tracking terms may remain defined in `.grove/glossary.md`. Add them to `CONTEXT.md` only after they become agreed domain language.
+
+Before adding or renaming a term in `CONTEXT.md`, present the proposed wording to the user and wait for explicit approval.
+
 ### Architectural decisions
 
 Canonical ADRs live under `docs/adr/`. When using Grove, create the ADR first, then add a `D` record that references it without duplicating its rationale. Supersede decisions in both places, and read the referenced ADR before working on a linked work item.
@@ -19,6 +25,8 @@ Canonical ADRs live under `docs/adr/`. When using Grove, create the ADR first, t
 Before creating or superseding an ADR, present the complete proposed ADR to the user and wait for explicit approval. After approval, write the ADR and create the corresponding Grove decision or superseding decision. Never infer ADR approval from general agreement with a plan.
 
 A single approval covers the complete supersession operation. Mark the old ADR as `superseded by ADR-NNNN`, keep the replacement ADR accepted and explicit about which ADR it supersedes, and create a pointer-only Grove `D` record with a `supersedes` edge to the old decision. Keep the old ADR and Grove decision rationale intact.
+
+Grove decisions D-01 through D-04 predate the canonical-ADR rule. Preserve their accepted Grove text and backfill matching Markdown ADRs verbatim.
 
 ## Development environment
 

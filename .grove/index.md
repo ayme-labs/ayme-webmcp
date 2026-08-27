@@ -6,14 +6,14 @@
 
 | Measure | Count | Composition |
 | --- | --- | --- |
-| C (content) | 4 | validated B 0 · answered Q 0 · accepted D 4 |
+| C (content) | 6 | validated B 0 · answered Q 0 · accepted D 6 |
 | V (uncertainty) | 0 | open Q 0 · pending B 0 · W below DoR 0 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
-| A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 4; V: open Q 0 · pending B 0 · W below DoR 0 |
+| A-01 | Repository foundation | 3 | 0 | C: validated B 0 · answered Q 0 · accepted D 3; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
 
@@ -33,10 +33,13 @@
 
 | ID | Title | Status | Supersedes |
 | --- | --- | --- | --- |
-| D-01 | Use the five-workspace monorepo layout | accepted |  |
+| D-01 | Use the five-workspace monorepo layout | superseded |  |
 | D-02 | Use Devbox and Corepack for local runtimes | accepted |  |
 | D-03 | Keep Vitest configuration package-local | accepted |  |
 | D-04 | Enforce dependency direction with Turbo Boundaries | accepted |  |
+| D-05 | Use core and Unplugin packages | accepted | D-01 |
+| D-06 | Separate POM compilation from live activation | accepted |  |
+| D-07 | Use structural POMs and explicit WebMCP exposure | accepted |  |
 
 ## Dependency graph
 
@@ -48,7 +51,11 @@ graph TD
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
   D_04["D-04: Enforce dependency direction with Turbo Boundaries"]:::decision
+  D_05["D-05: Use core and Unplugin packages"]:::decision
+  D_06["D-06: Separate POM compilation from live activation"]:::decision
+  D_07["D-07: Use structural POMs and explicit WebMCP exposure"]:::decision
   A_01["A-01: Repository foundation"]:::area
+  D_05 -->|supersedes| D_01
   W_01 -->|implements| D_01
   W_01 -->|implements| D_02
   W_01 -->|implements| D_03
