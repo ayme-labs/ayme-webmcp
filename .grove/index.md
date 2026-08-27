@@ -14,6 +14,7 @@
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 3 | 0 | C: validated B 0 · answered Q 0 · accepted D 3; V: open Q 0 · pending B 0 · W below DoR 0 |
+| A-02 | Page Object interoperability | 3 | 0 | C: validated B 0 · answered Q 0 · accepted D 3; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
 
@@ -22,12 +23,14 @@
 | ID | Outcome | Fitness function | Status |
 | --- | --- | --- | --- |
 | G-01 | Repository has a reproducible local development loop | count; current=1 target=1 | verified |
+| G-02 | Spike behavior runs through public packages | count; current=1 target=1 | verified |
 
 ## Work items
 
 | ID | Type | Title | Goals | Cynefin | DoR | Status | Critical |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | W-01 | feature | Establish the monorepo walking skeleton | G-01 | complicated | ⊤ | done |  |
+| W-02 | feature | Preserve spike behavior through package extraction | G-02 | complicated | ⊤ | done |  |
 
 ## Decisions
 
@@ -41,12 +44,20 @@
 | D-06 | Separate POM compilation from live activation | accepted |  |
 | D-07 | Use structural POMs and explicit WebMCP exposure | accepted |  |
 
+## Open questions
+
+| ID | Question | Cynefin | Targets | Status |
+| --- | --- | --- | --- | --- |
+| Q-01 | Choose the public activation interface | complicated | D-06 | deferred |
+
 ## Dependency graph
 
 ```mermaid
 graph TD
   G_01["G-01: Repository has a reproducible local development loop"]:::goal
+  G_02["G-02: Spike behavior runs through public packages"]:::goal
   W_01["W-01: Establish the monorepo walking skeleton"]:::done
+  W_02["W-02: Preserve spike behavior through package extraction"]:::done
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -54,12 +65,18 @@ graph TD
   D_05["D-05: Use core and Unplugin packages"]:::decision
   D_06["D-06: Separate POM compilation from live activation"]:::decision
   D_07["D-07: Use structural POMs and explicit WebMCP exposure"]:::decision
+  Q_01["Q-01: Choose the public activation interface"]:::question
   A_01["A-01: Repository foundation"]:::area
+  A_02["A-02: Page Object interoperability"]:::area
   D_05 -->|supersedes| D_01
+  Q_01 -->|asks| D_06
   W_01 -->|implements| D_01
   W_01 -->|implements| D_02
   W_01 -->|implements| D_03
   W_01 -->|implements| D_04
+  W_02 -->|implements| D_05
+  W_02 -->|implements| D_06
+  W_02 -->|implements| D_07
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff

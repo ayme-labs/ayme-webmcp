@@ -46,9 +46,6 @@ importers:
       "@ayme-dev/webmcp":
         specifier: workspace:*
         version: link:../../packages/webmcp
-      "@ayme-dev/webmcp-vite":
-        specifier: workspace:*
-        version: link:../../packages/webmcp-vite
       vue:
         specifier: ^3.5.42
         version: 3.5.42(typescript@6.0.3)
@@ -59,6 +56,9 @@ importers:
       "@ayme-dev/typescript-config":
         specifier: workspace:*
         version: link:../../packages/typescript-config
+      "@ayme-dev/unplugin-webmcp":
+        specifier: workspace:*
+        version: link:../../packages/unplugin-webmcp
       "@playwright/test":
         specifier: ^1.62.1
         version: 1.62.1
@@ -74,6 +74,9 @@ importers:
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1
+      playwright:
+        specifier: ^1.62.1
+        version: 1.62.1
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -98,7 +101,17 @@ importers:
 
   packages/typescript-config: {}
 
-  packages/webmcp:
+  packages/unplugin-webmcp:
+    dependencies:
+      "@ayme-dev/webmcp":
+        specifier: workspace:*
+        version: link:../webmcp
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      unplugin:
+        specifier: ^3.3.0
+        version: 3.3.0(rolldown@1.2.5)(vite@8.2.2(@types/node@24.13.3)(jiti@2.6.1)(yaml@2.9.0))
     devDependencies:
       "@ayme-dev/eslint-config":
         specifier: workspace:*
@@ -112,18 +125,11 @@ importers:
       tsdown:
         specifier: ^0.22.14
         version: 0.22.14(@volar/typescript@2.4.28(typescript@6.0.3))(typescript@6.0.3)(vue-tsc@3.3.11(typescript@6.0.3))
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
       vitest:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@24.13.3)(jsdom@30.0.1)(vite@8.2.2(@types/node@24.13.3)(jiti@2.6.1)(yaml@2.9.0))
 
-  packages/webmcp-vite:
-    dependencies:
-      "@ayme-dev/webmcp":
-        specifier: workspace:*
-        version: link:../webmcp
+  packages/webmcp:
     devDependencies:
       "@ayme-dev/eslint-config":
         specifier: workspace:*
@@ -515,10 +521,35 @@ packages:
       }
     engines: { node: ">=12" }
 
+  "@jridgewell/gen-mapping@0.3.13":
+    resolution:
+      {
+        integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==,
+      }
+
+  "@jridgewell/remapping@2.3.5":
+    resolution:
+      {
+        integrity: sha512-LI9u/+laYG4Ds1TDKSJW2YPrIlcVYOwi2fUC6xB43lueCjgxV4lffOCZCtYFiH6TNOX+tQKXx97T4IKHbhyHEQ==,
+      }
+
+  "@jridgewell/resolve-uri@3.1.2":
+    resolution:
+      {
+        integrity: sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw==,
+      }
+    engines: { node: ">=6.0.0" }
+
   "@jridgewell/sourcemap-codec@1.5.5":
     resolution:
       {
         integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==,
+      }
+
+  "@jridgewell/trace-mapping@0.3.31":
+    resolution:
+      {
+        integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==,
       }
 
   "@one-ini/wasm@0.1.1":
@@ -2866,6 +2897,42 @@ packages:
       }
     engines: { node: ">=22.19.0" }
 
+  unplugin@3.3.0:
+    resolution:
+      {
+        integrity: sha512-qa66K+crbfyE6JK10GjvbJeRrOsuC/JpbnHctfyp/i4oBTxWOzJfRZyDiOk1PtErMFRu8JhsU/wPvOdBNWe5Rg==,
+      }
+    engines: { node: ^20.19.0 || >=22.12.0 }
+    peerDependencies:
+      "@farmfe/core": "*"
+      "@rspack/core": "*"
+      bun-types-no-globals: "*"
+      esbuild: "*"
+      rolldown: "*"
+      rollup: "*"
+      unloader: "*"
+      vite: "*"
+      webpack: "*"
+    peerDependenciesMeta:
+      "@farmfe/core":
+        optional: true
+      "@rspack/core":
+        optional: true
+      bun-types-no-globals:
+        optional: true
+      esbuild:
+        optional: true
+      rolldown:
+        optional: true
+      rollup:
+        optional: true
+      unloader:
+        optional: true
+      vite:
+        optional: true
+      webpack:
+        optional: true
+
   uri-js@4.4.1:
     resolution:
       {
@@ -3014,6 +3081,12 @@ packages:
         integrity: sha512-BMhLD/Sw+GbJC21C/UgyaZX41nPt8bUTg+jWyDeg7e7YN4xOM05YPSIXceACnXVtqyEw/LMClUQMtMZ+PGGpqQ==,
       }
     engines: { node: ">=20" }
+
+  webpack-virtual-modules@0.6.2:
+    resolution:
+      {
+        integrity: sha512-66/V2i5hQanC51vBQKPH4aI8NMAcBW59FVBs+rC7eGHupMyfn34q7rZIE+ETlJ+XTevqfUhVVBgSUNSW2flEUQ==,
+      }
 
   whatwg-mimetype@5.0.0:
     resolution:
@@ -3390,7 +3463,24 @@ snapshots:
       wrap-ansi: 8.1.0
       wrap-ansi-cjs: wrap-ansi@7.0.0
 
+  "@jridgewell/gen-mapping@0.3.13":
+    dependencies:
+      "@jridgewell/sourcemap-codec": 1.5.5
+      "@jridgewell/trace-mapping": 0.3.31
+
+  "@jridgewell/remapping@2.3.5":
+    dependencies:
+      "@jridgewell/gen-mapping": 0.3.13
+      "@jridgewell/trace-mapping": 0.3.31
+
+  "@jridgewell/resolve-uri@3.1.2": {}
+
   "@jridgewell/sourcemap-codec@1.5.5": {}
+
+  "@jridgewell/trace-mapping@0.3.31":
+    dependencies:
+      "@jridgewell/resolve-uri": 3.1.2
+      "@jridgewell/sourcemap-codec": 1.5.5
 
   "@one-ini/wasm@0.1.1": {}
 
@@ -4635,6 +4725,15 @@ snapshots:
 
   undici@8.10.0: {}
 
+  unplugin@3.3.0(rolldown@1.2.5)(vite@8.2.2(@types/node@24.13.3)(jiti@2.6.1)(yaml@2.9.0)):
+    dependencies:
+      "@jridgewell/remapping": 2.3.5
+      picomatch: 4.0.7
+      webpack-virtual-modules: 0.6.2
+    optionalDependencies:
+      rolldown: 1.2.5
+      vite: 8.2.2(@types/node@24.13.3)(jiti@2.6.1)(yaml@2.9.0)
+
   uri-js@4.4.1:
     dependencies:
       punycode: 2.3.1
@@ -4707,6 +4806,8 @@ snapshots:
       xml-name-validator: 5.0.0
 
   webidl-conversions@8.0.1: {}
+
+  webpack-virtual-modules@0.6.2: {}
 
   whatwg-mimetype@5.0.0: {}
 

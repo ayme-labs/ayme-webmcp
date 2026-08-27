@@ -1,0 +1,569 @@
+import path from "node:path";
+
+import ts from "typescript";
+
+import type {
+  JsonPrimitive,
+  JsonSchema,
+  PomComponentManifest,
+  PomManifest,
+  PomMemberAccess,
+  PomMemberManifest,
+  ToolManifest,
+  ToolParameter,
+} from "@ayme-dev/webmcp";
+
+export type PomCompilerOptions = {
+  tsconfigPath?: string;
+};
+
+export type PomCompiler = {
+  derivePomManifests(fileName: string): PomManifest[];
+};
+
+/**
+ * Derives browser POM metadata from a TypeScript project without depending on
+ * a particular bundler.
+ */
+export function createPomCompiler(
+  options: PomCompilerOptions = {}
+): PomCompiler {
+  return {
+    derivePomManifests: (fileName) => derivePomManifests(fileName, options),
+  };
+}
+
+export function derivePomManifests(
+  fileName: string,
+  options: PomCompilerOptions = {}
+): PomManifest[] {
+  const absoluteFileName = path.resolve(fileName);
+  const config = projectConfigFor(absoluteFileName, options);
+  const program = ts.createProgram({
+    rootNames: [...new Set([...config.fileNames, absoluteFileName])],
+    options: {
+      ...config.options,
+      noEmit: true,
+    },
+  });
+  const sourceFile = program.getSourceFile(absoluteFileName);
+  if (!sourceFile)
+    throw new Error(`Could not read POM source ${absoluteFileName}.`);
+
+  const checker = program.getTypeChecker();
+  const manifests: PomManifest[] = [];
+  const components = new Map<ts.ClassDeclaration, PomComponentManifest>();
+
+  for (const declaration of sourceFile.statements) {
+    if (
+      !ts.isClassDeclaration(declaration) ||
+      !hasWebMcpClassDecorator(declaration)
+    )
+      continue;
+    if (!declaration.name)
+      throw new Error("A WebMCP page object needs a class name.");
+
+    const className = declaration.name.text;
+    const members = pomMembers(checker, declaration, components);
+    const tools = toolsForClass(checker, declaration);
+
+    manifests.push({
+      className,
+      members,
+      components: [...components.values()],
+      tools,
+    });
+  }
+
+  return manifests;
+}
+
+function projectConfigFor(
+  fileName: string,
+  options: PomCompilerOptions
+): ts.ParsedCommandLine {
+  const configPath = options.tsconfigPath
+    ? path.resolve(options.tsconfigPath)
+    : ts.findConfigFile(
+        path.dirname(fileName),
+        ts.sys.fileExists,
+        "tsconfig.json"
+      );
+  if (!configPath)
+    throw new Error(
+      `Could not find a tsconfig.json for POM source ${fileName}.`
+    );
+
+  const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
+  if (configFile.error) throw configError(configPath, configFile.error);
+
+  const config = ts.parseJsonConfigFileContent(
+    configFile.config,
+    ts.sys,
+    path.dirname(configPath)
+  );
+  const error = config.errors[0];
+  if (error) throw configError(configPath, error);
+  return config;
+}
+
+function configError(configPath: string, diagnostic: ts.Diagnostic) {
+  return new Error(
+    `Could not read TypeScript project configuration ${configPath}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")}`
+  );
+}
+
+function pomMembers(
+  checker: ts.TypeChecker,
+  declaration: ts.ClassDeclaration,
+  components: Map<ts.ClassDeclaration, PomComponentManifest>
+): PomMemberManifest[] {
+  return declaration.members.flatMap((member): PomMemberManifest[] => {
+    if (
+      !isPublicInstanceMember(member) ||
+      !member.name ||
+      !ts.isIdentifier(member.name)
+    )
+      return [];
+
+    const memberInfo = memberValueInfo(checker, member);
+    if (!memberInfo) return [];
+    if (
+      ts.isMethodDeclaration(member) &&
+      (toolDescription(member) !== undefined || member.parameters.length > 0)
+    ) {
+      return [];
+    }
+
+    if (isLocatorType(memberInfo.type)) {
+      return [
+        {
+          memberName: member.name.text,
+          kind: "locator",
+          access: memberInfo.access,
+        },
+      ];
+    }
+
+    const component = componentType(checker, memberInfo.type);
+    if (!component) return [];
+    const componentClassName = ensureComponentManifest(
+      checker,
+      component.declaration,
+      components
+    );
+    if (!componentClassName) return [];
+    return [
+      {
+        memberName: member.name.text,
+        kind: "component",
+        access: memberInfo.access,
+        componentClassName,
+        collection: component.collection,
+      },
+    ];
+  });
+}
+
+function memberValueInfo(
+  checker: ts.TypeChecker,
+  member: ts.ClassElement
+): { access: PomMemberAccess; type: ts.Type } | undefined {
+  if (ts.isPropertyDeclaration(member)) {
+    return { access: "field", type: checker.getTypeAtLocation(member.name) };
+  }
+  if (ts.isGetAccessorDeclaration(member)) {
+    const signature = checker.getSignatureFromDeclaration(member);
+    return signature
+      ? { access: "getter", type: checker.getReturnTypeOfSignature(signature) }
+      : undefined;
+  }
+  if (ts.isMethodDeclaration(member)) {
+    const signature = checker.getSignatureFromDeclaration(member);
+    return signature
+      ? { access: "method", type: checker.getReturnTypeOfSignature(signature) }
+      : undefined;
+  }
+  return undefined;
+}
+
+function ensureComponentManifest(
+  checker: ts.TypeChecker,
+  declaration: ts.ClassDeclaration,
+  components: Map<ts.ClassDeclaration, PomComponentManifest>
+) {
+  const className = declaration.name?.text;
+  if (!className) return undefined;
+
+  const existing = components.get(declaration);
+  if (existing) return existing.className;
+
+  components.set(declaration, { className, members: [], tools: [] });
+  components.set(declaration, {
+    className,
+    members: pomMembers(checker, declaration, components),
+    tools: toolsForClass(checker, declaration),
+  });
+  return className;
+}
+
+function toolsForClass(
+  checker: ts.TypeChecker,
+  declaration: ts.ClassDeclaration
+): ToolManifest[] {
+  const className = declaration.name?.text;
+  if (!className) throw new Error("A WebMCP tool class needs a class name.");
+
+  return declaration.members.flatMap((member) => {
+    if (!ts.isMethodDeclaration(member)) return [];
+    const description = toolDescription(member);
+    if (description === undefined) return [];
+    if (!member.name || !ts.isIdentifier(member.name)) {
+      throw new Error(
+        `WebMCP tool in ${className} needs an identifier method name.`
+      );
+    }
+
+    const methodName = member.name.text;
+    const parameters = member.parameters.map((parameter) =>
+      toolParameter(checker, parameter, className, methodName)
+    );
+    return [
+      {
+        methodName,
+        toolName: `${className}.${methodName}`,
+        description,
+        inputSchema: inputSchemaFor(parameters),
+        parameters,
+      } satisfies ToolManifest,
+    ];
+  });
+}
+
+function componentType(checker: ts.TypeChecker, type: ts.Type) {
+  const direct = componentTypeFromValue(checker, type, false);
+  if (direct) return direct;
+  if (!isNamedType(checker, type, "Promise")) return undefined;
+
+  const promiseType = type as ts.TypeReference;
+  const promiseValue = checker.getTypeArguments(promiseType)[0];
+  return promiseValue
+    ? componentTypeFromValue(checker, promiseValue, true)
+    : undefined;
+}
+
+function componentTypeFromValue(
+  checker: ts.TypeChecker,
+  type: ts.Type,
+  async: boolean
+) {
+  const arrayElement = checker.getIndexTypeOfType(type, ts.IndexKind.Number);
+  if (arrayElement) {
+    const declaration = componentDeclaration(checker, arrayElement);
+    if (declaration) return { declaration, collection: true, async };
+  }
+
+  const declaration = componentDeclaration(checker, type);
+  return declaration ? { declaration, collection: false, async } : undefined;
+}
+
+function componentDeclaration(checker: ts.TypeChecker, type: ts.Type) {
+  const symbol = type.aliasSymbol ?? type.getSymbol();
+  const declaration = symbol?.declarations?.find(ts.isClassDeclaration);
+  if (!declaration) return undefined;
+
+  const constructor = declaration.members.find(ts.isConstructorDeclaration);
+  const parameter = constructor?.parameters[0];
+  return parameter && isLocatorType(checker.getTypeAtLocation(parameter))
+    ? declaration
+    : undefined;
+}
+
+function isNamedType(checker: ts.TypeChecker, type: ts.Type, name: string) {
+  const symbol = type.aliasSymbol ?? type.getSymbol();
+  return symbol?.getName() === name;
+}
+
+function isPublicInstanceMember(member: ts.ClassElement) {
+  if (
+    !ts.isPropertyDeclaration(member) &&
+    !ts.isGetAccessorDeclaration(member) &&
+    !ts.isMethodDeclaration(member)
+  ) {
+    return false;
+  }
+  if (!member.name || !ts.isIdentifier(member.name)) return false;
+  return !(member.modifiers ?? []).some((modifier) =>
+    [
+      ts.SyntaxKind.PrivateKeyword,
+      ts.SyntaxKind.ProtectedKeyword,
+      ts.SyntaxKind.StaticKeyword,
+    ].includes(modifier.kind)
+  );
+}
+
+function isLocatorType(type: ts.Type) {
+  const symbol = type.aliasSymbol ?? type.getSymbol();
+  return (
+    symbol?.getName() === "BrowserLocator" || symbol?.getName() === "Locator"
+  );
+}
+
+function hasWebMcpClassDecorator(declaration: ts.ClassDeclaration) {
+  return (ts.getDecorators(declaration) ?? []).some((decorator) => {
+    return (
+      ts.isIdentifier(decorator.expression) &&
+      decorator.expression.text === "WebMCP"
+    );
+  });
+}
+
+function toolDescription(
+  declaration: ts.MethodDeclaration
+): string | undefined {
+  for (const decorator of ts.getDecorators(declaration) ?? []) {
+    if (!ts.isCallExpression(decorator.expression)) continue;
+    const callee = decorator.expression.expression;
+    if (
+      !ts.isPropertyAccessExpression(callee) ||
+      !ts.isIdentifier(callee.expression) ||
+      callee.expression.text !== "WebMCP" ||
+      callee.name.text !== "tool"
+    ) {
+      continue;
+    }
+
+    const options = decorator.expression.arguments[0];
+    if (!options || !ts.isObjectLiteralExpression(options)) return "";
+    const description = options.properties.find(
+      (property) =>
+        ts.isPropertyAssignment(property) &&
+        ts.isIdentifier(property.name) &&
+        property.name.text === "description"
+    );
+    if (
+      !description ||
+      !ts.isPropertyAssignment(description) ||
+      !ts.isStringLiteral(description.initializer)
+    ) {
+      return "";
+    }
+    return description.initializer.text;
+  }
+  return undefined;
+}
+
+function toolParameter(
+  checker: ts.TypeChecker,
+  parameter: ts.ParameterDeclaration,
+  className: string,
+  methodName: string
+): ToolParameter {
+  if (!ts.isIdentifier(parameter.name)) {
+    throw new Error(
+      `WebMCP tool ${className}.${methodName} needs identifier parameter names.`
+    );
+  }
+
+  const type = checker.getTypeAtLocation(parameter);
+  const optional =
+    parameter.questionToken !== undefined || typeIncludesUndefined(type);
+  return {
+    name: parameter.name.text,
+    optional,
+    schema: schemaForType(
+      checker,
+      type,
+      className,
+      methodName,
+      parameter.name.text
+    ),
+  };
+}
+
+function schemaForType(
+  checker: ts.TypeChecker,
+  type: ts.Type,
+  className: string,
+  methodName: string,
+  parameterName: string
+): JsonSchema {
+  const membersWithoutUndefined = type.isUnion()
+    ? type.types.filter(
+        (member) => (member.flags & ts.TypeFlags.Undefined) === 0
+      )
+    : undefined;
+  if (membersWithoutUndefined && membersWithoutUndefined.length === 1) {
+    return schemaForType(
+      checker,
+      membersWithoutUndefined[0],
+      className,
+      methodName,
+      parameterName
+    );
+  }
+
+  if (type.isUnion()) {
+    const members = membersWithoutUndefined ?? [];
+    const enumValues = members.map((member) => literalValue(checker, member));
+    if (enumValues.every((value) => value !== undefined)) {
+      const values = enumValues.filter(
+        (value): value is JsonPrimitive => value !== undefined
+      );
+      const valueTypes = new Set(values.map((value) => typeof value));
+      if (valueTypes.size === 1) {
+        const type = jsonPrimitiveSchemaType(values[0]);
+        if (type === "boolean" && values.length === 2) return { type };
+        if (type) return { type, enum: values };
+      }
+    }
+  }
+
+  if (type.flags & ts.TypeFlags.StringLike) return { type: "string" };
+  if (type.flags & ts.TypeFlags.NumberLike) return { type: "number" };
+  if (type.flags & ts.TypeFlags.BooleanLike) return { type: "boolean" };
+
+  if (type.flags & ts.TypeFlags.Object) {
+    return objectSchemaForType(
+      checker,
+      type,
+      className,
+      methodName,
+      parameterName
+    );
+  }
+
+  throw unsupportedInputType(
+    checker,
+    type,
+    className,
+    methodName,
+    parameterName
+  );
+}
+
+function objectSchemaForType(
+  checker: ts.TypeChecker,
+  type: ts.Type,
+  className: string,
+  methodName: string,
+  parameterName: string
+): JsonSchema {
+  if (
+    checker.isArrayType(type) ||
+    checker.isTupleType(type) ||
+    checker.getIndexTypeOfType(type, ts.IndexKind.String)
+  ) {
+    throw unsupportedInputType(
+      checker,
+      type,
+      className,
+      methodName,
+      parameterName
+    );
+  }
+  if (type.getCallSignatures().length || type.getConstructSignatures().length) {
+    throw unsupportedInputType(
+      checker,
+      type,
+      className,
+      methodName,
+      parameterName
+    );
+  }
+
+  const properties = checker.getPropertiesOfType(type);
+  const schemaProperties: Record<string, JsonSchema> = {};
+  const required: string[] = [];
+
+  for (const property of properties) {
+    const declaration = property.valueDeclaration ?? property.declarations?.[0];
+    if (!declaration || !ts.isPropertySignature(declaration)) {
+      throw unsupportedInputType(
+        checker,
+        type,
+        className,
+        methodName,
+        parameterName
+      );
+    }
+
+    const propertyType = checker.getTypeOfSymbolAtLocation(
+      property,
+      declaration
+    );
+    schemaProperties[property.name] = schemaForType(
+      checker,
+      propertyType,
+      className,
+      methodName,
+      property.name
+    );
+    if (
+      !(property.flags & ts.SymbolFlags.Optional) &&
+      !typeIncludesUndefined(propertyType)
+    ) {
+      required.push(property.name);
+    }
+  }
+
+  return {
+    type: "object",
+    properties: schemaProperties,
+    required,
+    additionalProperties: false,
+  };
+}
+
+function unsupportedInputType(
+  checker: ts.TypeChecker,
+  type: ts.Type,
+  className: string,
+  methodName: string,
+  parameterName: string
+) {
+  return new Error(
+    `Unsupported WebMCP input type for ${className}.${methodName}(${parameterName}): ${checker.typeToString(type)}.`
+  );
+}
+
+function literalValue(
+  checker: ts.TypeChecker,
+  type: ts.Type
+): JsonPrimitive | undefined {
+  if (type.isStringLiteral()) return type.value;
+  if (type.isNumberLiteral()) return type.value;
+  if (type.flags & ts.TypeFlags.BooleanLiteral) {
+    return checker.typeToString(type) === "true";
+  }
+  return undefined;
+}
+
+function jsonPrimitiveSchemaType(value: JsonPrimitive): JsonSchema["type"] {
+  if (typeof value === "string") return "string";
+  if (typeof value === "number") return "number";
+  if (typeof value === "boolean") return "boolean";
+  return undefined;
+}
+
+function typeIncludesUndefined(type: ts.Type) {
+  return (
+    type.isUnion() &&
+    type.types.some((member) => (member.flags & ts.TypeFlags.Undefined) !== 0)
+  );
+}
+
+function inputSchemaFor(parameters: readonly ToolParameter[]): JsonSchema {
+  const properties = Object.fromEntries(
+    parameters.map((parameter) => [parameter.name, parameter.schema])
+  );
+  const required = parameters
+    .filter((parameter) => !parameter.optional)
+    .map((parameter) => parameter.name);
+  return {
+    type: "object",
+    properties,
+    required,
+    additionalProperties: false,
+  };
+}

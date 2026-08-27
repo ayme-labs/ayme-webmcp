@@ -1,7 +1,7 @@
 {
-  "name": "@ayme-dev/webmcp-vite",
+  "name": "@ayme-dev/unplugin-webmcp",
   "version": "0.1.0",
-  "description": "Vite integration for WebMCP.",
+  "description": "Unplugin integration for WebMCP.",
   "license": "MIT",
   "publishConfig": {
     "access": "public"
@@ -15,6 +15,11 @@
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs",
       "default": "./dist/index.mjs"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.mts",
+      "import": "./dist/vite.mjs",
+      "default": "./dist/vite.mjs"
     }
   },
   "scripts": {
@@ -24,14 +29,15 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ayme-dev/webmcp": "workspace:*"
+    "@ayme-dev/webmcp": "workspace:*",
+    "typescript": "^6.0.3",
+    "unplugin": "^3.3.0"
   },
   "devDependencies": {
     "@ayme-dev/eslint-config": "workspace:*",
     "@ayme-dev/typescript-config": "workspace:*",
     "eslint": "^10.9.1",
     "tsdown": "^0.22.14",
-    "typescript": "^6.0.3",
     "vitest": "^4.1.11"
   }
 }
