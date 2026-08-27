@@ -1,0 +1,16 @@
+{
+  "name": "ayme-webmcp",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare": "lefthook install",
+    "hooks:install": "lefthook install",
+    "commitlint": "commitlint --verbose"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.0.2",
+    "@commitlint/types": "^21.0.1",
+    "@types/node": "^24.0.0",
+    "lefthook": "^2.1.8"
+  }
+}
