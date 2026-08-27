@@ -6,15 +6,15 @@
 
 | Measure | Count | Composition |
 | --- | --- | --- |
-| C (content) | 6 | validated B 0 · answered Q 0 · accepted D 6 |
+| C (content) | 7 | validated B 0 · answered Q 0 · accepted D 6 · active Discovery 1 |
 | V (uncertainty) | 0 | open Q 0 · pending B 0 · W below DoR 0 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
-| A-01 | Repository foundation | 3 | 0 | C: validated B 0 · answered Q 0 · accepted D 3; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 3 | 0 | C: validated B 0 · answered Q 0 · accepted D 3; V: open Q 0 · pending B 0 · W below DoR 0 |
+| A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
+| A-02 | Page Object interoperability | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
 
@@ -50,6 +50,12 @@
 | --- | --- | --- | --- | --- |
 | Q-01 | Choose the public activation interface | complicated | D-06 | deferred |
 
+## Discoveries
+
+| ID | Title | Tags | Status |
+| --- | --- | --- | --- |
+| Y-01 | Shared Page Object behavior | Generated WebMCP Tool, Page Object Model (POM) | active |
+
 ## Dependency graph
 
 ```mermaid
@@ -66,6 +72,7 @@ graph TD
   D_06["D-06: Separate POM compilation from live activation"]:::decision
   D_07["D-07: Use structural POMs and explicit WebMCP exposure"]:::decision
   Q_01["Q-01: Choose the public activation interface"]:::question
+  Y_01["Y-01: Shared Page Object behavior"]:::discovery
   A_01["A-01: Repository foundation"]:::area
   A_02["A-02: Page Object interoperability"]:::area
   D_05 -->|supersedes| D_01
@@ -77,6 +84,7 @@ graph TD
   W_02 -->|implements| D_05
   W_02 -->|implements| D_06
   W_02 -->|implements| D_07
+  W_02 -->|produces| Y_01
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff

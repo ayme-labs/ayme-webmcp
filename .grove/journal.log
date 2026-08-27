@@ -152,3 +152,6 @@
 {"v":1,"session":"host:45aecb9ad16cc81e","cmd":"field","ts":"2026-08-27T13:15:46Z","inv":{"id":"W-02","field":"evidence","op":"field_pop_last"}}
 {"v":1,"session":"host:45aecb9ad16cc81e","cmd":"set","ts":"2026-08-27T13:16:23Z","inv":{"had_session_at_before":true,"old_w_status":"progress","had_session_before":true,"id":"W-02","op":"set_w_status_with_goals","goal_statuses":{"G-02":"unverified"},"old_session_at":"2026-08-27T12:43:32Z","old_session":"host:45aecb9ad16cc81e"}}
 {"v":1,"session":"host:45aecb9ad16cc81e","cmd":"gate","ts":"2026-08-27T13:16:23Z","inv":{"dones":2,"overflows":[],"invalidated":[],"op":"gate","tw":1,"empty":false,"overflow_counts":{}}}
+{"v":1,"session":"host:45aecb9ad16cc81e","cmd":"add","ts":"2026-08-27T13:24:26Z","inv":{"id":"Y-01","op":"rm_node"}}
+{"v":1,"session":"host:45aecb9ad16cc81e","cmd":"field","ts":"2026-08-27T13:25:02Z","inv":{"id":"Y-01","field":"invariant","op":"field_pop_last"}}
+{"v":1,"session":"host:45aecb9ad16cc81e","cmd":"set","ts":"2026-08-27T13:25:03Z","inv":{"old_status":"proposed","id":"Y-01","op":"set_status_plain"}}

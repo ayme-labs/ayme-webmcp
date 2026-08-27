@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:b36874a0cf7233f86b4d2c8c30f7e39713e482dfea114b7138f12148ff2221b3
+# checksum: sha256:20f32e8d799e49cc805f5b049254fd4ecb64a4d6121f0034c73c1c35531bdc30
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -53,7 +53,7 @@ w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:1
   why:
     | The first repository slice must prove the development and packaging loop before WebMCP spike code moves.
 
-w W-02 type=feature status=done cynefin=complicated t_created=2026-08-27T12:43:05Z t_updated=2026-08-27T13:16:23Z "Preserve spike behavior through package extraction"
+w W-02 type=feature status=done cynefin=complicated t_created=2026-08-27T12:43:05Z t_updated=2026-08-27T13:24:26Z "Preserve spike behavior through package extraction"
   goals: G-02
   fitness: G-02=+1
   surface: packages/webmcp, packages/webmcp-vite, packages/unplugin-webmcp, apps/example-vue, package.json, pnpm-workspace.yaml, pnpm-lock.yaml, turbo.json, .grove
@@ -178,6 +178,12 @@ q Q-01 status=deferred cynefin=complicated t_created=2026-08-27T12:43:03Z t_upda
   exit:
     | Compare an explicit runtime object with a direct activation function against the packaged implementation, then agree on naming, disposal, and whether one activation may manage several Page Objects.
 
+y Y-01 status=active t_created=2026-08-27T13:24:26Z t_updated=2026-08-27T13:25:03Z "Shared Page Object behavior"
+  tags: Page Object Model (POM), Generated WebMCP Tool
+  surface: packages/webmcp, packages/unplugin-webmcp, apps/example-vue
+  invariant:
+    | A single authored Page Object definition can preserve the same behavior across Playwright execution and Generated WebMCP Tools when compilation and live activation remain separate.
+
 a A-01 status=present t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:42:21Z "Repository foundation"
   surface: apps, packages, package.json, pnpm-workspace.yaml, pnpm-lock.yaml, turbo.json, devbox.json, devbox.lock, .gitignore
 
@@ -192,3 +198,4 @@ e W-01 implements D-04 t_created=2026-08-27T08:43:22Z
 e W-02 implements D-05 t_created=2026-08-27T12:43:18Z
 e W-02 implements D-06 t_created=2026-08-27T12:43:18Z
 e W-02 implements D-07 t_created=2026-08-27T12:43:19Z
+e W-02 produces Y-01 t_created=2026-08-27T13:24:26Z
