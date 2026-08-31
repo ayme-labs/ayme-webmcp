@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:8988eb20842c369e455ad91b688710daad6787ddde8b958ce511c9474a7c3a66
+# checksum: sha256:8c8ac0a880c76fcd81fe2c2959bcb4e533756d94e63c99f2c9f44d5213906b39
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -22,6 +22,10 @@ g G-04 status=verified fitness_kind=count t_created=2026-08-31T10:13:13Z t_updat
   area: A-02
   fitness_target: 1
   fitness_current: 1
+
+g G-05 status=verified fitness_kind=boolean t_created=2026-08-31T13:49:13Z t_updated=2026-08-31T13:59:48Z "Vue package supports Vue 3.2 consumers"
+  area: A-02
+  fitness_current: true
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -153,6 +157,25 @@ w W-04 type=feature status=done cynefin=complicated t_created=2026-08-31T10:13:1
   why:
     | This tracer bullet validates the observation seam and tool transport before structural parsing or POM projection are introduced.
 
+w W-05 type=feature status=done cynefin=clear t_created=2026-08-31T13:49:35Z t_updated=2026-08-31T13:59:48Z "Enforce the Vue 3.2 support floor"
+  goals: G-05
+  fitness: G-05=+1
+  surface: .github/workflows/vue-compatibility.yml, packages/webmcp-vue/package.json, pnpm-lock.yaml
+  ac:
+    | The Vue peer dependency starts at exact Vue 3.2.0 while the workspace development dependency remains on the current version.
+    | The package typecheck and lifecycle tests pass against exact Vue 3.2.0, 3.3.0, 3.4.0, 3.5.29, and 3.5.42.
+    | A focused GitHub Actions job installs exact Vue 3.2.0, builds the core workspace dependency, and runs the Vue package typecheck and lifecycle tests.
+  hypothesis:
+    | The Vue lifecycle APIs used by the package are compatible from Vue 3.2.0 and the existing tests exercise the complete integration surface.
+  evidence_strategy:
+    | Run the exact-version compatibility checks, inspect the workflow command path, and run the full repository check.
+  evidence:
+    | Exact Vue 3.2.0, 3.3.0, 3.4.0, 3.5.29, and 3.5.42 checks passed: package typecheck clean and lifecycle tests 3/3 green for every version.
+    | The minimum-version workflow command path passed locally: core package build clean, Vue package typecheck clean, and lifecycle tests 3/3 green with exact Vue 3.2.0.
+    | Full pnpm check passed: build, lint, typecheck, unit tests, Playwright 4/4, and Turbo Boundaries checked 54 files with no issues.
+  plan:
+    | Lower only the peer dependency, preserve the development version, and add one minimum-version workflow job.
+
 d D-01 status=superseded t_created=2026-08-27T08:43:08Z t_updated=2026-08-27T11:48:35Z "Use the five-workspace monorepo layout"
   context:
     | The open-source WebMCP library needs independently publishable core and Vite packages, a private example application, and shared tooling configuration.
@@ -244,6 +267,14 @@ q Q-01 status=deferred cynefin=complicated t_created=2026-08-27T12:43:03Z t_upda
   exit:
     | Compare an explicit runtime object with a direct activation function against the packaged implementation, then agree on naming, disposal, and whether one activation may manage several Page Objects.
 
+b B-01 status=validated cynefin=complicated t_created=2026-08-31T13:49:50Z t_updated=2026-08-31T13:49:50Z "Vue 3.2.0 supports lifecycle integration"
+  vm:
+    | Run the Vue package typecheck and lifecycle tests against exact Vue 3.2.0, 3.3.0, 3.4.0, 3.5.29, and 3.5.42.
+  threshold:
+    | Every exact version passes typechecking and all three lifecycle tests.
+  result:
+    | Every exact version passed typechecking and all three lifecycle tests in an isolated checkout at commit 4f510a0.
+
 y Y-01 status=active t_created=2026-08-27T13:24:26Z t_updated=2026-08-27T13:25:03Z "Shared Page Object behavior"
   tags: Page Object Model (POM), Generated WebMCP Tool
   surface: packages/webmcp, packages/unplugin-webmcp, apps/example-vue
@@ -261,6 +292,7 @@ a A-01 status=present t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:42:
 
 a A-02 status=present t_created=2026-08-27T12:43:02Z t_updated=2026-08-27T12:43:02Z "Page Object interoperability"
 
+e B-01 targets W-05 t_created=2026-08-31T13:49:50Z
 e D-05 supersedes D-01 t_created=2026-08-27T11:48:25Z
 e Q-01 asks D-06 t_created=2026-08-27T12:43:04Z
 e Q-01 asks W-03 t_created=2026-08-27T14:13:29Z
