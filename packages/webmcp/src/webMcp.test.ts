@@ -75,13 +75,10 @@ describe("WebMCP publisher", () => {
         registrations.push({ tool, signal: options.signal });
       }
     );
-    vi.stubGlobal("document", {
-      documentElement: {},
-      modelContext: { registerTool },
-    });
+    vi.stubGlobal("document", { documentElement: {} });
 
     const registry = await import("./registry");
-    const { registerWebMcpTools } = await import("./webMcp");
+    const { synchronizeWebMcpTools } = await import("./webMcp");
     registry.configureAymeRuntime({} as BrowserPage);
 
     let rootCount = 1;
@@ -120,7 +117,7 @@ describe("WebMCP publisher", () => {
     );
     const pageRegistration = registry.createPageRegistration(ItemsPage);
 
-    const publication = await registerWebMcpTools(0);
+    const publication = await synchronizeWebMcpTools({ registerTool });
     expect(registrations.map(({ tool }) => tool.name)).toEqual([
       "get_page_state",
       "addItem",
@@ -174,13 +171,10 @@ describe("WebMCP publisher", () => {
         registrations.push({ tool, signal: options.signal });
       }
     );
-    vi.stubGlobal("document", {
-      documentElement: {},
-      modelContext: { registerTool },
-    });
+    vi.stubGlobal("document", { documentElement: {} });
 
     const registry = await import("./registry");
-    const { registerWebMcpTools } = await import("./webMcp");
+    const { synchronizeWebMcpTools } = await import("./webMcp");
     registry.configureAymeRuntime({} as BrowserPage);
 
     class SharedPage {}
@@ -196,7 +190,7 @@ describe("WebMCP publisher", () => {
     );
 
     const first = registry.createPageRegistration(SharedPage);
-    const publication = await registerWebMcpTools(0);
+    const publication = await synchronizeWebMcpTools({ registerTool });
     expect(registrations.map(({ tool }) => tool.name)).toEqual([
       "get_page_state",
       "run",

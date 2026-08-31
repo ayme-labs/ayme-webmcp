@@ -6,8 +6,9 @@ import {
   configureAymeRuntime,
   listRegisteredPoms,
   probeRegisteredPomMembers,
-  registerWebMcpTools,
   subscribeToRegisteredPoms,
+  synchronizeWebMcpTools,
+  waitForWebMcpDriver,
 } from "@ayme-dev/webmcp/internal";
 import { usePageObject } from "@ayme-dev/webmcp-vue";
 import { ListPage } from "../../playwright/pom/ListPage";
@@ -50,17 +51,22 @@ export function useAymeExperiment() {
     unsubscribeFromRegisteredPoms =
       subscribeToRegisteredPoms(updateRegisteredPoms);
 
-    const registration = await registerWebMcpTools();
+    const driver = await waitForWebMcpDriver();
+    if (!driver) {
+      webMcpStatus.value =
+        "document.modelContext is unavailable. Debug console remains available.";
+      return;
+    }
+
+    const registration = await synchronizeWebMcpTools(driver);
     if (unmounted) {
       registration.dispose();
       return;
     }
     disposeWebMcpTools = registration.dispose;
-    webMcpStatus.value = registration.registered
-      ? registration.message
-      : `${registration.message} Debug console remains available.`;
+    webMcpStatus.value = registration.message;
 
-    if (registration.registered && !window.__AYME_DISABLE_RELAY__) {
+    if (!window.__AYME_DISABLE_RELAY__) {
       try {
         await loadRelayEmbed();
       } catch (error) {

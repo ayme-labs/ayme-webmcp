@@ -4,24 +4,19 @@ import { listRegisteredPomTools, subscribeToRegisteredPoms } from "./registry";
 
 type PublishedTool = RegisteredPomTool | typeof getPageStateTool;
 
+export type WebMcpDriver = Pick<
+  NonNullable<typeof document.modelContext>,
+  "registerTool"
+>;
+
 export type WebMcpRegistration = {
-  registered: boolean;
   message: string;
   dispose(): void;
 };
 
-export async function registerWebMcpTools(
-  timeoutMs = 2_000
+export async function synchronizeWebMcpTools(
+  driver: WebMcpDriver
 ): Promise<WebMcpRegistration> {
-  const modelContext = await waitForModelContext(timeoutMs);
-  if (!modelContext) {
-    return {
-      registered: false,
-      message: "document.modelContext is unavailable.",
-      dispose() {},
-    };
-  }
-
   const published = new Map<
     string,
     { tool: PublishedTool; controller: AbortController }
@@ -56,7 +51,7 @@ export async function registerWebMcpTools(
           const controller = new AbortController();
           published.set(name, { tool, controller });
           try {
-            await modelContext.registerTool(tool, {
+            await driver.registerTool(tool, {
               signal: controller.signal,
             });
           } catch (error) {
@@ -77,7 +72,6 @@ export async function registerWebMcpTools(
   await synchronize();
 
   return {
-    registered: true,
     message: `Registered ${published.size} WebMCP tools and watching for changes.`,
     dispose() {
       if (disposed) return;
@@ -90,10 +84,10 @@ export async function registerWebMcpTools(
   };
 }
 
-function waitForModelContext(timeoutMs: number) {
+export function waitForWebMcpDriver(timeoutMs = 2_000) {
   const deadline = Date.now() + timeoutMs;
 
-  return new Promise<typeof document.modelContext>((resolve) => {
+  return new Promise<WebMcpDriver | undefined>((resolve) => {
     const check = () => {
       if (document.modelContext) {
         resolve(document.modelContext);

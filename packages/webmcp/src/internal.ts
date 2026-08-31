@@ -8,4 +8,5 @@ export {
   subscribeToRegisteredPoms,
 } from "./registry";
 export type { RegisteredPom } from "./registry";
-export { registerWebMcpTools } from "./webMcp";
+export { synchronizeWebMcpTools, waitForWebMcpDriver } from "./webMcp";
+export type { WebMcpDriver, WebMcpRegistration } from "./webMcp";
