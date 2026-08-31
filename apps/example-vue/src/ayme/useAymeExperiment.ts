@@ -4,12 +4,12 @@ import type { RegisteredPom } from "@ayme-dev/webmcp/internal";
 import {
   createBrowserPage,
   configureAymeRuntime,
-  createPageRegistration,
   listRegisteredPoms,
   probeRegisteredPomMembers,
   registerWebMcpTools,
   subscribeToRegisteredPoms,
 } from "@ayme-dev/webmcp/internal";
+import { usePageObject } from "@ayme-dev/webmcp-vue";
 import { ListPage } from "../../playwright/pom/ListPage";
 
 export function useAymeExperiment() {
@@ -32,7 +32,7 @@ export function useAymeExperiment() {
   });
 
   configureAymeRuntime(browserRuntime.page);
-  const listPageRegistration = createPageRegistration(ListPage);
+  usePageObject(ListPage);
 
   const trace = computed(() => {
     void traceRevision.value;
@@ -87,7 +87,6 @@ export function useAymeExperiment() {
   });
 
   onBeforeUnmount(() => {
-    listPageRegistration.dispose();
     demoMutationObserver?.disconnect();
     if (probeTimer !== undefined) window.clearTimeout(probeTimer);
     unsubscribeFromRegisteredPoms?.();
