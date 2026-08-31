@@ -12,23 +12,48 @@ type PublishedTool = {
   execute(args: unknown): Promise<unknown>;
 };
 
+type RecordingDriver = {
+  tools: PublishedTool[];
+};
+
 type ListActions = {
   addItem(text: string): Promise<void>;
   archiveItem(index: number): Promise<void>;
   renameItem(index: number, text: string): Promise<void>;
 };
 
+const initialToolNames = [
+  "get_page_state",
+  "ListPage.addItem",
+  "ListPage.items.archive",
+  "ListPage.items.rename",
+];
+
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(() => {
     const publishedTools: PublishedTool[] = [];
+    const driver: RecordingDriver & {
+      registerTool(
+        tool: PublishedTool,
+        options: { signal: AbortSignal }
+      ): Promise<void>;
+    } = {
+      tools: publishedTools,
+      async registerTool(tool, { signal }) {
+        publishedTools.push(tool);
+        signal.addEventListener(
+          "abort",
+          () => {
+            const index = publishedTools.indexOf(tool);
+            if (index >= 0) publishedTools.splice(index, 1);
+          },
+          { once: true }
+        );
+      },
+    };
     Object.defineProperty(document, "modelContext", {
       configurable: false,
-      value: {
-        async registerTool(tool: PublishedTool) {
-          publishedTools.push(tool);
-          window.__AYME_WEBMCP_TOOLS__ = publishedTools;
-        },
-      },
+      value: driver,
     });
     window.__AYME_DISABLE_RELAY__ = true;
   });
@@ -57,9 +82,9 @@ async function runListActions(
 async function executePublishedTool(page: Page, name: string, args: unknown) {
   const result = await page.evaluate(
     async ({ args, name }) => {
-      const tool = window.__AYME_WEBMCP_TOOLS__?.find(
-        (candidate) => candidate.name === name
-      );
+      const tool = (
+        document.modelContext as unknown as RecordingDriver
+      ).tools.find((candidate) => candidate.name === name);
       if (!tool) throw new Error(`${name} WebMCP tool was not published.`);
       return await tool.execute(args);
     },
@@ -67,6 +92,20 @@ async function executePublishedTool(page: Page, name: string, args: unknown) {
   );
 
   expect(result).toEqual({ ok: true });
+}
+
+async function recordedTools(page: Page) {
+  return await page.evaluate(() =>
+    (document.modelContext as unknown as RecordingDriver).tools.map((tool) => ({
+      description: tool.description,
+      inputSchema: tool.inputSchema,
+      name: tool.name,
+    }))
+  );
+}
+
+async function recordedToolNames(page: Page) {
+  return (await recordedTools(page)).map((tool) => tool.name);
 }
 
 test("derives nested object input schemas from POM action types", () => {
@@ -161,18 +200,14 @@ test("publishes the current page as ref-bearing ARIA state", async ({
   await page.goto("/");
   await expect
     .poll(async () =>
-      page.evaluate(() =>
-        window.__AYME_WEBMCP_TOOLS__?.some(
-          (candidate) => candidate.name === "get_page_state"
-        )
-      )
+      (await recordedToolNames(page)).includes("get_page_state")
     )
     .toBe(true);
 
   const result = await page.evaluate(async () => {
-    const tool = window.__AYME_WEBMCP_TOOLS__?.find(
-      (candidate) => candidate.name === "get_page_state"
-    );
+    const tool = (
+      document.modelContext as unknown as RecordingDriver
+    ).tools.find((candidate) => candidate.name === "get_page_state");
     if (!tool) throw new Error("get_page_state WebMCP tool was not published.");
     return {
       hasPomIdentity: "pomId" in tool,
@@ -197,11 +232,8 @@ test("runs the same POM behavior through registered WebMCP tools", async ({
 }) => {
   await page.goto("/");
   await expect
-    .poll(
-      async () =>
-        await page.evaluate(() => window.__AYME_WEBMCP_TOOLS__?.length)
-    )
-    .toBe(4);
+    .poll(async () => await recordedToolNames(page))
+    .toEqual(initialToolNames);
 
   await runListActions(
     page,
@@ -221,6 +253,34 @@ test("runs the same POM behavior through registered WebMCP tools", async ({
     },
     "Added through WebMCP"
   );
+});
+
+test("publishes collection tools only while a component root is live", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect
+    .poll(async () => await recordedToolNames(page))
+    .toEqual(initialToolNames);
+
+  await executePublishedTool(page, "ListPage.items.archive", {
+    index: 0,
+    args: {},
+  });
+  await executePublishedTool(page, "ListPage.items.archive", {
+    index: 0,
+    args: {},
+  });
+  await expect
+    .poll(async () => await recordedToolNames(page))
+    .toEqual(["get_page_state", "ListPage.addItem"]);
+
+  await executePublishedTool(page, "ListPage.addItem", {
+    text: "Restore live component tools",
+  });
+  await expect
+    .poll(async () => await recordedToolNames(page))
+    .toEqual(initialToolNames);
 });
 
 test("demonstrates the list app and invokes the generated POM tools from the debug console", async ({
@@ -267,19 +327,10 @@ test("demonstrates the list app and invokes the generated POM tools from the deb
     itemInstances.locator('[data-instance-path="ListPage.items[0]"]')
   ).toContainText("present");
   await expect
-    .poll(
-      async () =>
-        await page.evaluate(() => window.__AYME_WEBMCP_TOOLS__?.length)
-    )
-    .toBe(4);
+    .poll(async () => await recordedToolNames(page))
+    .toEqual(initialToolNames);
 
-  const tools = await page.evaluate(() =>
-    window.__AYME_WEBMCP_TOOLS__?.map((tool) => ({
-      name: tool.name,
-      description: tool.description,
-      inputSchema: tool.inputSchema,
-    }))
-  );
+  const tools = await recordedTools(page);
 
   expect(tools).toEqual([
     {
@@ -352,9 +403,9 @@ test("demonstrates the list app and invokes the generated POM tools from the deb
   ).toBeVisible();
 
   const invalidToolInputError = await page.evaluate(async () => {
-    const tool = window.__AYME_WEBMCP_TOOLS__?.find(
-      (candidate) => candidate.name === "ListPage.items.archive"
-    );
+    const tool = (
+      document.modelContext as unknown as RecordingDriver
+    ).tools.find((candidate) => candidate.name === "ListPage.items.archive");
     if (!tool) throw new Error("Archive WebMCP tool was not published.");
     try {
       await tool.execute({ index: -1, args: { unexpected: true } });
@@ -366,15 +417,10 @@ test("demonstrates the list app and invokes the generated POM tools from the deb
 
   expect(invalidToolInputError).toContain("index must be at least 0");
 
-  const archiveResult = await page.evaluate(async () => {
-    const tool = window.__AYME_WEBMCP_TOOLS__?.find(
-      (candidate) => candidate.name === "ListPage.items.archive"
-    );
-    if (!tool) throw new Error("Archive WebMCP tool was not published.");
-    return await tool.execute({ index: 0, args: {} });
+  await executePublishedTool(page, "ListPage.items.archive", {
+    index: 0,
+    args: {},
   });
-
-  expect(archiveResult).toEqual({ ok: true });
   await expect(
     page.getByText("Prepare launch notes", { exact: true })
   ).toBeVisible();
