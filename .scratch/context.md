@@ -409,8 +409,8 @@
   - Sources: Current conversation, implementation authorization.
 
 - P-061 — Choose how to distribute the reviewed Playwright runtime
-  - Origin: Agent
+  - Origin: User
   - Area: A-002
-  - Status: Open
-  - Content: The exact Git-subdirectory dependency installs Playwright source but not the generated `playwright-core/lib/coreBundle.js`. A `prepare` hook using Playwright's existing root builder passed in a populated checkout but failed in a cold pnpm install because root build dependencies are unavailable; that attempted hook was reverted from Playwright PR #7. Choose between committing a generated runtime artifact in the fork, adding a dedicated core-only build path, publishing an immutable built package artifact, or accepting a broad root install and build during dependency preparation before W-09 continues.
-  - Sources: W-09 dependency gate and Playwright PR #7 cold-install experiment.
+  - Status: Accepted
+  - Content: Commit Playwright's generated `src/generated/injectedScriptSource.ts` artifact in the fork, include that single artifact in the `playwright-core` Git-subdirectory package, and let `@ayme-dev/playwright-browser` consume it as build-time text from an exact reviewed commit. Do not commit the full `coreBundle.js`, add a consumer-side Playwright build, or introduce a publication pipeline for this slice.
+  - Sources: W-09 dependency gate, Playwright PR #7 cold-install experiment, and user approval of the generated-source recommendation.
