@@ -201,6 +201,7 @@ const locatorMembers = [
 ] as const;
 
 const fullMatched = new Set([
+  "Page.ariaSnapshot",
   "Page.content",
   "Page.getByAltText",
   "Page.getByLabel",
@@ -210,6 +211,7 @@ const fullMatched = new Set([
   "Page.getByText",
   "Page.getByTitle",
   "Page.locator",
+  "Page.setDefaultTimeout",
   "Page.title",
   "Page.url",
   "Locator.all",

@@ -3,6 +3,7 @@
  * Keep this selection explicit: catalog classifications do not promote support.
  */
 export const currentSupport = [
+  "Page.ariaSnapshot",
   "Page.content",
   "Page.getByAltText",
   "Page.getByLabel",
@@ -12,6 +13,7 @@ export const currentSupport = [
   "Page.getByText",
   "Page.getByTitle",
   "Page.locator",
+  "Page.setDefaultTimeout",
   "Page.title",
   "Page.url",
   "Locator.all",
@@ -24,7 +26,6 @@ export const currentSupport = [
   "Locator.fill",
   "Locator.filter",
   "Locator.first",
-  "Locator.focus",
   "Locator.getAttribute",
   "Locator.getByAltText",
   "Locator.getByLabel",
@@ -46,7 +47,6 @@ export const currentSupport = [
   "Locator.locator",
   "Locator.nth",
   "Locator.or",
-  "Locator.page",
   "Locator.press",
   "Locator.textContent",
   "Locator.waitFor",

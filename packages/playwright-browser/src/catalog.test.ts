@@ -13,6 +13,59 @@ import {
 
 const require = createRequire(import.meta.url);
 
+const selectedPageMembers = [
+  "Page.ariaSnapshot",
+  "Page.content",
+  "Page.getByAltText",
+  "Page.getByLabel",
+  "Page.getByPlaceholder",
+  "Page.getByRole",
+  "Page.getByTestId",
+  "Page.getByText",
+  "Page.getByTitle",
+  "Page.locator",
+  "Page.setDefaultTimeout",
+  "Page.title",
+  "Page.url",
+] as const;
+
+const selectedLocatorMembers = [
+  "Locator.all",
+  "Locator.allInnerTexts",
+  "Locator.allTextContents",
+  "Locator.and",
+  "Locator.ariaSnapshot",
+  "Locator.click",
+  "Locator.count",
+  "Locator.fill",
+  "Locator.filter",
+  "Locator.first",
+  "Locator.getAttribute",
+  "Locator.getByAltText",
+  "Locator.getByLabel",
+  "Locator.getByPlaceholder",
+  "Locator.getByRole",
+  "Locator.getByTestId",
+  "Locator.getByText",
+  "Locator.getByTitle",
+  "Locator.innerHTML",
+  "Locator.innerText",
+  "Locator.inputValue",
+  "Locator.isChecked",
+  "Locator.isDisabled",
+  "Locator.isEditable",
+  "Locator.isEnabled",
+  "Locator.isHidden",
+  "Locator.isVisible",
+  "Locator.last",
+  "Locator.locator",
+  "Locator.nth",
+  "Locator.or",
+  "Locator.press",
+  "Locator.textContent",
+  "Locator.waitFor",
+] as const;
+
 describe("the Playwright compatibility catalog", () => {
   it("classifies every member of the pinned Page and Locator interfaces once", () => {
     const upstreamMembers = membersFromPinnedPlaywrightTypes();
@@ -40,19 +93,27 @@ describe("the Playwright compatibility catalog", () => {
       ])
     );
 
-    expect(currentSupport).toHaveLength(47);
-    expect(new Set(currentSupport).size).toBe(47);
+    expect(currentSupport).toEqual([
+      ...selectedPageMembers,
+      ...selectedLocatorMembers,
+    ]);
+    expect(selectedPageMembers).toHaveLength(13);
+    expect(selectedLocatorMembers).toHaveLength(34);
     for (const member of currentSupport)
       expect(catalogByMember.get(member)?.api).toBe("Full");
 
-    for (const action of ["click", "fill", "press"] as const) {
-      const member = catalogByMember.get(`Locator.${action}`);
-      expect(member).toMatchObject({
+    for (const member of selectedPageMembers)
+      expect(catalogByMember.get(member)).toMatchObject({
         api: "Full",
-        execution: "Browser-emulated",
+        execution: "Matched",
       });
-      expect(currentSupport).toContain(`Locator.${action}`);
-    }
+
+    expect(
+      currentSupport.filter(
+        (member) =>
+          catalogByMember.get(member)?.execution === "Browser-emulated"
+      )
+    ).toEqual(["Locator.click", "Locator.fill", "Locator.press"]);
   });
 
   it("records the pinned @playwright/test provenance without a generated runtime", () => {
