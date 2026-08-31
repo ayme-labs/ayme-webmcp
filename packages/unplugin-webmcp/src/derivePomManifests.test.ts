@@ -1,5 +1,10 @@
 import path from "node:path";
 
+import {
+  compatibilityCatalog,
+  type CompatibilityMember,
+} from "@ayme-dev/playwright-browser/catalog";
+import { currentSupport } from "@ayme-dev/playwright-browser/currentSupport";
 import { describe, expect, it } from "vitest";
 
 import { derivePomManifests } from "./index";
@@ -51,6 +56,117 @@ describe("derivePomManifests", () => {
         ],
       },
     ]);
+  });
+
+  it("accepts selected Page and Locator members, including browser-emulated actions", () => {
+    expect(() => manifestFor("selectedCompatibilityPom")).not.toThrow();
+  });
+
+  it("rejects compatible members that are not selected for the current runtime", () => {
+    expect(() => manifestFor("unselectedCompatibilityPom")).toThrow(
+      "Playwright member Locator.page is compatible but unavailable in the current browser runtime."
+    );
+  });
+
+  it("rejects partially compatible members that are not selected for the current runtime", () => {
+    const member = compatibilityMember("Locator.page");
+    const api = member.api;
+    member.api = "Partial";
+
+    try {
+      expect(() => manifestFor("unselectedCompatibilityPom")).toThrow(
+        "Playwright member Locator.page is compatible but unavailable in the current browser runtime."
+      );
+    } finally {
+      member.api = api;
+    }
+  });
+
+  it("rejects architecturally unsupported members", () => {
+    expect(() => manifestFor("unsupportedCompatibilityPom")).toThrow(
+      "Playwright member Page.goto is architecturally unsupported."
+    );
+  });
+
+  it("checks inherited decorated tools", () => {
+    expect(() => manifestFor("inheritedCompatibilityPom")).toThrow(
+      "Playwright member Locator.hover is architecturally unsupported."
+    );
+  });
+
+  it("checks generic inherited decorated tools", () => {
+    expect(() => manifestFor("genericInheritedCompatibilityPom")).toThrow(
+      "Playwright member Locator.hover is architecturally unsupported."
+    );
+  });
+
+  it("rejects calls absent from the compatibility catalog", () => {
+    const catalog = compatibilityCatalog as CompatibilityMember[];
+    const index = catalog.findIndex(
+      (member) => member.interface === "Page" && member.member === "goto"
+    );
+    const [member] = catalog.splice(index, 1);
+
+    try {
+      expect(() => manifestFor("unsupportedCompatibilityPom")).toThrow(
+        "Playwright member Page.goto is not classified in the compatibility catalog."
+      );
+    } finally {
+      catalog.splice(index, 0, member!);
+    }
+  });
+
+  it("rejects invalid decorated tools", () => {
+    expect(() => manifestFor("invalidDecoratedToolPom")).toThrow(
+      "WebMCP tool InvalidDecoratedToolPom.run needs a string description."
+    );
+  });
+
+  it("fails closed when current support drifts from the catalog", () => {
+    const support = currentSupport as unknown as string[];
+    support.push("Page.goto");
+
+    try {
+      expect(() => manifestFor("selectedCompatibilityPom")).toThrow(
+        "Selected Playwright member Page.goto is not fully compatible in the catalog."
+      );
+    } finally {
+      support.pop();
+    }
+  });
+
+  it("fails closed when current support names a member absent from the catalog", () => {
+    const support = currentSupport as unknown as string[];
+    support.push("Page.missingFromCatalog");
+
+    try {
+      expect(() => manifestFor("selectedCompatibilityPom")).toThrow(
+        "Selected Playwright member Page.missingFromCatalog is absent from the catalog."
+      );
+    } finally {
+      support.pop();
+    }
+  });
+
+  it("fails closed when a selected member is absent from Playwright's actual types", () => {
+    const catalog = compatibilityCatalog as CompatibilityMember[];
+    const support = currentSupport as unknown as string[];
+    catalog.push({
+      interface: "Page",
+      member: "removedMember",
+      api: "Full",
+      execution: "Matched",
+    });
+    support.push("Page.removedMember");
+
+    try {
+      expect(() => manifestFor("selectedCompatibilityPom")).toThrow(
+        "Selected Playwright member Page.removedMember does not exist on @playwright/test Page."
+      );
+    } finally {
+      support.pop();
+      catalog.pop();
+    }
   });
 
   it("collects public members and tools through multi-level inheritance", () => {
@@ -125,3 +241,13 @@ describe("derivePomManifests", () => {
     );
   });
 });
+
+function compatibilityMember(key: string) {
+  const [interfaceName, memberName] = key.split(".");
+  const member = (compatibilityCatalog as CompatibilityMember[]).find(
+    (candidate) =>
+      candidate.interface === interfaceName && candidate.member === memberName
+  );
+  if (!member) throw new Error(`Missing compatibility fixture member ${key}.`);
+  return member;
+}
