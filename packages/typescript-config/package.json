@@ -1,0 +1,10 @@
+{
+  "name": "@ayme-dev/typescript-config",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./base.json": "./base.json",
+    "./library.json": "./library.json",
+    "./vue.json": "./vue.json"
+  }
+}

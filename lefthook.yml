@@ -1,0 +1,13 @@
+pre-commit:
+  jobs:
+    - name: lint-staged
+      run: pnpm exec lint-staged
+    - name: typecheck
+      run: pnpm run typecheck
+    - name: test
+      run: pnpm run test
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: pnpm exec commitlint --verbose --edit {1}
