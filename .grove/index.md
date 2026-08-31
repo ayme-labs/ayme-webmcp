@@ -6,7 +6,7 @@
 
 | Measure | Count | Composition |
 | --- | --- | --- |
-| C (content) | 11 | validated B 1 · answered Q 0 · accepted D 8 · active Discovery 2 |
+| C (content) | 13 | validated B 1 · answered Q 0 · accepted D 10 · active Discovery 2 |
 | V (uncertainty) | 0 | open Q 0 · pending B 0 · W below DoR 0 |
 
 ## Areas
@@ -53,6 +53,8 @@
 | D-07 | Use structural POMs and explicit WebMCP exposure | accepted |  |
 | D-08 | Package Vue lifecycle integration separately | accepted |  |
 | D-09 | Let Ayme own live Page Object observation | accepted |  |
+| D-10 | Use capture-scoped Structural Refs | accepted |  |
+| D-11 | Capture only the top-level document | accepted |  |
 
 ## Open questions
 
@@ -98,6 +100,8 @@ graph TD
   D_07["D-07: Use structural POMs and explicit WebMCP exposure"]:::decision
   D_08["D-08: Package Vue lifecycle integration separately"]:::decision
   D_09["D-09: Let Ayme own live Page Object observation"]:::decision
+  D_10["D-10: Use capture-scoped Structural Refs"]:::decision
+  D_11["D-11: Capture only the top-level document"]:::decision
   Q_01["Q-01: Choose the public activation interface"]:::question
   B_01["B-01: Vue 3.2.0 supports lifecycle integration"]:::assumption
   Y_01["Y-01: Shared Page Object behavior"]:::discovery
