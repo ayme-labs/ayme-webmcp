@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:48dda5738bfc533fc4ddeb4ffe1c6b6d19278a7b72917e17a5634da300a593cb
+# checksum: sha256:46a60f856e91259dda4348c6f2dd7ceeeb2a32fabbbba8d1477d1c55047b047f
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -31,6 +31,10 @@ g G-06 status=verified fitness_kind=count t_created=2026-08-31T15:47:50Z t_updat
   area: A-02
   fitness_target: 1
   fitness_current: 1
+
+g G-07 status=unverified fitness_kind=count t_created=2026-08-31T19:05:01Z t_updated=2026-08-31T19:05:01Z "Assistant receives POM-aware structural page state"
+  area: A-02
+  fitness_target: 4
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -202,6 +206,67 @@ w W-06 type=feature status=done cynefin=complicated t_created=2026-08-31T15:48:1
   plan:
     | Implement one red-green slice at a time at the registry activation seam, active-tool listing seam, WebMCP publication seam, and Vue example user-flow seam.
 
+w W-07 type=feature status=ready cynefin=complicated t_created=2026-08-31T19:05:01Z t_updated=2026-08-31T19:05:07Z "Expose dual ARIA capture in Playwright fork"
+  goals: G-07
+  fitness: G-07=+1
+  surface: external/playwright
+  ac:
+    | captureAriaSnapshot(root) returns distilledText, fullText, and refsByElement from one ARIA capture.
+    | The distilled and full text reuse the same literal Playwright refs, and the full text retains nodes omitted by the distilled view with refs on every represented node.
+    | refsByElement maps represented DOM elements to the refs emitted in that capture.
+    | Existing public ariaSnapshot behavior and tests remain unchanged.
+  hypothesis:
+    | A focused InjectedScript extension can expose the existing ARIA snapshot data without duplicating Playwright accessibility semantics.
+  evidence_strategy:
+    | Run focused Playwright ARIA snapshot tests proving the dual capture contract, then run the relevant existing snapshot suite and type checks.
+  plan:
+    | Port the experiment to the exact Playwright 1.62.1 baseline and commit the smallest internal extension.
+
+w W-08 type=feature status=ready cynefin=clear t_created=2026-08-31T19:05:02Z t_updated=2026-08-31T19:05:07Z "Add Playwright-free StructuralTree kernel"
+  goals: G-07
+  fitness: G-07=+1
+  surface: packages/structural-observation, package.json, pnpm-lock.yaml, turbo.json
+  ac:
+    | The private JIT package @ayme-dev/structural-observation exports the proven StructuralNode, StructuralTree, StructuralTypes, and SyntheticAriaRefFactory kernel.
+    | The package depends on neither Playwright nor WebMCP and contains no capture, session, timeline, tracing, or framework integration code.
+    | Focused ported tests cover node identity, tree projection and reconciliation behavior, and synthetic ref allocation through the package interface.
+    | Package tests, workspace type checking, and the full repository test suite pass.
+  hypothesis:
+    | Copying the proven kernel from Ayme PR 553 preserves its behavior while giving WebMCP a small independent domain package.
+  evidence_strategy:
+    | Use red-green vertical slices at the package export seam, then record focused test, typecheck, full test, and commit evidence.
+  plan:
+    | Copy only the accepted kernel and focused tests from Ayme PR 553 at commit 85272c530bfaeb51bfbc117a53504d587ec0127a.
+
+w W-09 type=feature status=proposed cynefin=complicated t_created=2026-08-31T19:05:03Z t_updated=2026-08-31T19:05:07Z "Extract Playwright browser capture package"
+  goals: G-07
+  fitness: G-07=+1
+  surface: packages/playwright-browser, packages/webmcp/tsdown.config.ts, packages/webmcp/src/playwright-injected.d.ts, pnpm-lock.yaml
+  ac:
+    | The private JIT package @ayme-dev/playwright-browser owns Playwright InjectedScript extraction and the captureAriaSnapshot browser adapter.
+    | The package pins the reviewed Playwright fork commit and exposes only the internal dual-capture contract needed by WebMCP.
+    | packages/webmcp no longer owns the virtual InjectedScript extraction while existing raw get_page_state behavior remains unchanged.
+    | Focused package tests, workspace type checking, and the full repository test suite pass.
+  hypothesis:
+    | Moving the existing extraction behind one private browser package lets WebMCP consume the fork seam without owning Playwright internals.
+  evidence_strategy:
+    | Test the package capture contract and preserved WebMCP behavior, then record typecheck, full test, and commit evidence.
+
+w W-10 type=feature status=proposed cynefin=complicated t_created=2026-08-31T19:05:04Z t_updated=2026-08-31T19:05:48Z "Render root-only POM structural page state"
+  goals: G-07
+  fitness: G-07=+1
+  surface: packages/webmcp, apps/example-vue
+  ac:
+    | get_page_state returns the accepted compact StructuralTree format and annotates registered Page Object roots only.
+    | Matched observable roots use real refs from the same capture, while only uniquely resolved eligible omitted roots receive synthetic s_* refs.
+    | Hidden, missing, ambiguous, and cross-frame roots remain absent from agent-visible structural state, and child-frame documents are not traversed.
+    | POM member notation, external ref actions, collection address replacement, and highlighting remain absent.
+    | The integration pull request is open and every required CI check passes.
+  hypothesis:
+    | Composing the registry, browser capture, and StructuralTree at get_page_state can expose POM roots without changing live POM action dispatch.
+  evidence_strategy:
+    | Use golden contract tests and browser integration tests for correlation and exclusions, then run the repository check command and verify GitHub CI.
+
 d D-01 status=superseded t_created=2026-08-27T08:43:08Z t_updated=2026-08-27T11:48:35Z "Use the five-workspace monorepo layout"
   context:
     | The open-source WebMCP library needs independently publishable core and Vite packages, a private example application, and shared tooling configuration.
@@ -291,11 +356,11 @@ d D-09 status=accepted t_created=2026-08-31T15:47:55Z t_updated=2026-08-31T15:48
   decision:
     | See ADR-0009: docs/adr/0009-let-ayme-own-live-page-object-observation.md.
 
-d D-10 status=accepted t_created=2026-08-31T18:36:54Z t_updated=2026-08-31T18:37:10Z "Use capture-scoped Structural Refs"
+d D-10 status=accepted t_created=2026-08-31T18:36:54Z t_updated=2026-08-31T19:05:06Z "Use capture-scoped Structural Refs"
   decision:
     | See ADR-0010: docs/adr/0010-use-capture-scoped-structural-refs.md.
 
-d D-11 status=accepted t_created=2026-08-31T18:37:10Z t_updated=2026-08-31T18:37:26Z "Capture only the top-level document"
+d D-11 status=accepted t_created=2026-08-31T18:37:10Z t_updated=2026-08-31T19:05:06Z "Capture only the top-level document"
   decision:
     | See ADR-0011: docs/adr/0011-capture-only-the-top-level-document.md.
 
@@ -304,6 +369,22 @@ q Q-01 status=deferred cynefin=complicated t_created=2026-08-27T12:43:03Z t_upda
     | The spike useAymePage function combines Vue lifecycle management with framework-neutral runtime behavior. W-02 separates those responsibilities but intentionally does not choose the final public interface.
   exit:
     | Compare an explicit runtime object with a direct activation function against the packaged implementation, then agree on naming, disposal, and whether one activation may manage several Page Objects.
+
+q Q-02 status=open cynefin=complicated t_created=2026-08-31T19:05:06Z t_updated=2026-08-31T19:05:06Z "Choose the compact structural output contract"
+  why:
+    | The first integration needs one accepted representative output before its renderer and golden test are implemented.
+  hypothesis:
+    | Use the Ayme experiment's ref-first tree syntax and add /pom only on explicit registered roots.
+  exit:
+    | Record the accepted literal example and map it to a golden integration test.
+
+q Q-03 status=open cynefin=complicated t_created=2026-08-31T19:05:06Z t_updated=2026-08-31T19:05:07Z "Choose multiple POM root match behavior"
+  why:
+    | PR 9 decides live tool availability by root count but does not decide how several matched elements map into structural state.
+  hypothesis:
+    | Decorate every matched occurrence with a real Playwright ref and synthesize a ref only when one eligible omitted root resolves uniquely.
+  exit:
+    | Record accepted behavior for zero, one, and multiple matches with observable and omitted roots.
 
 b B-01 status=validated cynefin=complicated t_created=2026-08-31T13:49:50Z t_updated=2026-08-31T13:49:50Z "Vue 3.2.0 supports lifecycle integration"
   vm:
@@ -334,6 +415,8 @@ e B-01 targets W-05 t_created=2026-08-31T13:49:50Z
 e D-05 supersedes D-01 t_created=2026-08-27T11:48:25Z
 e Q-01 asks D-06 t_created=2026-08-27T12:43:04Z
 e Q-01 asks W-03 t_created=2026-08-27T14:13:29Z
+e Q-02 asks W-10 t_created=2026-08-31T19:05:06Z
+e Q-03 asks W-10 t_created=2026-08-31T19:05:06Z
 e W-01 implements D-01 t_created=2026-08-27T08:43:22Z
 e W-01 implements D-02 t_created=2026-08-27T08:43:22Z
 e W-01 implements D-03 t_created=2026-08-27T08:43:22Z
@@ -344,4 +427,12 @@ e W-02 implements D-07 t_created=2026-08-27T12:43:19Z
 e W-02 produces Y-01 t_created=2026-08-27T13:24:26Z
 e W-03 implements D-08 t_created=2026-08-27T14:13:29Z
 e W-06 implements D-09 t_created=2026-08-31T15:48:44Z
+e W-07 blocks W-09 t_created=2026-08-31T19:05:07Z
+e W-07 implements D-10 t_created=2026-08-31T19:05:02Z
+e W-08 blocks W-10 t_created=2026-08-31T19:05:07Z
+e W-08 implements D-10 t_created=2026-08-31T19:05:03Z
+e W-09 blocks W-10 t_created=2026-08-31T19:05:07Z
+e W-09 implements D-10 t_created=2026-08-31T19:05:04Z
+e W-10 implements D-10 t_created=2026-08-31T19:05:06Z
+e W-10 implements D-11 t_created=2026-08-31T19:05:06Z
 e Y-02 distills D-08 t_created=2026-08-27T14:40:25Z

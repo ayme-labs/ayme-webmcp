@@ -7,14 +7,14 @@
 | Measure | Count | Composition |
 | --- | --- | --- |
 | C (content) | 13 | validated B 1 · answered Q 0 · accepted D 10 · active Discovery 2 |
-| V (uncertainty) | 0 | open Q 0 · pending B 0 · W below DoR 0 |
+| V (uncertainty) | 6 | open Q 2 · pending B 0 · W below DoR 1 · uncovered surface 3 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 8 | 0 | C: validated B 1 · answered Q 0 · accepted D 5 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
+| A-02 | Page Object interoperability | 10 | 6 | C: validated B 1 · answered Q 0 · accepted D 7 · active Discovery 2; V: open Q 2 · pending B 0 · W below DoR 1 · uncovered surface 3 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
 
@@ -28,6 +28,7 @@
 | G-04 | Assistant can inspect the current page through ref-bearing state | count; current=1 target=1 | verified |
 | G-05 | Vue package supports Vue 3.2 consumers | boolean; current=true | verified |
 | G-06 | Generated WebMCP Tools track live Page Objects | count; current=1 target=1 | verified |
+| G-07 | Assistant receives POM-aware structural page state | count; current= target=4 | unverified |
 
 ## Work items
 
@@ -39,6 +40,10 @@
 | W-04 | feature | Expose raw Playwright ARIA state through get_page_state | G-04 | complicated | ⊤ | done |  |
 | W-05 | feature | Enforce the Vue 3.2 support floor | G-05 | clear | ⊤ | done |  |
 | W-06 | feature | Synchronize tools with live Page Objects | G-06 | complicated | ⊤ | done |  |
+| W-07 | feature | Expose dual ARIA capture in Playwright fork | G-07 | complicated | ⊤ | ready | ★ |
+| W-08 | feature | Add Playwright-free StructuralTree kernel | G-07 | clear | ⊤ | ready |  |
+| W-09 | feature | Extract Playwright browser capture package | G-07 | complicated | ⊤ | proposed | ★ |
+| W-10 | feature | Render root-only POM structural page state | G-07 | complicated | ⊥ | proposed | ★ |
 
 ## Decisions
 
@@ -61,6 +66,8 @@
 | ID | Question | Cynefin | Targets | Status |
 | --- | --- | --- | --- | --- |
 | Q-01 | Choose the public activation interface | complicated | D-06, W-03 | deferred |
+| Q-02 | Choose the compact structural output contract | complicated | W-10 | open |
+| Q-03 | Choose multiple POM root match behavior | complicated | W-10 | open |
 
 ## Assumptions
 
@@ -85,12 +92,17 @@ graph TD
   G_04["G-04: Assistant can inspect the current page through ref-bearing state"]:::goal
   G_05["G-05: Vue package supports Vue 3.2 consumers"]:::goal
   G_06["G-06: Generated WebMCP Tools track live Page Objects"]:::goal
+  G_07["G-07: Assistant receives POM-aware structural page state"]:::goal
   W_01["W-01: Establish the monorepo walking skeleton"]:::done
   W_02["W-02: Preserve spike behavior through package extraction"]:::done
   W_03["W-03: Extract Vue Page Object activation composable"]:::done
   W_04["W-04: Expose raw Playwright ARIA state through get_page_state"]:::done
   W_05["W-05: Enforce the Vue 3.2 support floor"]:::done
   W_06["W-06: Synchronize tools with live Page Objects"]:::done
+  W_07["W-07: Expose dual ARIA capture in Playwright fork"]:::ready,critical
+  W_08["W-08: Add Playwright-free StructuralTree kernel"]:::ready
+  W_09["W-09: Extract Playwright browser capture package"]:::feature,critical
+  W_10["W-10: Render root-only POM structural page state"]:::feature,critical
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -103,6 +115,8 @@ graph TD
   D_10["D-10: Use capture-scoped Structural Refs"]:::decision
   D_11["D-11: Capture only the top-level document"]:::decision
   Q_01["Q-01: Choose the public activation interface"]:::question
+  Q_02["Q-02: Choose the compact structural output contract"]:::question
+  Q_03["Q-03: Choose multiple POM root match behavior"]:::question
   B_01["B-01: Vue 3.2.0 supports lifecycle integration"]:::assumption
   Y_01["Y-01: Shared Page Object behavior"]:::discovery
   Y_02["Y-02: Framework lifecycle owns Page Object disposal"]:::discovery
@@ -112,6 +126,8 @@ graph TD
   D_05 -->|supersedes| D_01
   Q_01 -->|asks| D_06
   Q_01 -->|asks| W_03
+  Q_02 -->|asks| W_10
+  Q_03 -->|asks| W_10
   W_01 -->|implements| D_01
   W_01 -->|implements| D_02
   W_01 -->|implements| D_03
@@ -122,7 +138,16 @@ graph TD
   W_02 -->|produces| Y_01
   W_03 -->|implements| D_08
   W_06 -->|implements| D_09
+  W_07 ==>|blocks| W_09
+  W_07 -->|implements| D_10
+  W_08 ==>|blocks| W_10
+  W_08 -->|implements| D_10
+  W_09 ==>|blocks| W_10
+  W_09 -->|implements| D_10
+  W_10 -->|implements| D_10
+  W_10 -->|implements| D_11
   Y_02 -->|distills| D_08
+  class W_07,W_09,W_10 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff

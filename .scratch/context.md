@@ -81,13 +81,13 @@
 - P-010 — Align the fork with Playwright 1.62.1
   - Origin: Agent
   - Area: A-002
-  - Status: Open
+  - Status: Accepted
   - Content: Align the fork baseline with the exact Playwright 1.62.1 version currently used by ayme-webmcp so the capture runtime and WebMCP dependency do not diverge.
 
 - P-011 — Expose one Ayme-specific capture operation
   - Origin: Agent
   - Area: A-002
-  - Status: Open
+  - Status: Outdated
   - Content: Expose one decision-complete internal operation returning the distilled snapshot, undistilled snapshot, and `Element` to ref map from one capture. The exact method name and returned field names remain undecided.
 
 - P-012 — Copy the Ayme StructuralTree domain temporarily
@@ -111,13 +111,13 @@
 - P-015 — Keep the StructuralTree package Playwright-free
   - Origin: Agent
   - Area: A-002
-  - Status: Open
+  - Status: Accepted
   - Content: `@ayme-dev/structural-observation` depends on neither Playwright nor WebMCP. It accepts structural data and owns nodes, trees, projection, enrichment, synthetic refs, and rendering. `@ayme-dev/webmcp` composes it with `@ayme-dev/playwright-browser`.
 
 - P-016 — Copy the domain kernel intact
   - Origin: Agent
   - Area: A-002
-  - Status: Open
+  - Status: Accepted
   - Content: Copy the relevant Ayme domain files and focused tests intact, including currently unused reconciliation methods, while excluding capture services, timelines, tracing, and framework integration. This preserves provenance and avoids a redesign during extraction.
 
 - P-017 — Replace the earlier @ayme-dev/playwright package name
@@ -201,13 +201,13 @@
 - P-030 — Permit narrow temporary duplication
   - Origin: User
   - Area: A-004
-  - Status: Open
+  - Status: Outdated
   - Content: If waiting for task `01a05796-d126-7631-916c-6cb1597a6bf3` would block progress for too long, allow the minimum duplicated capture plumbing needed for StructuralTree work and synchronize it with the compatibility package in a follow-up.
 
 - P-031 — Split the compatibility coordinator at its capture foundation
   - Origin: Agent
   - Area: A-004
-  - Status: Open
+  - Status: Outdated
   - Content: Reshape task `01a05796-d126-7631-916c-6cb1597a6bf3` so its package-contract and generated-runtime work opens a narrow foundation pull request before its wider Page and Locator compatibility implementation. Build StructuralTree work on that foundation and continue the remaining compatibility work afterward, avoiding throwaway duplication.
 
 - P-032 — Reconcile existing ADR and Grove ID collisions first
@@ -255,7 +255,7 @@
 - P-039 — Keep PR #11 as the integration pull request
   - Origin: Agent
   - Area: A-004
-  - Status: Open
+  - Status: Accepted
   - Content: Keep PR #11 as the Wave 2 `get_page_state` integration pull request. Do not fold the Playwright fork change, playwright-browser foundation, or StructuralTree kernel extraction into it.
   - Sources: Current conversation, prior recommendation.
 
@@ -276,7 +276,7 @@
 - P-042 — Base local integration work on PR #9
   - Origin: User
   - Area: A-004
-  - Status: Accepted
+  - Status: Superseded
   - Content: Start the local integration branch from the current tip of PR #9 when that dependency makes the work clearer. Do not rewrite or push PR #11 merely to establish the local base.
   - Sources: Current conversation, user request.
 
@@ -374,13 +374,36 @@
 - P-056 — Execute the three-wave task plan
   - Origin: Agent
   - Area: A-004
-  - Status: Open
+  - Status: Accepted
   - Content: Run the Playwright capture change and StructuralTree kernel extraction in the first wave, the playwright-browser foundation after the fork contract exists, and the root-only `get_page_state` integration in PR #11 after both WebMCP foundations exist. Stop for a user checkpoint after each wave.
   - Sources: Current conversation, coordinator plan proposal.
 
 - P-057 — Keep one coordinator-owned integration branch
   - Origin: Agent
   - Area: A-004
-  - Status: Open
+  - Status: Superseded
   - Content: Keep `codex/pom-structural-state` based on PR #9 as the coordinator and eventual PR #11 integration branch. Give each prerequisite implementation its own worktree and branch. The coordinator owns final review, Grove reconciliation, pushing, and pull-request creation; implementation tasks commit but do not push or open pull requests.
   - Sources: Current conversation, coordinator plan proposal.
+
+- P-058 — Rebase the coordinator branch onto current main
+  - Origin: User
+  - Area: A-004
+  - Status: Accepted
+  - Content: Rebase `codex/pom-structural-state` onto current `main` before implementation. Current `main` already contains merged PR #9, so it replaces the earlier PR #9 tip as the integration baseline.
+  - Sources: Current conversation, implementation authorization.
+  - Supersedes: P-042
+
+- P-059 — Keep coordinator ownership on the rebased integration branch
+  - Origin: User
+  - Area: A-004
+  - Status: Accepted
+  - Content: Keep the rebased `codex/pom-structural-state` branch as the coordinator-owned integration branch for PR #11. Give prerequisite implementations isolated tasks and checkouts. The coordinator owns Grove state, review, reconciliation, pushes, pull-request updates, and CI follow-through.
+  - Sources: Current conversation, approved coordinator distribution and implementation authorization.
+  - Supersedes: P-057
+
+- P-060 — Finish with a green integration pull request
+  - Origin: User
+  - Area: A-004
+  - Status: Accepted
+  - Content: Continue through implementation, review, pull-request delivery, and CI follow-through. Completion requires the integration pull request to be open with all required checks passing.
+  - Sources: Current conversation, implementation authorization.
