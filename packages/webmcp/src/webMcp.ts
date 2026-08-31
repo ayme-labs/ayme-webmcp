@@ -1,15 +1,5 @@
-import type { RegisteredTool } from "./contracts";
-import { listRegisteredTools } from "./registry";
-
-type ModelContext = {
-  registerTool(tool: RegisteredTool): Promise<void>;
-};
-
-declare global {
-  interface Document {
-    modelContext?: ModelContext;
-  }
-}
+import { getPageStateTool } from "./pageState";
+import { listRegisteredPomTools } from "./registry";
 
 export type WebMcpRegistration = {
   registered: boolean;
@@ -27,21 +17,22 @@ export async function registerWebMcpTools(
     };
   }
 
-  const tools = listRegisteredTools();
-  for (const tool of tools) {
+  await modelContext.registerTool(getPageStateTool);
+  const pomTools = listRegisteredPomTools();
+  for (const tool of pomTools) {
     await modelContext.registerTool(tool);
   }
 
   return {
     registered: true,
-    message: `Registered ${tools.length} WebMCP tools.`,
+    message: `Registered ${pomTools.length + 1} WebMCP tools.`,
   };
 }
 
 function waitForModelContext(timeoutMs: number) {
   const deadline = Date.now() + timeoutMs;
 
-  return new Promise<ModelContext | undefined>((resolve) => {
+  return new Promise<typeof document.modelContext>((resolve) => {
     const check = () => {
       if (document.modelContext) {
         resolve(document.modelContext);

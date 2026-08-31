@@ -155,6 +155,43 @@ test("runs the WebMCP POM source through real Playwright", async ({ page }) => {
   );
 });
 
+test("publishes the current page as ref-bearing ARIA state", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect
+    .poll(async () =>
+      page.evaluate(() =>
+        window.__AYME_WEBMCP_TOOLS__?.some(
+          (candidate) => candidate.name === "get_page_state"
+        )
+      )
+    )
+    .toBe(true);
+
+  const result = await page.evaluate(async () => {
+    const tool = window.__AYME_WEBMCP_TOOLS__?.find(
+      (candidate) => candidate.name === "get_page_state"
+    );
+    if (!tool) throw new Error("get_page_state WebMCP tool was not published.");
+    return {
+      hasPomIdentity: "pomId" in tool,
+      snapshot: await tool.execute({}),
+    };
+  });
+
+  expect(result.hasPomIdentity).toBe(false);
+  const { snapshot } = result;
+  expect(typeof snapshot).toBe("string");
+  if (typeof snapshot !== "string") return;
+
+  const archiveRefs = [
+    ...snapshot.matchAll(/button "Archive item-[12]"[^\n]*\[ref=(e\d+)\]/g),
+  ].map((match) => match[1]);
+  expect(archiveRefs).toHaveLength(2);
+  expect(new Set(archiveRefs).size).toBe(2);
+});
+
 test("runs the same POM behavior through registered WebMCP tools", async ({
   page,
 }) => {
@@ -164,7 +201,7 @@ test("runs the same POM behavior through registered WebMCP tools", async ({
       async () =>
         await page.evaluate(() => window.__AYME_WEBMCP_TOOLS__?.length)
     )
-    .toBe(3);
+    .toBe(4);
 
   await runListActions(
     page,
@@ -234,7 +271,7 @@ test("demonstrates the list app and invokes the generated POM tools from the deb
       async () =>
         await page.evaluate(() => window.__AYME_WEBMCP_TOOLS__?.length)
     )
-    .toBe(3);
+    .toBe(4);
 
   const tools = await page.evaluate(() =>
     window.__AYME_WEBMCP_TOOLS__?.map((tool) => ({
@@ -245,6 +282,17 @@ test("demonstrates the list app and invokes the generated POM tools from the deb
   );
 
   expect(tools).toEqual([
+    {
+      name: "get_page_state",
+      description:
+        "Return the current page as Playwright's AI ARIA snapshot with structural refs.",
+      inputSchema: {
+        type: "object",
+        properties: {},
+        required: [],
+        additionalProperties: false,
+      },
+    },
     {
       name: "ListPage.addItem",
       description: "Add a new item to the list.",

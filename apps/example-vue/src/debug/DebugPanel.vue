@@ -5,7 +5,7 @@ import type {
   JsonValue,
   PomMemberManifest,
   PomMemberObservation,
-  RegisteredTool,
+  RegisteredPomTool,
   TraceEntry,
 } from "@ayme-dev/webmcp";
 import type { RegisteredPom } from "@ayme-dev/webmcp/internal";
@@ -35,7 +35,7 @@ type PomClassCard = {
   className: string;
   kind: "page" | "component";
   members: PomMemberManifest[];
-  tools: RegisteredTool[];
+  tools: RegisteredPomTool[];
   registrations: RegisteredPom[];
   instances: PomInstance[];
 };
@@ -93,7 +93,7 @@ const pomClassCards = computed(() => {
   return [...cards.values()];
 });
 
-function toolInput(tool: RegisteredTool) {
+function toolInput(tool: RegisteredPomTool) {
   const existing = toolInputValues[tool.name];
   if (existing) return existing;
 
@@ -119,7 +119,7 @@ function toolInput(tool: RegisteredTool) {
   return values;
 }
 
-function inputType(tool: RegisteredTool, parameterName: string) {
+function inputType(tool: RegisteredPomTool, parameterName: string) {
   const parameter = tool.parameters.find(
     (candidate) => candidate.name === parameterName
   );
@@ -129,12 +129,12 @@ function inputType(tool: RegisteredTool, parameterName: string) {
     : "text";
 }
 
-function jsonInputValue(tool: RegisteredTool, parameterName: string) {
+function jsonInputValue(tool: RegisteredPomTool, parameterName: string) {
   return JSON.stringify(toolInput(tool)[parameterName]);
 }
 
 function updateJsonInput(
-  tool: RegisteredTool,
+  tool: RegisteredPomTool,
   parameterName: string,
   event: Event
 ) {
@@ -168,7 +168,7 @@ function ensurePomClassCard(
   className: string,
   kind: PomClassCard["kind"],
   members: readonly PomMemberManifest[],
-  tools: readonly RegisteredTool[]
+  tools: readonly RegisteredPomTool[]
 ) {
   const existing = cards.get(className);
   if (existing) {
@@ -391,7 +391,7 @@ function instanceCountSummary(card: PomClassCard) {
   } present`;
 }
 
-async function invokeTool(tool: RegisteredTool) {
+async function invokeTool(tool: RegisteredPomTool) {
   const startedAt = Date.now();
   props.resetTrace();
   const execution: ToolExecution = {

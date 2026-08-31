@@ -1,3 +1,5 @@
+import type { ModelContextTool } from "@mcp-b/webmcp-types";
+
 export type JsonPrimitive = string | number | boolean | null;
 
 export type JsonValue =
@@ -66,12 +68,13 @@ export type PomManifest = {
   tools: readonly ToolManifest[];
 };
 
-export type RegisteredTool = {
+export type RegisteredPomTool = ModelContextTool<
+  Record<string, unknown>,
+  JsonValue
+> & {
   pomId: string;
   componentClassName?: string;
   methodName: string;
-  name: string;
-  description: string;
   inputSchema: JsonSchema;
   parameters: readonly ToolParameter[];
   execute(args: unknown): Promise<JsonValue>;
