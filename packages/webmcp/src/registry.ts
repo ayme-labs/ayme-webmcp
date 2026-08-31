@@ -10,7 +10,7 @@ import type {
   RegisteredPomTool,
   ToolManifest,
 } from "./contracts";
-import type { BrowserLocator, BrowserPage } from "./browserPage";
+import type { BrowserLocator, BrowserPage } from "@ayme-dev/playwright-browser";
 
 type CompiledPom = {
   manifest: PomManifest;

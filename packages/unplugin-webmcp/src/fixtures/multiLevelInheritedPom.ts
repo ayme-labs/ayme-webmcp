@@ -1,4 +1,4 @@
-import type { BrowserLocator } from "@ayme-dev/webmcp";
+import type { BrowserLocator } from "@ayme-dev/playwright-browser";
 
 import { WebMCP } from "./webmcp";
 

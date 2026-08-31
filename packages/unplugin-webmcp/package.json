@@ -29,6 +29,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ayme-dev/playwright-browser": "workspace:*",
     "@ayme-dev/webmcp": "workspace:*",
     "typescript": "^6.0.3",
     "unplugin": "^3.3.0"

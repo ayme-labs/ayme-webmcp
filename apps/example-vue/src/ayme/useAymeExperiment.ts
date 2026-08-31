@@ -2,7 +2,6 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 
 import type { RegisteredPom } from "@ayme-dev/webmcp/internal";
 import {
-  createBrowserPage,
   configureAymeRuntime,
   listRegisteredPoms,
   probeRegisteredPomMembers,
@@ -10,6 +9,7 @@ import {
   synchronizeWebMcpTools,
   waitForWebMcpDriver,
 } from "@ayme-dev/webmcp/internal";
+import { createBrowserPage } from "@ayme-dev/playwright-browser";
 import { usePageObject } from "@ayme-dev/webmcp-vue";
 import { ListPage } from "../../playwright/pom/ListPage";
 
