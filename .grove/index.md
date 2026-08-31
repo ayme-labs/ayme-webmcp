@@ -25,6 +25,7 @@
 | G-01 | Repository has a reproducible local development loop | count; current=1 target=1 | verified |
 | G-02 | Spike behavior runs through public packages | count; current=1 target=1 | verified |
 | G-03 | Vue example activates Page Objects through the Vue package | count; current=1 target=1 | verified |
+| G-04 | Assistant can inspect the current page through ref-bearing state | count; current=1 target=1 | verified |
 
 ## Work items
 
@@ -33,6 +34,7 @@
 | W-01 | feature | Establish the monorepo walking skeleton | G-01 | complicated | ⊤ | done |  |
 | W-02 | feature | Preserve spike behavior through package extraction | G-02 | complicated | ⊤ | done |  |
 | W-03 | feature | Extract Vue Page Object activation composable | G-03 | complicated | ⊤ | done |  |
+| W-04 | feature | Expose raw Playwright ARIA state through get_page_state | G-04 | complicated | ⊤ | done |  |
 
 ## Decisions
 
@@ -67,9 +69,11 @@ graph TD
   G_01["G-01: Repository has a reproducible local development loop"]:::goal
   G_02["G-02: Spike behavior runs through public packages"]:::goal
   G_03["G-03: Vue example activates Page Objects through the Vue package"]:::goal
+  G_04["G-04: Assistant can inspect the current page through ref-bearing state"]:::goal
   W_01["W-01: Establish the monorepo walking skeleton"]:::done
   W_02["W-02: Preserve spike behavior through package extraction"]:::done
   W_03["W-03: Extract Vue Page Object activation composable"]:::done
+  W_04["W-04: Expose raw Playwright ARIA state through get_page_state"]:::done
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision

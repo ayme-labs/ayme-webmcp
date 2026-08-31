@@ -7,7 +7,7 @@ import type {
   PomManifest,
   PomMemberManifest,
   PomMemberObservation,
-  RegisteredTool,
+  RegisteredPomTool,
   ToolManifest,
 } from "./contracts";
 import type { BrowserLocator, BrowserPage } from "./browserPage";
@@ -22,7 +22,7 @@ export type RegisteredPom = {
   instance: object;
   manifest: PomManifest;
   memberObservations: readonly PomMemberObservation[];
-  tools: readonly RegisteredTool[];
+  tools: readonly RegisteredPomTool[];
 };
 
 let browserPage: BrowserPage | undefined;
@@ -99,7 +99,7 @@ export function listRegisteredPoms() {
   return [...registeredPoms.values()];
 }
 
-export function listRegisteredTools() {
+export function listRegisteredPomTools() {
   return [...registeredPoms.values()].flatMap(
     (registration) => registration.tools
   );
@@ -142,7 +142,7 @@ function createRegisteredTool(
   pomId: string,
   instance: object,
   tool: ToolManifest
-): RegisteredTool {
+): RegisteredPomTool {
   return {
     pomId,
     methodName: tool.methodName,
@@ -160,7 +160,7 @@ function createCollectionTool(
   member: PomComponentMemberManifest,
   component: PomComponentManifest,
   action: ToolManifest
-): RegisteredTool {
+): RegisteredPomTool {
   const wrapper = collectionToolManifest(pomId, member, action);
   return {
     pomId,
