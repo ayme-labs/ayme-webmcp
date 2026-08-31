@@ -25,6 +25,11 @@ describe("usePageObject", () => {
     });
   });
 
+  it("requires an active effect scope before activating the page object", () => {
+    expect(() => usePageObject(FakePageObject)).toThrow();
+    expect(createPageRegistration).not.toHaveBeenCalled();
+  });
+
   it("activates once and returns the concrete page object type", () => {
     const scope = effectScope();
     const pageObject = scope.run(() => usePageObject(FakePageObject));
