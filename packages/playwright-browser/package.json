@@ -1,0 +1,34 @@
+{
+  "name": "@ayme-dev/playwright-browser",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./tsdown": {
+      "types": "./src/tsdown.ts",
+      "default": "./src/tsdown.ts"
+    }
+  },
+  "scripts": {
+    "lint": "eslint src --max-warnings 0",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "playwright-core": "github:enekesabel/playwright#path:/packages/playwright-core&9f727f03584f863d551f3b969e4fc634b2ed6fd8"
+  },
+  "devDependencies": {
+    "@ayme-dev/eslint-config": "workspace:*",
+    "@ayme-dev/typescript-config": "workspace:*",
+    "@types/node": "^24.0.0",
+    "@vitest/browser-playwright": "^4.1.11",
+    "eslint": "^10.9.1",
+    "playwright": "^1.62.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.11"
+  }
+}
