@@ -42,7 +42,7 @@
 | W-06 | feature | Synchronize tools with live Page Objects | G-06 | complicated | ⊤ | done |  |
 | W-07 | feature | Expose dual ARIA capture in Playwright fork | G-07 | complicated | ⊤ | done |  |
 | W-08 | feature | Add Playwright-free StructuralTree kernel | G-07 | clear | ⊤ | done |  |
-| W-09 | feature | Extract Playwright browser capture package | G-07 | complicated | ⊤ | proposed | ★ |
+| W-09 | feature | Extract Playwright browser capture package | G-07 | complicated | ⊤ | progress | ★ |
 | W-10 | feature | Render root-only POM structural page state | G-07 | complicated | ⊥ | proposed | ★ |
 
 ## Decisions
@@ -101,7 +101,7 @@ graph TD
   W_06["W-06: Synchronize tools with live Page Objects"]:::done
   W_07["W-07: Expose dual ARIA capture in Playwright fork"]:::done
   W_08["W-08: Add Playwright-free StructuralTree kernel"]:::done
-  W_09["W-09: Extract Playwright browser capture package"]:::feature,critical
+  W_09["W-09: Extract Playwright browser capture package"]:::progress,critical
   W_10["W-10: Render root-only POM structural page state"]:::feature,critical
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision

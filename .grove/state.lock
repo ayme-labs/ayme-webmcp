@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:ee874387da440d6d44f8cb4cf277ae6d03702e678932d30dca35e3f9104b98fe
+# checksum: sha256:7bb55d8157f67e34f7a63f6970e6f2a0d1042b4a8391aebb45958ef2720f1022
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -243,7 +243,7 @@ w W-08 type=feature status=done cynefin=clear t_created=2026-08-31T19:05:02Z t_u
   plan:
     | Copy only the accepted kernel and focused tests from Ayme PR 553 at commit 85272c530bfaeb51bfbc117a53504d587ec0127a.
 
-w W-09 type=feature status=proposed cynefin=complicated t_created=2026-08-31T19:05:03Z t_updated=2026-08-31T19:05:07Z "Extract Playwright browser capture package"
+w W-09 type=feature status=progress cynefin=complicated session=host:fb79d5a1c35be112 session_at=2026-08-31T19:57:58Z t_created=2026-08-31T19:05:03Z t_updated=2026-08-31T19:57:58Z "Extract Playwright browser capture package"
   goals: G-07
   fitness: G-07=+1
   surface: packages/playwright-browser, packages/webmcp/tsdown.config.ts, packages/webmcp/src/playwright-injected.d.ts, pnpm-lock.yaml
