@@ -7,14 +7,14 @@
 | Measure | Count | Composition |
 | --- | --- | --- |
 | C (content) | 13 | validated B 1 · answered Q 0 · accepted D 10 · active Discovery 2 |
-| V (uncertainty) | 6 | open Q 2 · pending B 0 · W below DoR 1 · uncovered surface 3 |
+| V (uncertainty) | 4 | open Q 2 · pending B 0 · W below DoR 1 · uncovered surface 1 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 10 | 6 | C: validated B 1 · answered Q 0 · accepted D 7 · active Discovery 2; V: open Q 2 · pending B 0 · W below DoR 1 · uncovered surface 3 |
+| A-02 | Page Object interoperability | 10 | 4 | C: validated B 1 · answered Q 0 · accepted D 7 · active Discovery 2; V: open Q 2 · pending B 0 · W below DoR 1 · uncovered surface 1 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
 
@@ -28,7 +28,7 @@
 | G-04 | Assistant can inspect the current page through ref-bearing state | count; current=1 target=1 | verified |
 | G-05 | Vue package supports Vue 3.2 consumers | boolean; current=true | verified |
 | G-06 | Generated WebMCP Tools track live Page Objects | count; current=1 target=1 | verified |
-| G-07 | Assistant receives POM-aware structural page state | count; current= target=4 | unverified |
+| G-07 | Assistant receives POM-aware structural page state | count; current=2 target=4 | partial |
 
 ## Work items
 
@@ -40,8 +40,8 @@
 | W-04 | feature | Expose raw Playwright ARIA state through get_page_state | G-04 | complicated | ⊤ | done |  |
 | W-05 | feature | Enforce the Vue 3.2 support floor | G-05 | clear | ⊤ | done |  |
 | W-06 | feature | Synchronize tools with live Page Objects | G-06 | complicated | ⊤ | done |  |
-| W-07 | feature | Expose dual ARIA capture in Playwright fork | G-07 | complicated | ⊤ | ready | ★ |
-| W-08 | feature | Add Playwright-free StructuralTree kernel | G-07 | clear | ⊤ | ready |  |
+| W-07 | feature | Expose dual ARIA capture in Playwright fork | G-07 | complicated | ⊤ | done |  |
+| W-08 | feature | Add Playwright-free StructuralTree kernel | G-07 | clear | ⊤ | done |  |
 | W-09 | feature | Extract Playwright browser capture package | G-07 | complicated | ⊤ | proposed | ★ |
 | W-10 | feature | Render root-only POM structural page state | G-07 | complicated | ⊥ | proposed | ★ |
 
@@ -99,8 +99,8 @@ graph TD
   W_04["W-04: Expose raw Playwright ARIA state through get_page_state"]:::done
   W_05["W-05: Enforce the Vue 3.2 support floor"]:::done
   W_06["W-06: Synchronize tools with live Page Objects"]:::done
-  W_07["W-07: Expose dual ARIA capture in Playwright fork"]:::ready,critical
-  W_08["W-08: Add Playwright-free StructuralTree kernel"]:::ready
+  W_07["W-07: Expose dual ARIA capture in Playwright fork"]:::done
+  W_08["W-08: Add Playwright-free StructuralTree kernel"]:::done
   W_09["W-09: Extract Playwright browser capture package"]:::feature,critical
   W_10["W-10: Render root-only POM structural page state"]:::feature,critical
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
@@ -147,7 +147,7 @@ graph TD
   W_10 -->|implements| D_10
   W_10 -->|implements| D_11
   Y_02 -->|distills| D_08
-  class W_07,W_09,W_10 critical
+  class W_09,W_10 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff
