@@ -6,7 +6,7 @@
 
 | Measure | Count | Composition |
 | --- | --- | --- |
-| C (content) | 9 | validated B 0 · answered Q 0 · accepted D 7 · active Discovery 2 |
+| C (content) | 10 | validated B 1 · answered Q 0 · accepted D 7 · active Discovery 2 |
 | V (uncertainty) | 0 | open Q 0 · pending B 0 · W below DoR 0 |
 
 ## Areas
@@ -14,7 +14,7 @@
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 6 | 0 | C: validated B 0 · answered Q 0 · accepted D 4 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
+| A-02 | Page Object interoperability | 7 | 0 | C: validated B 1 · answered Q 0 · accepted D 4 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
 
@@ -26,6 +26,7 @@
 | G-02 | Spike behavior runs through public packages | count; current=1 target=1 | verified |
 | G-03 | Vue example activates Page Objects through the Vue package | count; current=1 target=1 | verified |
 | G-04 | Assistant can inspect the current page through ref-bearing state | count; current=1 target=1 | verified |
+| G-05 | Vue package supports Vue 3.2 consumers | boolean; current=true | verified |
 
 ## Work items
 
@@ -35,6 +36,7 @@
 | W-02 | feature | Preserve spike behavior through package extraction | G-02 | complicated | ⊤ | done |  |
 | W-03 | feature | Extract Vue Page Object activation composable | G-03 | complicated | ⊤ | done |  |
 | W-04 | feature | Expose raw Playwright ARIA state through get_page_state | G-04 | complicated | ⊤ | done |  |
+| W-05 | feature | Enforce the Vue 3.2 support floor | G-05 | clear | ⊤ | done |  |
 
 ## Decisions
 
@@ -55,6 +57,12 @@
 | --- | --- | --- | --- | --- |
 | Q-01 | Choose the public activation interface | complicated | D-06, W-03 | deferred |
 
+## Assumptions
+
+| ID | Assumption | Tests | Targets | Status |
+| --- | --- | --- | --- | --- |
+| B-01 | Vue 3.2.0 supports lifecycle integration |  | W-05 | validated |
+
 ## Discoveries
 
 | ID | Title | Tags | Status |
@@ -70,10 +78,12 @@ graph TD
   G_02["G-02: Spike behavior runs through public packages"]:::goal
   G_03["G-03: Vue example activates Page Objects through the Vue package"]:::goal
   G_04["G-04: Assistant can inspect the current page through ref-bearing state"]:::goal
+  G_05["G-05: Vue package supports Vue 3.2 consumers"]:::goal
   W_01["W-01: Establish the monorepo walking skeleton"]:::done
   W_02["W-02: Preserve spike behavior through package extraction"]:::done
   W_03["W-03: Extract Vue Page Object activation composable"]:::done
   W_04["W-04: Expose raw Playwright ARIA state through get_page_state"]:::done
+  W_05["W-05: Enforce the Vue 3.2 support floor"]:::done
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -83,10 +93,12 @@ graph TD
   D_07["D-07: Use structural POMs and explicit WebMCP exposure"]:::decision
   D_08["D-08: Package Vue lifecycle integration separately"]:::decision
   Q_01["Q-01: Choose the public activation interface"]:::question
+  B_01["B-01: Vue 3.2.0 supports lifecycle integration"]:::assumption
   Y_01["Y-01: Shared Page Object behavior"]:::discovery
   Y_02["Y-02: Framework lifecycle owns Page Object disposal"]:::discovery
   A_01["A-01: Repository foundation"]:::area
   A_02["A-02: Page Object interoperability"]:::area
+  B_01 -.->|targets| W_05
   D_05 -->|supersedes| D_01
   Q_01 -->|asks| D_06
   Q_01 -->|asks| W_03
