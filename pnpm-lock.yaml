@@ -46,6 +46,9 @@ importers:
       "@ayme-dev/webmcp":
         specifier: workspace:*
         version: link:../../packages/webmcp
+      "@ayme-dev/webmcp-vue":
+        specifier: workspace:*
+        version: link:../../packages/webmcp-vue
       vue:
         specifier: ^3.5.42
         version: 3.5.42(typescript@6.0.3)
@@ -149,6 +152,34 @@ importers:
       vitest:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@24.13.3)(jsdom@30.0.1)(vite@8.2.2(@types/node@24.13.3)(jiti@2.6.1)(yaml@2.9.0))
+
+  packages/webmcp-vue:
+    dependencies:
+      "@ayme-dev/webmcp":
+        specifier: workspace:*
+        version: link:../webmcp
+    devDependencies:
+      "@ayme-dev/eslint-config":
+        specifier: workspace:*
+        version: link:../eslint-config
+      "@ayme-dev/typescript-config":
+        specifier: workspace:*
+        version: link:../typescript-config
+      eslint:
+        specifier: ^10.9.1
+        version: 10.9.1(jiti@2.6.1)
+      tsdown:
+        specifier: ^0.22.14
+        version: 0.22.14(@volar/typescript@2.4.28(typescript@6.0.3))(typescript@6.0.3)(vue-tsc@3.3.11(typescript@6.0.3))
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@24.13.3)(jsdom@30.0.1)(vite@8.2.2(@types/node@24.13.3)(jiti@2.6.1)(yaml@2.9.0))
+      vue:
+        specifier: ^3.5.42
+        version: 3.5.42(typescript@6.0.3)
 
 packages:
   "@asamuzakjp/css-color@6.0.7":

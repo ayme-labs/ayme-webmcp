@@ -6,7 +6,7 @@
 
 | Measure | Count | Composition |
 | --- | --- | --- |
-| C (content) | 7 | validated B 0 · answered Q 0 · accepted D 6 · active Discovery 1 |
+| C (content) | 9 | validated B 0 · answered Q 0 · accepted D 7 · active Discovery 2 |
 | V (uncertainty) | 0 | open Q 0 · pending B 0 · W below DoR 0 |
 
 ## Areas
@@ -14,7 +14,7 @@
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
+| A-02 | Page Object interoperability | 6 | 0 | C: validated B 0 · answered Q 0 · accepted D 4 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
 
@@ -24,6 +24,7 @@
 | --- | --- | --- | --- |
 | G-01 | Repository has a reproducible local development loop | count; current=1 target=1 | verified |
 | G-02 | Spike behavior runs through public packages | count; current=1 target=1 | verified |
+| G-03 | Vue example activates Page Objects through the Vue package | count; current=1 target=1 | verified |
 
 ## Work items
 
@@ -31,6 +32,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | W-01 | feature | Establish the monorepo walking skeleton | G-01 | complicated | ⊤ | done |  |
 | W-02 | feature | Preserve spike behavior through package extraction | G-02 | complicated | ⊤ | done |  |
+| W-03 | feature | Extract Vue Page Object activation composable | G-03 | complicated | ⊤ | done |  |
 
 ## Decisions
 
@@ -43,18 +45,20 @@
 | D-05 | Use core and Unplugin packages | accepted | D-01 |
 | D-06 | Separate POM compilation from live activation | accepted |  |
 | D-07 | Use structural POMs and explicit WebMCP exposure | accepted |  |
+| D-08 | Package Vue lifecycle integration separately | accepted |  |
 
 ## Open questions
 
 | ID | Question | Cynefin | Targets | Status |
 | --- | --- | --- | --- | --- |
-| Q-01 | Choose the public activation interface | complicated | D-06 | deferred |
+| Q-01 | Choose the public activation interface | complicated | D-06, W-03 | deferred |
 
 ## Discoveries
 
 | ID | Title | Tags | Status |
 | --- | --- | --- | --- |
 | Y-01 | Shared Page Object behavior | Generated WebMCP Tool, Page Object Model (POM) | active |
+| Y-02 | Framework lifecycle owns Page Object disposal | Page Object | active |
 
 ## Dependency graph
 
@@ -62,8 +66,10 @@
 graph TD
   G_01["G-01: Repository has a reproducible local development loop"]:::goal
   G_02["G-02: Spike behavior runs through public packages"]:::goal
+  G_03["G-03: Vue example activates Page Objects through the Vue package"]:::goal
   W_01["W-01: Establish the monorepo walking skeleton"]:::done
   W_02["W-02: Preserve spike behavior through package extraction"]:::done
+  W_03["W-03: Extract Vue Page Object activation composable"]:::done
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -71,12 +77,15 @@ graph TD
   D_05["D-05: Use core and Unplugin packages"]:::decision
   D_06["D-06: Separate POM compilation from live activation"]:::decision
   D_07["D-07: Use structural POMs and explicit WebMCP exposure"]:::decision
+  D_08["D-08: Package Vue lifecycle integration separately"]:::decision
   Q_01["Q-01: Choose the public activation interface"]:::question
   Y_01["Y-01: Shared Page Object behavior"]:::discovery
+  Y_02["Y-02: Framework lifecycle owns Page Object disposal"]:::discovery
   A_01["A-01: Repository foundation"]:::area
   A_02["A-02: Page Object interoperability"]:::area
   D_05 -->|supersedes| D_01
   Q_01 -->|asks| D_06
+  Q_01 -->|asks| W_03
   W_01 -->|implements| D_01
   W_01 -->|implements| D_02
   W_01 -->|implements| D_03
@@ -85,6 +94,8 @@ graph TD
   W_02 -->|implements| D_06
   W_02 -->|implements| D_07
   W_02 -->|produces| Y_01
+  W_03 -->|implements| D_08
+  Y_02 -->|distills| D_08
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff

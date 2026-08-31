@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:20f32e8d799e49cc805f5b049254fd4ecb64a4d6121f0034c73c1c35531bdc30
+# checksum: sha256:90b44037e5f4893ac75161cb99ad79305f365107e9efc2cbb50cdf817bc3bc88
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -9,6 +9,11 @@ g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updat
     | Distillation is --distill-deferred until the first migrated WebMCP slice.
 
 g G-02 status=verified fitness_kind=count t_created=2026-08-27T12:43:03Z t_updated=2026-08-27T13:16:23Z "Spike behavior runs through public packages"
+  area: A-02
+  fitness_target: 1
+  fitness_current: 1
+
+g G-03 status=verified fitness_kind=count t_created=2026-08-27T14:13:27Z t_updated=2026-08-27T14:39:37Z "Vue example activates Page Objects through the Vue package"
   area: A-02
   fitness_target: 1
   fitness_current: 1
@@ -93,6 +98,33 @@ w W-02 type=feature status=done cynefin=complicated t_created=2026-08-27T12:43:0
   why:
     | The first migration slice must prove the package boundaries using the already working spike instead of rebuilding its behavior.
 
+w W-03 type=feature status=done cynefin=complicated t_created=2026-08-27T14:13:27Z t_updated=2026-08-27T14:39:37Z "Extract Vue Page Object activation composable"
+  goals: G-03
+  fitness: G-03=+1
+  surface: packages/webmcp-vue, apps/example-vue/src/ayme/useAymeExperiment.ts, apps/example-vue/package.json, pnpm-lock.yaml, apps/example-vue/vitest.config.ts
+  ac:
+    | The @ayme-dev/webmcp-vue workspace package exposes usePageObject from its root entry point.
+    | usePageObject returns the typed Page Object and disposes its core registration exactly once when the current Vue effect scope ends.
+    | The Vue example activates ListPage through @ayme-dev/webmcp-vue and no longer calls or disposes createPageRegistration directly.
+    | The example keeps its Page Object Models and experiment-specific runtime, debugging, probing, and relay behavior.
+    | Package tests, example Vitest and Playwright tests, build, lint, typecheck, Turbo boundaries, and a package dry-run pass.
+    | No package is published and no Vue app plugin, Nuxt integration, other framework package, or final public core activation API is added.
+  hypothesis:
+    | Extracting the proven Vue lifecycle binding behind one composable will preserve example behavior while giving Vue integration a reusable owner.
+  evidence_strategy:
+    | Run the package test suite against activation and scope disposal, then run the repository build, lint, typecheck, Vitest, Playwright, Turbo boundaries, and package dry-run checks.
+  evidence:
+    | Package checks passed: build, lint, typecheck, and test; Vitest reported 1 file and 2 tests passed.
+    | Example checks passed: build, lint, typecheck, and Vitest reported 2 files and 3 tests passed; all 4 Playwright tests passed against the existing 127.0.0.1:4190 server with the temporary no-webServer config after the strict wrapper found the port occupied.
+    | Repository checks passed: pnpm run build, lint, typecheck, and test; Turbo boundaries checked 50 files in 6 packages with no issues; frozen lockfile install passed.
+    | Package dry-run passed: pnpm --filter @ayme-dev/webmcp-vue pack --dry-run listed dist/index.d.mts, dist/index.mjs, LICENSE, and package.json; no package was published.
+    | Final hygiene passed: git diff --check reported no errors; package exports use only the new adapter files and the example changes use usePageObject(ListPage).
+    | Vitest isolation correction verified: pnpm --filter @ayme-dev/webmcp-vue run test passed 1 file and 2 tests; pnpm --filter @ayme-dev/example-vue run test passed 1 file and 1 test from src/App.test.ts only; pnpm run test passed 7 tasks with the example test at 1 file and 1 test.
+    | Follow-up hygiene verified: pnpm --filter @ayme-dev/example-vue run typecheck passed; git diff --check passed; grove check passed.
+    | Coordinator verification passed: package test 1 file and 2 tests; example test 1 file and 1 test; example typecheck; Turbo boundaries checked 50 files in 6 packages; Playwright 4 tests passed against the existing 127.0.0.1:4190 server; git diff --check and grove check passed.
+  why:
+    | This package pilots framework lifecycle integration without settling Q-01 or moving consumer Page Object Models into library code.
+
 d D-01 status=superseded t_created=2026-08-27T08:43:08Z t_updated=2026-08-27T11:48:35Z "Use the five-workspace monorepo layout"
   context:
     | The open-source WebMCP library needs independently publishable core and Vite packages, a private example application, and shared tooling configuration.
@@ -172,7 +204,13 @@ d D-07 status=accepted t_created=2026-08-27T11:48:37Z t_updated=2026-08-27T12:43
   decision:
     | Adopt ADR-0007.
 
-q Q-01 status=deferred cynefin=complicated t_created=2026-08-27T12:43:03Z t_updated=2026-08-27T12:43:05Z "Choose the public activation interface"
+d D-08 status=accepted t_created=2026-08-27T14:12:45Z t_updated=2026-08-27T14:40:25Z "Package Vue lifecycle integration separately"
+  context:
+    | Canonical rationale: docs/adr/0008-package-vue-lifecycle-integration-separately.md.
+  decision:
+    | Adopt ADR-0008.
+
+q Q-01 status=deferred cynefin=complicated t_created=2026-08-27T12:43:03Z t_updated=2026-08-27T14:13:29Z "Choose the public activation interface"
   why:
     | The spike useAymePage function combines Vue lifecycle management with framework-neutral runtime behavior. W-02 separates those responsibilities but intentionally does not choose the final public interface.
   exit:
@@ -184,6 +222,12 @@ y Y-01 status=active t_created=2026-08-27T13:24:26Z t_updated=2026-08-27T13:25:0
   invariant:
     | A single authored Page Object definition can preserve the same behavior across Playwright execution and Generated WebMCP Tools when compilation and live activation remain separate.
 
+y Y-02 status=active t_created=2026-08-27T14:40:25Z t_updated=2026-08-27T14:40:25Z "Framework lifecycle owns Page Object disposal"
+  tags: Page Object
+  surface: packages/webmcp-vue, apps/example-vue/src/ayme/useAymeExperiment.ts
+  invariant:
+    | A framework integration can own Page Object activation and disposal for its lifecycle while the core runtime remains framework-neutral.
+
 a A-01 status=present t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:42:21Z "Repository foundation"
   surface: apps, packages, package.json, pnpm-workspace.yaml, pnpm-lock.yaml, turbo.json, devbox.json, devbox.lock, .gitignore
 
@@ -191,6 +235,7 @@ a A-02 status=present t_created=2026-08-27T12:43:02Z t_updated=2026-08-27T12:43:
 
 e D-05 supersedes D-01 t_created=2026-08-27T11:48:25Z
 e Q-01 asks D-06 t_created=2026-08-27T12:43:04Z
+e Q-01 asks W-03 t_created=2026-08-27T14:13:29Z
 e W-01 implements D-01 t_created=2026-08-27T08:43:22Z
 e W-01 implements D-02 t_created=2026-08-27T08:43:22Z
 e W-01 implements D-03 t_created=2026-08-27T08:43:22Z
@@ -199,3 +244,5 @@ e W-02 implements D-05 t_created=2026-08-27T12:43:18Z
 e W-02 implements D-06 t_created=2026-08-27T12:43:18Z
 e W-02 implements D-07 t_created=2026-08-27T12:43:19Z
 e W-02 produces Y-01 t_created=2026-08-27T13:24:26Z
+e W-03 implements D-08 t_created=2026-08-27T14:13:29Z
+e Y-02 distills D-08 t_created=2026-08-27T14:40:25Z
