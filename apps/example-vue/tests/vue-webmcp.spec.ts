@@ -24,9 +24,20 @@ test.beforeEach(async ({ context }) => {
     Object.defineProperty(document, "modelContext", {
       configurable: false,
       value: {
-        async registerTool(tool: PublishedTool) {
+        async registerTool(
+          tool: PublishedTool,
+          { signal }: { signal: AbortSignal }
+        ) {
           publishedTools.push(tool);
           window.__AYME_WEBMCP_TOOLS__ = publishedTools;
+          signal.addEventListener(
+            "abort",
+            () => {
+              const index = publishedTools.indexOf(tool);
+              if (index >= 0) publishedTools.splice(index, 1);
+            },
+            { once: true }
+          );
         },
       },
     });
@@ -221,6 +232,31 @@ test("runs the same POM behavior through registered WebMCP tools", async ({
     },
     "Added through WebMCP"
   );
+});
+
+test("publishes collection tools only while a component root is live", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const publishedToolCount = async () =>
+    await page.evaluate(() => window.__AYME_WEBMCP_TOOLS__?.length);
+
+  await expect.poll(publishedToolCount).toBe(4);
+
+  await executePublishedTool(page, "ListPage.items.archive", {
+    index: 0,
+    args: {},
+  });
+  await executePublishedTool(page, "ListPage.items.archive", {
+    index: 0,
+    args: {},
+  });
+  await expect.poll(publishedToolCount).toBe(2);
+
+  await executePublishedTool(page, "ListPage.addItem", {
+    text: "Restore live component tools",
+  });
+  await expect.poll(publishedToolCount).toBe(4);
 });
 
 test("demonstrates the list app and invokes the generated POM tools from the debug console", async ({

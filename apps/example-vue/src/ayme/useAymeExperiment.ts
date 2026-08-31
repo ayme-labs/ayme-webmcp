@@ -16,9 +16,6 @@ export function useAymeExperiment() {
   const traceRevision = ref(0);
   const webMcpStatus = ref("Waiting to register WebMCP tools…");
   const registeredPoms = ref<RegisteredPom[]>([]);
-  let demoMutationObserver: MutationObserver | undefined;
-  let probeTimer: number | undefined;
-  let probeScheduled = false;
 
   const browserRuntime = createBrowserPage({
     onTrace() {
@@ -41,17 +38,9 @@ export function useAymeExperiment() {
 
   const refreshPomMembers = () => probeRegisteredPomMembers();
 
-  const schedulePomMemberProbe = () => {
-    if (probeScheduled) return;
-    probeScheduled = true;
-    probeTimer = window.setTimeout(() => {
-      probeScheduled = false;
-      probeTimer = undefined;
-      void refreshPomMembers();
-    }, 0);
-  };
-
   let unsubscribeFromRegisteredPoms: (() => void) | undefined;
+  let disposeWebMcpTools: (() => void) | undefined;
+  let unmounted = false;
 
   onMounted(async () => {
     const updateRegisteredPoms = () => {
@@ -61,18 +50,12 @@ export function useAymeExperiment() {
     unsubscribeFromRegisteredPoms =
       subscribeToRegisteredPoms(updateRegisteredPoms);
 
-    const demoPanel = document.querySelector(".demo-panel");
-    if (demoPanel) {
-      demoMutationObserver = new MutationObserver(schedulePomMemberProbe);
-      demoMutationObserver.observe(demoPanel, {
-        attributes: true,
-        childList: true,
-        subtree: true,
-      });
-    }
-    await refreshPomMembers();
-
     const registration = await registerWebMcpTools();
+    if (unmounted) {
+      registration.dispose();
+      return;
+    }
+    disposeWebMcpTools = registration.dispose;
     webMcpStatus.value = registration.registered
       ? registration.message
       : `${registration.message} Debug console remains available.`;
@@ -87,8 +70,8 @@ export function useAymeExperiment() {
   });
 
   onBeforeUnmount(() => {
-    demoMutationObserver?.disconnect();
-    if (probeTimer !== undefined) window.clearTimeout(probeTimer);
+    unmounted = true;
+    disposeWebMcpTools?.();
     unsubscribeFromRegisteredPoms?.();
   });
 

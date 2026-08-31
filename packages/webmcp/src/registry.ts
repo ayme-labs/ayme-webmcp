@@ -17,18 +17,24 @@ type CompiledPom = {
   instantiate(page: BrowserPage): object;
 };
 
+type LiveRegisteredPomTool = RegisteredPomTool & {
+  componentPath?: string;
+};
+
 export type RegisteredPom = {
   id: string;
   instance: object;
   manifest: PomManifest;
   memberObservations: readonly PomMemberObservation[];
-  tools: readonly RegisteredPomTool[];
+  tools: readonly LiveRegisteredPomTool[];
 };
 
 let browserPage: BrowserPage | undefined;
 const compiledPoms = new WeakMap<object, CompiledPom>();
-const registeredPoms = new Map<string, RegisteredPom>();
+const registeredPoms = new Set<RegisteredPom>();
 const subscribers = new Set<() => void>();
+let mutationObserver: MutationObserver | undefined;
+let probeTimer: ReturnType<typeof setTimeout> | undefined;
 
 export function configureAymeRuntime(page: BrowserPage) {
   browserPage = page;
@@ -63,47 +69,133 @@ export function createPageRegistration(PomClass: object) {
     memberObservations: [],
     tools: createRegisteredTools(compiledPom.manifest, instance),
   };
-  registeredPoms.set(registration.id, registration);
+  const registryWasEmpty = registeredPoms.size === 0;
+  registeredPoms.add(registration);
+  if (registryWasEmpty) startObservingPage();
+  else schedulePomMemberProbe();
   notifySubscribers();
 
   return {
     instance: registration.instance,
     dispose() {
-      if (registeredPoms.get(registration.id) !== registration) return;
-      registeredPoms.delete(registration.id);
+      if (!registeredPoms.delete(registration)) return;
+      if (registeredPoms.size === 0) stopObservingPage();
       notifySubscribers();
     },
   };
 }
 
+function startObservingPage() {
+  mutationObserver = new MutationObserver(schedulePomMemberProbe);
+  mutationObserver.observe(document.documentElement, {
+    attributes: true,
+    childList: true,
+    characterData: true,
+    subtree: true,
+  });
+  schedulePomMemberProbe();
+}
+
+function stopObservingPage() {
+  mutationObserver?.disconnect();
+  mutationObserver = undefined;
+  if (probeTimer !== undefined) clearTimeout(probeTimer);
+  probeTimer = undefined;
+}
+
+function schedulePomMemberProbe() {
+  if (probeTimer !== undefined) return;
+  probeTimer = setTimeout(() => {
+    probeTimer = undefined;
+    void probeRegisteredPomMembers();
+  }, 0);
+}
+
 export async function probeRegisteredPomMembers() {
   const results = await Promise.all(
-    [...registeredPoms.values()].map(async (registration) => ({
+    [...registeredPoms].map(async (registration) => ({
       registration,
       memberObservations: await probePomMembers(registration),
     }))
   );
 
+  let changed = false;
   for (const result of results) {
-    if (registeredPoms.get(result.registration.id) !== result.registration)
+    if (!registeredPoms.has(result.registration)) continue;
+    if (
+      sameObservations(
+        result.registration.memberObservations,
+        result.memberObservations
+      )
+    )
       continue;
-    registeredPoms.set(result.registration.id, {
-      ...result.registration,
-      memberObservations: result.memberObservations,
-    });
+    result.registration.memberObservations = result.memberObservations;
+    changed = true;
   }
-  notifySubscribers();
+  if (changed) notifySubscribers();
+}
+
+function sameObservations(
+  left: readonly PomMemberObservation[],
+  right: readonly PomMemberObservation[]
+) {
+  return (
+    left.length === right.length &&
+    left.every((observation, index) => {
+      const candidate = right[index];
+      return (
+        candidate !== undefined &&
+        observation.memberName === candidate.memberName &&
+        observation.kind === candidate.kind &&
+        observation.count === candidate.count &&
+        observation.access === candidate.access &&
+        observation.error === candidate.error
+      );
+    })
+  );
 }
 
 export function listRegisteredPoms() {
-  return [...registeredPoms.values()];
+  return [...registeredPoms];
 }
 
 export function listRegisteredPomTools() {
-  return [...registeredPoms.values()].flatMap(
-    (registration) => registration.tools
-  );
+  const activeTools = new Map<string, LiveRegisteredPomTool>();
+  for (const registration of registeredPoms) {
+    for (const tool of registration.tools) {
+      const componentPath = tool.componentPath;
+      const active =
+        componentPath === undefined ||
+        registration.memberObservations.some(
+          (observation) =>
+            observation.kind === "component-root" &&
+            observation.count > 0 &&
+            isLiveComponentRoot(componentPath, observation.memberName)
+        );
+      if (active && !activeTools.has(tool.name))
+        activeTools.set(tool.name, tool);
+    }
+  }
+  return [...activeTools.values()];
 }
+
+function isLiveComponentRoot(path: string, memberName: string) {
+  const pattern = path
+    .split(".")
+    .map((segment) => {
+      const collection = segment.endsWith("[]");
+      const name = collection ? segment.slice(0, -2) : segment;
+      return `${escapeRegExp(name)}${collection ? "\\[\\d+\\]" : ""}`;
+    })
+    .join("\\.");
+  return new RegExp(`^${pattern}\\.root$`).test(memberName);
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export const listRegisteredTools = listRegisteredPomTools;
 
 export function subscribeToRegisteredPoms(subscriber: () => void) {
   subscribers.add(subscriber);
@@ -121,21 +213,19 @@ function createRegisteredTools(manifest: PomManifest, instance: object) {
   const components = new Map(
     manifest.components.map((component) => [component.className, component])
   );
-  const collectionTools = manifest.members.flatMap((member) => {
-    if (member.kind !== "component" || !member.collection) return [];
+  const componentTools = manifest.members.flatMap((member) => {
+    if (member.kind !== "component") return [];
     const component = components.get(member.componentClassName);
     if (!component) return [];
-    return component.tools.map((tool) =>
-      createCollectionTool(
-        manifest.className,
-        instance,
-        member,
-        component,
-        tool
-      )
+    return createComponentTools(
+      manifest.className,
+      instance,
+      [member],
+      component,
+      components
     );
   });
-  return [...pageTools, ...collectionTools];
+  return [...pageTools, ...componentTools];
 }
 
 function createRegisteredTool(
@@ -154,32 +244,81 @@ function createRegisteredTool(
   };
 }
 
-function createCollectionTool(
+function createComponentTools(
   pomId: string,
   pageInstance: object,
-  member: PomComponentMemberManifest,
+  path: readonly PomComponentMemberManifest[],
+  component: PomComponentManifest,
+  components: ReadonlyMap<string, PomComponentManifest>,
+  componentPath: ReadonlySet<string> = new Set()
+): LiveRegisteredPomTool[] {
+  if (componentPath.has(component.className)) return [];
+  const nextComponentPath = new Set(componentPath).add(component.className);
+  const tools = component.tools.map((action) =>
+    createComponentTool(pomId, pageInstance, path, component, action)
+  );
+  const nestedTools = component.members.flatMap((member) => {
+    if (member.kind !== "component") return [];
+    const childComponent = components.get(member.componentClassName);
+    if (!childComponent) return [];
+    return createComponentTools(
+      pomId,
+      pageInstance,
+      [...path, member],
+      childComponent,
+      components,
+      nextComponentPath
+    );
+  });
+  return [...tools, ...nestedTools];
+}
+
+function createComponentTool(
+  pomId: string,
+  pageInstance: object,
+  path: readonly PomComponentMemberManifest[],
   component: PomComponentManifest,
   action: ToolManifest
-): RegisteredPomTool {
-  const wrapper = collectionToolManifest(pomId, member, action);
+): LiveRegisteredPomTool {
+  const componentPath = componentPathFor(path);
+  const collectionCount = path.filter((member) => member.collection).length;
+  if (collectionCount === 0)
+    return createSingularComponentTool(
+      pomId,
+      pageInstance,
+      path,
+      component,
+      action,
+      componentPath
+    );
+
+  const wrapper = indexedComponentToolManifest(
+    pomId,
+    path,
+    action,
+    collectionCount
+  );
   return {
     pomId,
     componentClassName: component.className,
+    componentPath,
     methodName: action.methodName,
     name: wrapper.toolName,
     description: action.description,
     inputSchema: wrapper.inputSchema,
     parameters: wrapper.parameters,
     execute: async (input) => {
-      const [index, args] = validatedArguments(wrapper, input);
-      if (typeof index !== "number")
-        throw new Error("Collection tool index must be a number.");
-
-      const components = asComponents(await readMember(pageInstance, member));
-      const componentInstance = components[index];
+      const values = validatedArguments(wrapper, input);
+      const indexes = values.slice(0, collectionCount);
+      const args = values[collectionCount];
+      const componentInstance = await resolveComponent(
+        pageInstance,
+        path,
+        indexes
+      );
       if (!componentInstance || !isRecord(componentInstance)) {
         throw new Error(
-          `No ${component.className} instance exists at ${pomId}.${member.memberName}[${index}].`
+          `No ${component.className} instance exists at ${pomId}.${publicComponentPath(path)}.`
         );
       }
       return await executeTool(componentInstance, action, args);
@@ -187,17 +326,51 @@ function createCollectionTool(
   };
 }
 
-function collectionToolManifest(
+function createSingularComponentTool(
   pomId: string,
-  member: PomComponentMemberManifest,
-  action: ToolManifest
+  pageInstance: object,
+  path: readonly PomComponentMemberManifest[],
+  component: PomComponentManifest,
+  action: ToolManifest,
+  componentPath: string
+): LiveRegisteredPomTool {
+  return {
+    pomId,
+    componentClassName: component.className,
+    componentPath,
+    methodName: action.methodName,
+    name: `${pomId}.${publicComponentPath(path)}.${action.methodName}`,
+    description: action.description,
+    inputSchema: action.inputSchema,
+    parameters: action.parameters,
+    execute: async (input) => {
+      const componentInstance = await resolveComponent(pageInstance, path, []);
+      if (!componentInstance || !isRecord(componentInstance)) {
+        throw new Error(
+          `No ${component.className} instance exists at ${pomId}.${publicComponentPath(path)}.`
+        );
+      }
+      return await executeTool(componentInstance, action, input);
+    },
+  };
+}
+
+function indexedComponentToolManifest(
+  pomId: string,
+  path: readonly PomComponentMemberManifest[],
+  action: ToolManifest,
+  collectionCount: number
 ): ToolManifest {
-  const parameters = [
-    {
-      name: "index",
+  const indexParameters = Array.from(
+    { length: collectionCount },
+    (_, index) => ({
+      name: index === 0 ? "index" : `index${index + 1}`,
       optional: false,
       schema: { type: "integer", minimum: 0 } satisfies JsonSchema,
-    },
+    })
+  );
+  const parameters = [
+    ...indexParameters,
     {
       name: "args",
       optional: false,
@@ -207,10 +380,41 @@ function collectionToolManifest(
 
   return {
     ...action,
-    toolName: `${pomId}.${member.memberName}.${action.methodName}`,
+    toolName: `${pomId}.${publicComponentPath(path)}.${action.methodName}`,
     inputSchema: inputSchemaFor(parameters),
     parameters,
   };
+}
+
+function componentPathFor(path: readonly PomComponentMemberManifest[]) {
+  return path
+    .map((member) => `${member.memberName}${member.collection ? "[]" : ""}`)
+    .join(".");
+}
+
+function publicComponentPath(path: readonly PomComponentMemberManifest[]) {
+  return path.map((member) => member.memberName).join(".");
+}
+
+async function resolveComponent(
+  pageInstance: object,
+  path: readonly PomComponentMemberManifest[],
+  indexes: readonly unknown[]
+) {
+  let current: unknown = pageInstance;
+  let collectionIndex = 0;
+  for (const member of path) {
+    if (!isRecord(current)) return undefined;
+    const value = await readMember(current, member);
+    if (!member.collection) {
+      current = value;
+      continue;
+    }
+    const index = indexes[collectionIndex++];
+    if (typeof index !== "number") return undefined;
+    current = asComponents(value)[index];
+  }
+  return current;
 }
 
 async function probePomMembers(
