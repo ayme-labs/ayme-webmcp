@@ -19,6 +19,7 @@
     },
     "test:e2e": {
       "dependsOn": ["^build"],
+      "passThroughEnv": ["PLAYWRIGHT_BROWSERS_PATH"],
       "cache": false
     }
   },
