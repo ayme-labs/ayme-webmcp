@@ -118,51 +118,69 @@ function pomMembers(
   declaration: ts.ClassDeclaration,
   components: Map<ts.ClassDeclaration, PomComponentManifest>
 ): PomMemberManifest[] {
-  return declaration.members.flatMap((member): PomMemberManifest[] => {
-    if (
-      !isPublicInstanceMember(member) ||
-      !member.name ||
-      !ts.isIdentifier(member.name)
-    )
-      return [];
+  return classMembers(checker, declaration).flatMap(
+    (member): PomMemberManifest[] => {
+      if (
+        !isPublicInstanceMember(member) ||
+        !member.name ||
+        !ts.isIdentifier(member.name)
+      )
+        return [];
 
-    const memberInfo = memberValueInfo(checker, member);
-    if (!memberInfo) return [];
-    if (
-      ts.isMethodDeclaration(member) &&
-      (toolDescription(member) !== undefined || member.parameters.length > 0)
-    ) {
-      return [];
-    }
+      const memberInfo = memberValueInfo(checker, member);
+      if (!memberInfo) return [];
+      if (
+        ts.isMethodDeclaration(member) &&
+        (toolDescription(member) !== undefined || member.parameters.length > 0)
+      ) {
+        return [];
+      }
 
-    if (isLocatorType(memberInfo.type)) {
+      if (isLocatorType(memberInfo.type)) {
+        return [
+          {
+            memberName: member.name.text,
+            kind: "locator",
+            access: memberInfo.access,
+          },
+        ];
+      }
+
+      const component = componentType(checker, memberInfo.type);
+      if (!component) return [];
+      const componentClassName = ensureComponentManifest(
+        checker,
+        component.declaration,
+        components
+      );
+      if (!componentClassName) return [];
       return [
         {
           memberName: member.name.text,
-          kind: "locator",
+          kind: "component",
           access: memberInfo.access,
+          componentClassName,
+          collection: component.collection,
         },
       ];
     }
+  );
+}
 
-    const component = componentType(checker, memberInfo.type);
-    if (!component) return [];
-    const componentClassName = ensureComponentManifest(
-      checker,
-      component.declaration,
-      components
-    );
-    if (!componentClassName) return [];
-    return [
-      {
-        memberName: member.name.text,
-        kind: "component",
-        access: memberInfo.access,
-        componentClassName,
-        collection: component.collection,
-      },
-    ];
-  });
+function classMembers(
+  checker: ts.TypeChecker,
+  declaration: ts.ClassDeclaration
+): ts.ClassElement[] {
+  if (!declaration.name) return [];
+  const symbol = checker.getSymbolAtLocation(declaration.name);
+  if (!symbol) return [];
+
+  return checker
+    .getPropertiesOfType(checker.getDeclaredTypeOfSymbol(symbol))
+    .flatMap((property) => {
+      const member = property.valueDeclaration ?? property.declarations?.[0];
+      return member && ts.isClassElement(member) ? [member] : [];
+    });
 }
 
 function memberValueInfo(
@@ -214,8 +232,9 @@ function toolsForClass(
   const className = declaration.name?.text;
   if (!className) throw new Error("A WebMCP tool class needs a class name.");
 
-  return declaration.members.flatMap((member) => {
-    if (!ts.isMethodDeclaration(member)) return [];
+  return classMembers(checker, declaration).flatMap((member) => {
+    if (!isPublicInstanceMember(member) || !ts.isMethodDeclaration(member))
+      return [];
     const description = toolDescription(member);
     if (description === undefined) return [];
     if (!member.name || !ts.isIdentifier(member.name)) {
