@@ -407,3 +407,10 @@
   - Status: Accepted
   - Content: Continue through implementation, review, pull-request delivery, and CI follow-through. Completion requires the integration pull request to be open with all required checks passing.
   - Sources: Current conversation, implementation authorization.
+
+- P-061 — Choose how to distribute the reviewed Playwright runtime
+  - Origin: Agent
+  - Area: A-002
+  - Status: Open
+  - Content: The exact Git-subdirectory dependency installs Playwright source but not the generated `playwright-core/lib/coreBundle.js`. A `prepare` hook using Playwright's existing root builder passed in a populated checkout but failed in a cold pnpm install because root build dependencies are unavailable; that attempted hook was reverted from Playwright PR #7. Choose between committing a generated runtime artifact in the fork, adding a dedicated core-only build path, publishing an immutable built package artifact, or accepting a broad root install and build during dependency preparation before W-09 continues.
+  - Sources: W-09 dependency gate and Playwright PR #7 cold-install experiment.
