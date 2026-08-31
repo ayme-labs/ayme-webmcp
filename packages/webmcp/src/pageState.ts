@@ -1,8 +1,5 @@
-import { InjectedScript } from "virtual:ayme-playwright-injected";
-
+import { ariaSnapshot } from "@ayme-dev/playwright-browser";
 import type { ModelContextTool } from "@mcp-b/webmcp-types";
-
-let injectedScript: InjectedScript | undefined;
 
 const inputSchema = {
   type: "object",
@@ -20,16 +17,5 @@ export const getPageStateTool = {
 } satisfies ModelContextTool<Record<string, never>, string>;
 
 function capturePageState() {
-  injectedScript ??= new InjectedScript(window, {
-    browserName: "chromium",
-    customEngines: [],
-    frameSeq: 0,
-    isUnderTest: false,
-    isUtilityWorld: false,
-    sdkLanguage: "javascript",
-    shouldPrependErrorPrefix: false,
-    stableRafCount: 0,
-    testIdAttributeName: "data-testid",
-  });
-  return injectedScript.ariaSnapshot(document.body, { mode: "ai" });
+  return ariaSnapshot(document.body);
 }
