@@ -159,19 +159,19 @@
 - P-023 — Treat locator cardinality as already handled elsewhere
   - Origin: User
   - Area: A-003
-  - Status: Open
+  - Status: Rejected
   - Content: The user proposed that zero and multiple POM-root matches are handled by task `01a05808-b9aa-7fb0-ba3a-5d0ba08b617f`. Inspection shows that task defines tool presence as `root.count() > 0` and does not map individual matched elements to StructuralRefs, so the StructuralTree behavior for multiple matches still requires alignment.
 
 - P-024 — Separate live tool availability from structural observability
   - Origin: Agent
   - Area: A-003
-  - Status: Open
+  - Status: Accepted
   - Content: Task `01a05808-b9aa-7fb0-ba3a-5d0ba08b617f` settles page registration, Ayme-owned observation, root-count-based child-tool activation, and publisher synchronization. It does not settle element-to-ref correlation, synthetic refs, multiple structural occurrences, or hidden-root representation. A hidden DOM root can therefore activate tools while remaining absent from AI-visible page state unless the integration policy says otherwise.
 
 - P-025 — Decorate every real-ref occurrence on multiple matches
   - Origin: Agent
   - Area: A-003
-  - Status: Open
+  - Status: Rejected
   - Content: For a locator resolving to several elements, consider decorating every matched element that maps to a real Playwright ref, while reserving synthetic refs for uniquely resolved omitted roots. This remains an integration decision and is not accepted yet.
 
 - P-026 — Reject a combined iframe and index-addressing ADR
@@ -311,7 +311,7 @@
 - P-047 — Use compact root-only POM annotations
   - Origin: Agent
   - Area: A-001
-  - Status: Open
+  - Status: Accepted
   - Content: Render the current StructuralTree with the Ayme experiment's ref-first compact syntax. Add `/pom: <registration-id>.<component-path>` only to nodes matched by explicit nested Page Object root locators. Do not attach a top-level Page Object without a root locator to an arbitrary document node, and do not emit locator-member annotations.
   - Sources: Current conversation, proposed representative output example.
 
@@ -414,3 +414,17 @@
   - Status: Accepted
   - Content: Commit Playwright's generated `src/generated/injectedScriptSource.ts` artifact in the fork, include that single artifact in the `playwright-core` Git-subdirectory package, and let `@ayme-dev/playwright-browser` consume it as build-time text from an exact reviewed commit. Do not commit the full `coreBundle.js`, add a consumer-side Playwright build, or introduce a publication pipeline for this slice.
   - Sources: W-09 dependency gate, Playwright PR #7 cold-install experiment, and user approval of the generated-source recommendation.
+
+- P-062 — Lock the representative root-only output
+  - Origin: User
+  - Area: A-001
+  - Status: Accepted
+  - Content: Use `- [ref=e1] listitem:` followed by `  - /pom: ListPage.items[0]` and `  - [ref=e2] button "Archive item-1"` as the first literal serialized-output contract. Ref values in live captures remain capture-scoped.
+  - Sources: P-041, P-047, the Ayme live POM experiment renderer, and the approved W-10 execution plan.
+
+- P-063 — Require one element per indexed POM root
+  - Origin: Agent
+  - Area: A-003
+  - Status: Accepted
+  - Content: Resolve collection members into their existing indexed component paths, then apply the same root rule to each instance: zero matches are absent, exactly one observable match is decorated, and multiple matches are ambiguous and absent. A uniquely resolved eligible root omitted from the ARIA tree may receive a synthetic ref.
+  - Sources: PR #9 component observation behavior, P-019, W-10 acceptance criteria, and the approved implementation plan.

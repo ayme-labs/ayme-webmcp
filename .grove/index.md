@@ -6,15 +6,15 @@
 
 | Measure | Count | Composition |
 | --- | --- | --- |
-| C (content) | 13 | validated B 1 · answered Q 0 · accepted D 10 · active Discovery 2 |
-| V (uncertainty) | 3 | open Q 2 · pending B 0 · W below DoR 1 |
+| C (content) | 15 | validated B 1 · answered Q 2 · accepted D 10 · active Discovery 2 |
+| V (uncertainty) | 0 | open Q 0 · pending B 0 · W below DoR 0 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 10 | 3 | C: validated B 1 · answered Q 0 · accepted D 7 · active Discovery 2; V: open Q 2 · pending B 0 · W below DoR 1 |
+| A-02 | Page Object interoperability | 12 | 0 | C: validated B 1 · answered Q 2 · accepted D 7 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
 
@@ -43,7 +43,7 @@
 | W-07 | feature | Expose dual ARIA capture in Playwright fork | G-07 | complicated | ⊤ | done |  |
 | W-08 | feature | Add Playwright-free StructuralTree kernel | G-07 | clear | ⊤ | done |  |
 | W-09 | feature | Extract Playwright browser capture package | G-07 | complicated | ⊤ | done |  |
-| W-10 | feature | Render root-only POM structural page state | G-07 | complicated | ⊥ | proposed | ★ |
+| W-10 | feature | Render root-only POM structural page state | G-07 | complicated | ⊤ | proposed | ★ |
 
 ## Decisions
 
@@ -66,8 +66,8 @@
 | ID | Question | Cynefin | Targets | Status |
 | --- | --- | --- | --- | --- |
 | Q-01 | Choose the public activation interface | complicated | D-06, W-03 | deferred |
-| Q-02 | Choose the compact structural output contract | complicated | W-10 | open |
-| Q-03 | Choose multiple POM root match behavior | complicated | W-10 | open |
+| Q-02 | Choose the compact structural output contract | complicated | W-10 | answered |
+| Q-03 | Choose multiple POM root match behavior | complicated | W-10 | answered |
 
 ## Assumptions
 
