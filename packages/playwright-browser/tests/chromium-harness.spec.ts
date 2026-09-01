@@ -6,10 +6,13 @@ import {
   observeFinderFactories,
   observeLocatorComposition,
   observeInputEvents,
+  observeLocatorReads,
+  observeLocatorStates,
   observePerCallTimeout,
   observeStrictResolution,
 } from "./fixtures/operations";
 import { revealDelayedState } from "./fixtures/dom";
+import { locatorReadDocument } from "./fixtures/document";
 
 test("matches finder factories and lazy descendant composition in Chromium", async ({
   parity,
@@ -106,5 +109,40 @@ test("observes the shared BrowserPage parity fixtures in Chromium", async ({
     allCount: 3,
     postInsertionCount: 4,
     clicked: ["alpha", "inserted"],
+  });
+});
+
+test("observes locator reads and state predicates in Chromium", async ({
+  parity,
+}) => {
+  await parity.reset(locatorReadDocument);
+
+  expect(await parity.run(observeLocatorReads)).toEqual({
+    allInnerTexts: ["First Visible", "Second Visible"],
+    allTextContents: ["First DOM-only Visible", "Second Visible"],
+    attribute: "rendered-text",
+    html: "<strong>Markup</strong>",
+    innerText: "Rendered",
+    inputValue: "from-control",
+    scalarStrict: true,
+    textContent: "Rendered DOM-only",
+  });
+
+  expect(await parity.run(observeLocatorStates)).toEqual({
+    checked: true,
+    unchecked: false,
+    ariaChecked: true,
+    inheritedDisabled: true,
+    ariaDisabled: true,
+    enabled: true,
+    editable: true,
+    readonly: false,
+    contentEditable: true,
+    visible: true,
+    hidden: true,
+    displayNone: false,
+    visibilityHidden: true,
+    missingVisible: false,
+    missingHidden: true,
   });
 });

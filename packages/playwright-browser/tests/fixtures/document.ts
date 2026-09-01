@@ -57,3 +57,34 @@ export const parityDocument = `<!doctype html>
     </main>
   </body>
 </html>`;
+
+export const locatorReadDocument = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Locator read fixture</title>
+  </head>
+  <body>
+    <ul>
+      <li data-fixture="read-item">First <span style="display: none">DOM-only</span> Visible</li>
+      <li data-fixture="read-item">Second <strong>Visible</strong></li>
+    </ul>
+    <div id="rendered-text">Rendered <span style="display: none">DOM-only</span></div>
+    <div id="html-read"><strong>Markup</strong></div>
+    <label id="wrapped-label">Wrapped <input id="wrapped-control" value="from-control" /></label>
+
+    <input id="checked" type="checkbox" checked />
+    <input id="unchecked" type="checkbox" />
+    <div id="aria-checked" role="checkbox" aria-checked="true">Custom check</div>
+    <fieldset disabled><input id="inherited-disabled" /></fieldset>
+    <button id="aria-disabled" aria-disabled="true">Disabled</button>
+    <input id="readonly" readonly />
+    <input id="editable" />
+    <div id="contenteditable" contenteditable="true"></div>
+
+    <div id="visible">Visible</div>
+    <div id="hidden" hidden>Hidden</div>
+    <div id="display-none" style="display: none">Display none</div>
+    <div id="visibility-hidden" style="visibility: hidden">Visibility hidden</div>
+  </body>
+</html>`;

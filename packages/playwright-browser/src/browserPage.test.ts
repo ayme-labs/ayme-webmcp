@@ -3,6 +3,38 @@ import { describe, expect, it } from "vitest";
 import { createBrowserPage } from "./browserPage";
 
 describe("createBrowserPage", () => {
+  it("reads plural text values in document order", async () => {
+    document.body.innerHTML =
+      "<ul><li>First</li><li>Second <span>item</span></li></ul>";
+    const runtime = createBrowserPage();
+
+    const items = runtime.page.locator("li");
+
+    expect(await items.allInnerTexts()).toEqual(["First", "Second item"]);
+    expect(await items.allTextContents()).toEqual(["First", "Second item"]);
+  });
+
+  it("reads scalar values strictly and retargets labeled controls", async () => {
+    document.body.innerHTML = `
+      <div id="read" data-kind="value"><span>Rendered</span></div>
+      <label id="field-label">Field<input value="from-control" /></label>
+      <button class="duplicate" data-kind="one">One</button>
+      <button class="duplicate" data-kind="two">Two</button>`;
+    const runtime = createBrowserPage();
+
+    const read = runtime.page.locator("#read");
+    expect(await read.getAttribute("data-kind")).toBe("value");
+    expect(await read.innerHTML()).toBe("<span>Rendered</span>");
+    expect(await read.innerText()).toBe("Rendered");
+    expect(await read.textContent()).toBe("Rendered");
+    expect(await runtime.page.locator("#field-label").inputValue()).toBe(
+      "from-control"
+    );
+    await expect(
+      runtime.page.locator(".duplicate").getAttribute("data-kind")
+    ).rejects.toThrow("Expected one element");
+  });
+
   it("creates lazy Playwright-compatible finder locators", async () => {
     document.body.innerHTML = `
       <main id="finder-root">

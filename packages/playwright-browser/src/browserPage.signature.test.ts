@@ -93,6 +93,22 @@ type _LocatorCompositionSignaturesMatch = Expect<
 type _FilterOptionsMatch = Expect<
   Equal<Flatten<BrowserLocatorFilterOptions>, ExpectedFilterOptions>
 >;
+type LocatorReadSurface = Pick<
+  Locator,
+  | "allInnerTexts"
+  | "allTextContents"
+  | "getAttribute"
+  | "innerHTML"
+  | "innerText"
+  | "inputValue"
+  | "isChecked"
+  | "isDisabled"
+  | "isEditable"
+  | "isEnabled"
+  | "isHidden"
+  | "isVisible"
+  | "textContent"
+>;
 
 const locatorOptions: NonNullable<Parameters<Page["locator"]>[1]> = {
   has: {} as Locator,
@@ -120,6 +136,9 @@ describe("BrowserPage finder signatures", () => {
     void (0 as unknown as _TestIdMatches);
     void (0 as unknown as _LocatorCompositionSignaturesMatch);
     void (0 as unknown as _FilterOptionsMatch);
+    const locator = undefined as unknown as BrowserLocator;
+    const playwrightReadSurface: LocatorReadSurface = locator;
+    expect(playwrightReadSurface).toBe(locator);
     expect(
       Object.keys({ ...locatorOptions, ...browserLocatorOptions })
     ).toHaveLength(4);

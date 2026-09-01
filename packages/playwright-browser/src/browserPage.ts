@@ -28,6 +28,15 @@ export type BrowserLocatorFilterOptions = BrowserLocatorOptions & {
   visible?: boolean;
 };
 
+export type BrowserLocatorReadOptions = {
+  signal?: AbortSignal;
+  timeout?: number;
+};
+
+export type BrowserLocatorVisibilityOptions = {
+  timeout?: number;
+};
+
 export type TraceEntry = {
   operation: "click" | "fill" | "waitFor";
   locator: string;
@@ -73,6 +82,22 @@ export interface BrowserLocator {
   nth(index: number): BrowserLocator;
   all(): Promise<BrowserLocator[]>;
   count(): Promise<number>;
+  allInnerTexts(): Promise<string[]>;
+  allTextContents(): Promise<string[]>;
+  getAttribute(
+    name: string,
+    options?: BrowserLocatorReadOptions
+  ): Promise<null | string>;
+  innerHTML(options?: BrowserLocatorReadOptions): Promise<string>;
+  innerText(options?: BrowserLocatorReadOptions): Promise<string>;
+  inputValue(options?: BrowserLocatorReadOptions): Promise<string>;
+  isChecked(options?: BrowserLocatorReadOptions): Promise<boolean>;
+  isDisabled(options?: BrowserLocatorReadOptions): Promise<boolean>;
+  isEditable(options?: BrowserLocatorReadOptions): Promise<boolean>;
+  isEnabled(options?: BrowserLocatorReadOptions): Promise<boolean>;
+  isHidden(options?: BrowserLocatorVisibilityOptions): Promise<boolean>;
+  isVisible(options?: BrowserLocatorVisibilityOptions): Promise<boolean>;
+  textContent(options?: BrowserLocatorReadOptions): Promise<null | string>;
   fill(value: string): Promise<void>;
   press(key: string): Promise<void>;
   click(): Promise<void>;
@@ -291,6 +316,74 @@ export class BrowserLocatorImpl implements BrowserLocator {
     return this.resolveElements().length;
   }
 
+  async allInnerTexts() {
+    return this.resolveElements().map((element) => getInnerText(element));
+  }
+
+  async allTextContents() {
+    return this.resolveElements().map((element) => element.textContent ?? "");
+  }
+
+  async getAttribute(name: string, options?: BrowserLocatorReadOptions) {
+    void options;
+    return this.requireSingleElement().getAttribute(name);
+  }
+
+  async innerHTML(options?: BrowserLocatorReadOptions) {
+    void options;
+    return this.requireSingleElement().innerHTML;
+  }
+
+  async innerText(options?: BrowserLocatorReadOptions) {
+    void options;
+    return getInnerText(this.requireSingleElement());
+  }
+
+  async inputValue(options?: BrowserLocatorReadOptions) {
+    void options;
+    const element = retargetToControl(this.requireSingleElement());
+    if (!isInputValueElement(element))
+      throw new Error("Node is not an <input>, <textarea> or <select> element");
+    return element.value;
+  }
+
+  async isChecked(options?: BrowserLocatorReadOptions) {
+    void options;
+    return this.elementState("checked");
+  }
+
+  async isDisabled(options?: BrowserLocatorReadOptions) {
+    void options;
+    return this.elementState("disabled");
+  }
+
+  async isEditable(options?: BrowserLocatorReadOptions) {
+    void options;
+    return this.elementState("editable");
+  }
+
+  async isEnabled(options?: BrowserLocatorReadOptions) {
+    void options;
+    return this.elementState("enabled");
+  }
+
+  async isHidden(options?: BrowserLocatorVisibilityOptions) {
+    return !(await this.isVisible(options));
+  }
+
+  async isVisible(options?: BrowserLocatorVisibilityOptions) {
+    void options;
+    const element = this.resolveSingleElement();
+    return element
+      ? this.ownerPage.injectedScript.elementState(element, "visible").matches
+      : false;
+  }
+
+  async textContent(options?: BrowserLocatorReadOptions) {
+    void options;
+    return this.requireSingleElement().textContent;
+  }
+
   async fill(value: string) {
     this.record({ operation: "fill", locator: this.label, value });
     await this.ownerPage.waitBeforeAction();
@@ -390,6 +483,13 @@ export class BrowserLocatorImpl implements BrowserLocator {
     return this.resolver(scope).filter(isElement);
   }
 
+  private elementState(state: string) {
+    return this.ownerPage.injectedScript.elementState(
+      this.requireSingleElement(),
+      state
+    ).matches;
+  }
+
   private isInState(state: "visible" | "hidden") {
     const elements = this.resolveElements();
     return state === "visible"
@@ -398,14 +498,18 @@ export class BrowserLocatorImpl implements BrowserLocator {
   }
 
   private requireSingleElement() {
-    const elements = this.resolveElements();
-    const first = elements[0];
+    const first = this.resolveSingleElement();
     if (!first) throw new Error(`No elements found for locator ${this.label}`);
+    return first;
+  }
+
+  private resolveSingleElement() {
+    const elements = this.resolveElements();
     if (elements.length > 1)
       throw new Error(
         `Expected one element for locator ${this.label}, found ${elements.length}`
       );
-    return first;
+    return elements[0];
   }
 
   private record(entry: TraceEntry) {
@@ -455,7 +559,7 @@ export class BrowserLocatorImpl implements BrowserLocator {
 export class BrowserPageImpl implements BrowserPage {
   readonly document: Document;
   readonly window: Window;
-  private readonly injectedScript: InjectedScript;
+  readonly injectedScript: InjectedScript;
 
   constructor(
     browserWindow: Window,
@@ -682,6 +786,26 @@ function isVisible(element: Element) {
   const style = element.ownerDocument.defaultView?.getComputedStyle(element);
   if (style?.display === "none" || style?.visibility === "hidden") return false;
   return true;
+}
+
+function getInnerText(element: Element) {
+  if (element.namespaceURI !== "http://www.w3.org/1999/xhtml")
+    throw new Error("Node is not an HTMLElement");
+  return (element as HTMLElement).innerText ?? element.textContent ?? "";
+}
+
+function retargetToControl(element: Element) {
+  if (isInputValueElement(element)) return element;
+  const label = element.closest("label");
+  if (label?.nodeName === "LABEL")
+    return (label as HTMLLabelElement).control ?? element;
+  return element;
+}
+
+function isInputValueElement(
+  element: Element
+): element is HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement {
+  return ["INPUT", "TEXTAREA", "SELECT"].includes(element.nodeName);
 }
 
 function matchesText(element: Element, pattern: string | RegExp) {

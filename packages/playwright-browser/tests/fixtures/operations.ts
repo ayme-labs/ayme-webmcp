@@ -218,3 +218,47 @@ export async function observeLocatorComposition(page: BrowserPage) {
     clicked,
   };
 }
+
+export async function observeLocatorReads(page: BrowserPage) {
+  const items = page.locator('[data-fixture="read-item"]');
+  const renderedText = page.locator("#rendered-text");
+  const duplicate = page.locator('[data-fixture="read-item"]');
+  let scalarStrict = false;
+
+  try {
+    await duplicate.getAttribute("data-fixture");
+  } catch {
+    scalarStrict = true;
+  }
+
+  return {
+    allInnerTexts: await items.allInnerTexts(),
+    allTextContents: await items.allTextContents(),
+    attribute: await renderedText.getAttribute("id"),
+    html: await page.locator("#html-read").innerHTML(),
+    innerText: await renderedText.innerText(),
+    inputValue: await page.locator("#wrapped-label").inputValue(),
+    scalarStrict,
+    textContent: await renderedText.textContent(),
+  };
+}
+
+export async function observeLocatorStates(page: BrowserPage) {
+  return {
+    checked: await page.locator("#checked").isChecked(),
+    unchecked: await page.locator("#unchecked").isChecked(),
+    ariaChecked: await page.locator("#aria-checked").isChecked(),
+    inheritedDisabled: await page.locator("#inherited-disabled").isDisabled(),
+    ariaDisabled: await page.locator("#aria-disabled").isDisabled(),
+    enabled: await page.locator("#editable").isEnabled(),
+    editable: await page.locator("#editable").isEditable(),
+    readonly: await page.locator("#readonly").isEditable(),
+    contentEditable: await page.locator("#contenteditable").isEditable(),
+    visible: await page.locator("#visible").isVisible(),
+    hidden: await page.locator("#hidden").isHidden(),
+    displayNone: await page.locator("#display-none").isVisible(),
+    visibilityHidden: await page.locator("#visibility-hidden").isHidden(),
+    missingVisible: await page.locator("#missing").isVisible(),
+    missingHidden: await page.locator("#missing").isHidden(),
+  };
+}
