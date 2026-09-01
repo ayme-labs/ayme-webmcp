@@ -1,13 +1,15 @@
 {
   "name": "@ayme-dev/playwright-browser",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./capture": "./src/capture.ts",
     "./catalog": "./src/catalog.ts",
     "./currentSupport": "./src/currentSupport.ts",
     "./injected": "./src/generated/injectedScript.js",
+    "./tsdown": "./src/tsdown.ts",
     "./upstream": "./src/upstream.ts"
   },
   "scripts": {
@@ -18,20 +20,24 @@
     "check:runtime": "node scripts/generate-runtime.ts --check",
     "verify:runtime": "node scripts/generate-runtime.ts --verify",
     "smoke:runtime": "node scripts/smoke-runtime.ts",
-    "lint": "eslint src scripts tests playwright.config.ts --ignore-pattern src/generated --max-warnings 0",
-    "test": "pnpm run check:surface && pnpm run check:runtime && vitest run",
+    "lint": "eslint src scripts tests playwright.config.ts vitest.browser.config.ts --ignore-pattern src/generated --max-warnings 0",
+    "test": "pnpm run check:surface && pnpm run check:runtime && vitest run && vitest run --config vitest.browser.config.ts",
     "test:e2e": "playwright test --config playwright.config.ts --reporter=list",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "playwright-core": "github:enekesabel/playwright#path:/packages/playwright-core&b25d782e3fbdf21abdae60e974e49b78ca07e828"
   },
   "devDependencies": {
     "@ayme-dev/eslint-config": "workspace:*",
     "@ayme-dev/typescript-config": "workspace:*",
     "@playwright/test": "1.62.1",
     "@types/node": "^24.0.0",
+    "@vitest/browser-playwright": "^4.1.11",
     "esbuild": "0.28.1",
     "eslint": "^10.9.1",
     "jsdom": "^30.0.1",
-    "playwright-core": "1.62.1",
+    "playwright": "^1.62.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11",
     "vite": "^8.2.2"

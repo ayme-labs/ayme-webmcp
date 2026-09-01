@@ -1,5 +1,6 @@
 import { defineConfig } from "tsdown";
 
+import { playwrightInjectedPlugin } from "@ayme-dev/playwright-browser/tsdown";
 import { upstreamPlaywright } from "@ayme-dev/playwright-browser/upstream";
 
 const playwrightSource = `../playwright-browser/source/playwright-${upstreamPlaywright.version}`;
@@ -32,4 +33,5 @@ export default defineConfig({
   dts: { eager: true },
   entry: ["src/index.ts", "src/internal.ts"],
   format: ["esm"],
+  plugins: [playwrightInjectedPlugin()],
 });

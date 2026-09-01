@@ -393,3 +393,5 @@
 {"v":1,"session":"host:75cd936167237b83","cmd":"set","ts":"2026-09-01T10:27:31Z","inv":{"had_session_at_before":true,"old_w_status":"progress","had_session_before":true,"id":"W-15","op":"set_w_status_with_goals","goal_statuses":{"G-07":"partial"},"old_session_at":"2026-09-01T09:44:27Z","old_session":"host:75cd936167237b83"}}
 {"v":1,"session":"host:75cd936167237b83","cmd":"distill","ts":"2026-09-01T10:28:10Z","inv":{"goal":"G-07","op":"distill","empty":true}}
 {"v":1,"session":"host:75cd936167237b83","cmd":"field","ts":"2026-09-01T11:28:23Z","inv":{"id":"W-15","field":"evidence","op":"field_pop_last"}}
+{"v":1,"session":"host:75cd936167237b83","cmd":"field","ts":"2026-09-01T11:51:59Z","inv":{"id":"W-15","field":"evidence","op":"field_pop_last"}}
+{"v":1,"session":"host:75cd936167237b83","cmd":"field","ts":"2026-09-01T12:11:42Z","inv":{"id":"W-15","field":"evidence","op":"field_pop_last"}}
