@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:04af0dc434c6ad23a50dc3feda74356f3559014c126924ef178ab96dd95b60f5
+# checksum: sha256:dab9719a821e4c404a5b13c1bb08e691e2cd64bc7de0d4026d705a005f1e6370
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -31,6 +31,11 @@ g G-06 status=verified fitness_kind=count t_created=2026-08-31T15:47:50Z t_updat
   area: A-02
   fitness_target: 1
   fitness_current: 1
+
+g G-07 status=verified fitness_kind=count t_created=2026-08-31T15:28:35Z t_updated=2026-09-01T10:27:31Z "Browser runtime executes the selected Playwright-compatible POM surface"
+  area: A-02
+  fitness_target: 10
+  fitness_current: 10
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -202,6 +207,150 @@ w W-06 type=feature status=done cynefin=complicated t_created=2026-08-31T15:48:1
   plan:
     | Implement one red-green slice at a time at the registry activation seam, active-tool listing seam, WebMCP publication seam, and Vue example user-flow seam.
 
+w W-07 type=feature status=done cynefin=complicated t_created=2026-08-31T15:28:58Z t_updated=2026-09-01T08:41:12Z "Generate the pinned Playwright browser runtime"
+  goals: G-07
+  fitness: G-07=+1
+  surface: packages/playwright-browser
+  ac:
+    | A maintainer-time generator builds the private browser module from pinned, unmodified Playwright source without reading coreBundle.js or using runtime evaluation.
+    | The committed artifact builds offline and deterministically with verified provenance, source closure, license, notice, and third-party attribution.
+  hypothesis:
+    | The proven exact-source closure can replace bundle extraction with a reproducible hermetic artifact.
+  evidence_strategy:
+    | Rebuild twice and compare hashes; run representative Chromium selector, state, and ARIA smoke checks with runtime evaluation disabled; verify artifact imports and notices.
+  evidence:
+    | pnpm run check passed build, lint, typecheck, unit tests, Chromium e2e, format, and boundaries. verify:runtime rebuilt twice with deterministic sha256:7de5f27b28ba4a08ff4f7ee080f2adecc1847a7719dbf9d31ca032aa4e4d43ba from 24 trusted source files. smoke:runtime passed selectors, state, ARIA, and fail-closed dynamic source. webmcp build bundled the private runtime in JS and declarations, copied all three legal files, and left no private-package imports in dist. Standards and spec re-reviews reported no findings.
+
+w W-08 type=feature status=done cynefin=complicated t_created=2026-08-31T15:28:58Z t_updated=2026-08-31T23:35:33Z "Enforce POM compatibility diagnostics"
+  goals: G-07
+  fitness: G-07=+1
+  surface: packages/unplugin-webmcp, packages/playwright-browser
+  ac:
+    | The POM compiler combines the compatibility catalog with current support and distinguishes architecturally Unsupported members from compatible but currently unavailable members.
+    | Selected Full members validate against upstream Playwright types, Browser-emulated Full members compile silently, and diagnostics identify the owning Page or Locator member.
+  hypothesis:
+    | A single compiler integration over the live package resources can reject unavailable POM usage before browser execution.
+  evidence_strategy:
+    | Run compiler unit tests and TypeScript fixtures covering selected, unselected-compatible, Unsupported, inherited, and invalid decorated-tool cases.
+  evidence:
+    | unplugin compiler: 14/14 Vitest; lint and typecheck pass; dependency build passes; pnpm run check reaches example-vue build then fails on pre-existing playwright-browser/src/browserPage ESM resolution (W-07 runtime artifact), outside W-08 boundary; reviews Standards=0, Spec=0.
+    | Final verification: pnpm run check passes (build, lint, typecheck, workspace tests, 5 E2E tests, format, boundaries). Baseline d20f98e also passes; the W-08 value import originally caused Node to load browserPage, resolved by package-local catalog/currentSupport resource subpaths.
+
+w W-09 type=feature status=done cynefin=clear t_created=2026-08-31T15:28:58Z t_updated=2026-09-01T08:17:23Z "Establish the Chromium parity harness"
+  goals: G-07
+  fitness: G-07=+1
+  surface: packages/playwright-browser
+  ac:
+    | A shared real-Chromium harness exercises BrowserPage and BrowserLocator through their package interface with deterministic document and viewport fixtures.
+    | The harness supplies reusable strictness, delayed-state, timeout, AbortSignal, event, and ARIA fixtures without implementing selected member behavior.
+  hypothesis:
+    | One small browser harness lets independent compatibility slices verify behavior without duplicating infrastructure.
+  evidence_strategy:
+    | Run the harness smoke test in Chromium and verify its shared fixtures can observe DOM mutation, timing, abort, input events, and accessibility output.
+  evidence:
+    | Verified package-interface Chromium harness after two-axis review: test:e2e passed twice; full pnpm run check passed including 5 example E2E tests, formatting, and Turbo boundaries. Shared fixtures cover strictness, delayed state, default/per-call timeouts with classification, live locator wait cancellation observation, DOM input/key/change events, and DOM-derived ARIA output.
+
+w W-10 type=feature status=done cynefin=complicated t_created=2026-08-31T15:28:58Z t_updated=2026-09-01T09:12:27Z "Implement Page and Locator finder factories"
+  goals: G-07
+  fitness: G-07=+1
+  surface: packages/playwright-browser
+  ac:
+    | BrowserPage and BrowserLocator implement locator plus getByAltText, getByLabel, getByPlaceholder, getByRole, getByTestId, getByText, and getByTitle with upstream-compatible signatures.
+    | Finder composition remains lazy and matches upstream selector generation, escaping, exactness, role-name, label, test-id, and descendant behavior in Chromium.
+  hypothesis:
+    | Pinned locator utilities and InjectedScript selector engines can provide finder parity behind the browser interfaces.
+  evidence_strategy:
+    | Implement one finder at a time from curated upstream source and tests; run signature fixtures and the finder Chromium suite.
+  evidence:
+    | Implemented lazy BrowserPage/BrowserLocator finder factories using the pinned Playwright selector utilities and generated InjectedScript engine. Signature fixture covers Page and Locator finder tuples; unit tests cover escaping and exactness; Chromium parity covers all seven finders, role name, label, test id, descendant composition, has/hasNot, locator options, and post-construction DOM. pnpm run check passed: build, lint, typecheck, tests, e2e, format, and boundaries.
+
+w W-11 type=feature status=done cynefin=complicated t_created=2026-08-31T15:28:58Z t_updated=2026-09-01T09:20:48Z "Implement Locator composition and collections"
+  goals: G-07
+  fitness: G-07=+1
+  surface: packages/playwright-browser
+  ac:
+    | BrowserLocator implements filter, and, or, first, last, nth, all, and count with upstream-compatible signatures and strict lazy resolution.
+    | all snapshots the count while returning live nth locators, and filter composition covers has, hasNot, hasText, and hasNotText.
+  hypothesis:
+    | A small exact-version selector-state composer can preserve Playwright composition semantics without remote element handles.
+  evidence_strategy:
+    | Implement one member at a time from curated upstream source and tests; run signature fixtures and composition and collection Chromium scenarios.
+  evidence:
+    | Integrated W-10 and W-11 targeted package typecheck, lint, runtime verification, Vitest (4 files, 10 tests), and Chromium parity (2 tests) passed; semantic conflict review preserved injected finder selectors plus relative composition and live collection behavior.
+
+w W-12 type=feature status=done cynefin=complicated t_created=2026-08-31T15:29:14Z t_updated=2026-09-01T09:30:03Z "Implement Locator reads and state predicates"
+  goals: G-07
+  fitness: G-07=+1
+  surface: packages/playwright-browser
+  ac:
+    | BrowserLocator implements allInnerTexts, allTextContents, getAttribute, innerHTML, innerText, inputValue, textContent, isChecked, isDisabled, isEditable, isEnabled, isHidden, and isVisible with upstream-compatible signatures.
+    | Reads preserve plural ordering, scalar strictness, rendered versus DOM text distinctions, and the documented element-state results.
+  hypothesis:
+    | InjectedScript query and state primitives can match these DOM-observation contracts without server-side Playwright objects.
+  evidence_strategy:
+    | Implement one member at a time from curated upstream source and tests; run signature fixtures and Chromium read, strictness, text, and state scenarios.
+  evidence:
+    | Integrated W-10 through W-12 package typecheck, lint, pinned-runtime verification, Vitest (4 files, 12 tests), and Chromium parity (3 tests) passed; signature fixture covers all 13 selected reads/state methods and missing-locator state behavior.
+
+w W-13 type=feature status=done cynefin=complicated t_created=2026-08-31T15:29:21Z t_updated=2026-09-01T09:38:41Z "Implement waits, ARIA, and Page observation"
+  goals: G-07
+  fitness: G-07=+1
+  surface: packages/playwright-browser
+  ac:
+    | BrowserLocator implements waitFor and ariaSnapshot, and BrowserPage implements ariaSnapshot, content, title, url, and setDefaultTimeout with upstream-compatible signatures.
+    | Waiting honors strictness, delayed state, explicit and default timeouts, and AbortSignal; ARIA snapshots cover the supported modes, depth, refs, and deterministic boxes.
+  hypothesis:
+    | Browser-owned retry orchestration around InjectedScript can match the selected wait and observation contracts within one document.
+  evidence_strategy:
+    | Implement one member at a time from curated upstream source and tests; run signature fixtures and Chromium timeout, abort, Page observation, and ARIA scenarios.
+  evidence:
+    | Integrated W-10 through W-13 package typecheck, lint, pinned-runtime verification, Vitest (4 files, 15 tests), and Chromium parity (3 tests) passed; waits cover strictness, default and explicit timeouts, AbortSignal, ARIA snapshots, and Page observations.
+
+w W-14 type=feature status=done cynefin=complicated t_created=2026-08-31T15:29:28Z t_updated=2026-09-01T09:43:02Z "Implement browser-emulated Locator actions"
+  goals: G-07
+  fitness: G-07=+1
+  surface: packages/playwright-browser
+  ac:
+    | BrowserLocator implements click, fill, and press with upstream-compatible public signatures and Browser-emulated execution.
+    | Tests assert strict live-target resolution and promised DOM outcomes and events, plus negative contracts for intentionally unpromised trusted-input, device, actionability, and navigation behavior.
+  hypothesis:
+    | The selected action outcomes can be delivered with InjectedScript primitives and browser events without pretending to be Playwright device input.
+  evidence_strategy:
+    | Implement one action at a time from curated upstream smoke tests and explicit emulation contracts; run signature fixtures and Chromium action scenarios.
+  evidence:
+    | Integrated W-10 through W-14 package typecheck, lint, pinned-runtime verification, Vitest (5 files, 19 tests), and Chromium parity (4 tests) passed; click, fill, and press retain exact Playwright option shapes while their browser-emulated DOM outcomes and negative contracts are explicit.
+
+w W-15 type=feature status=done cynefin=complicated t_created=2026-08-31T15:29:35Z t_updated=2026-09-01T10:27:31Z "Integrate and verify Playwright browser compatibility"
+  goals: G-07
+  fitness: G-07=+1
+  surface: packages/playwright-browser, packages/webmcp, packages/unplugin-webmcp, apps/example-vue
+  ac:
+    | The WebMCP runtime and example consume @ayme-dev/playwright-browser directly, and the old BrowserPage, BrowserLocator, generated-bundle extraction, declarations, and compatibility exports are removed from @ayme-dev/webmcp.
+    | The complete selected surface passes package signature, catalog, compiler, Chromium parity, workspace build, type-check, test, and Turbo boundary verification.
+  hypothesis:
+    | Integrating only after every independent substrate and behavior slice is verified will make the clean cut mechanical and expose cross-slice defects before completion.
+  evidence_strategy:
+    | Inspect the combined diff and exported symbols; run all affected package and example checks plus the complete workspace verification matrix.
+  evidence:
+    | Integrated clean package cut and exact 47-member BrowserPage/BrowserLocator selection; compile-time signatures enforce exactly 13 Page and 34 Locator members. Restored exhaustive catalog to 118 Full, 5 Partial, and 62 Unsupported with current support separate. Deterministic Page/Locator surface fingerprint and pinned 24-file generated-runtime fingerprints verify. Package 20/20 unit-contract tests and 8/8 Chromium parity tests pass; unplugin 14/14 tests and example 1/1 unit plus 5/5 E2E tests pass. Full pnpm run check passed before main rebase; independent Standards and Spec remediation reviews report no findings.
+
+w W-16 type=feature status=done cynefin=complicated t_created=2026-08-31T15:28:58Z t_updated=2026-08-31T17:34:31Z "Establish the playwright-browser package contract"
+  goals: G-07
+  fitness: G-07=+1
+  surface: packages/playwright-browser, packages/webmcp, package.json, pnpm-lock.yaml, turbo.json
+  ac:
+    | A private source-exporting JIT package named @ayme-dev/playwright-browser exists at packages/playwright-browser and satisfies Turbo dependency boundaries.
+    | BrowserPage, BrowserLocator, and browser-page construction move behind the new package interface without compatibility re-exports from @ayme-dev/webmcp.
+    | The package contains the exhaustive compatibility catalog, separate current selection, and upstream metadata resources defined by ADR-0010.
+    | Repository imports covered by the extracted walking skeleton target the new package directly and existing behavior tests remain green.
+  hypothesis:
+    | A clean package contract and live catalog provide stable ownership for the independent implementation waves.
+  evidence_strategy:
+    | Run package tests, type checks, builds, catalog completeness checks, and Turbo boundaries; inspect exported symbols and repository imports.
+  evidence:
+    | commit d18368c8446c54ae57ef054f68f9b84478fad0fe; pnpm --filter @ayme-dev/playwright-browser test passed (5 tests); pnpm run check passed (build, lint, typecheck, tests, 5 e2e tests, format, boundaries); turbo boundaries passed; catalog test verifies 116 Page plus 69 Locator members, 47 selected Full members, and Browser-emulated click/fill/press.
+    | commit b376e17; pnpm --filter @ayme-dev/playwright-browser test and typecheck passed; pnpm run check passed with 5 e2e tests; exact 13 Page plus 34 Locator selection verified.
+
 d D-01 status=superseded t_created=2026-08-27T08:43:08Z t_updated=2026-08-27T11:48:35Z "Use the five-workspace monorepo layout"
   context:
     | The open-source WebMCP library needs independently publishable core and Vite packages, a private example application, and shared tooling configuration.
@@ -291,6 +440,12 @@ d D-09 status=accepted t_created=2026-08-31T15:47:55Z t_updated=2026-08-31T15:48
   decision:
     | See ADR-0009: docs/adr/0009-let-ayme-own-live-page-object-observation.md.
 
+d D-10 status=accepted t_created=2026-08-31T15:27:02Z t_updated=2026-08-31T15:34:11Z "Isolate browser-side Playwright compatibility"
+  context:
+    | Canonical rationale: docs/adr/0010-isolate-browser-side-playwright-compatibility.md.
+  decision:
+    | Adopt ADR-0010.
+
 q Q-01 status=deferred cynefin=complicated t_created=2026-08-27T12:43:03Z t_updated=2026-08-27T14:13:29Z "Choose the public activation interface"
   why:
     | The spike useAymePage function combines Vue lifecycle management with framework-neutral runtime behavior. W-02 separates those responsibilities but intentionally does not choose the final public interface.
@@ -336,4 +491,33 @@ e W-02 implements D-07 t_created=2026-08-27T12:43:19Z
 e W-02 produces Y-01 t_created=2026-08-27T13:24:26Z
 e W-03 implements D-08 t_created=2026-08-27T14:13:29Z
 e W-06 implements D-09 t_created=2026-08-31T15:48:44Z
+e W-07 blocks W-10 t_created=2026-08-31T15:34:15Z
+e W-07 blocks W-11 t_created=2026-08-31T15:34:16Z
+e W-07 blocks W-12 t_created=2026-08-31T15:34:17Z
+e W-07 blocks W-13 t_created=2026-08-31T15:34:19Z
+e W-07 blocks W-14 t_created=2026-08-31T15:34:20Z
+e W-07 implements D-10 t_created=2026-08-31T15:34:02Z
+e W-08 blocks W-15 t_created=2026-08-31T15:34:26Z
+e W-08 implements D-10 t_created=2026-08-31T15:34:03Z
+e W-09 blocks W-10 t_created=2026-08-31T15:34:21Z
+e W-09 blocks W-11 t_created=2026-08-31T15:34:22Z
+e W-09 blocks W-12 t_created=2026-08-31T15:34:23Z
+e W-09 blocks W-13 t_created=2026-08-31T15:34:24Z
+e W-09 blocks W-14 t_created=2026-08-31T15:34:25Z
+e W-09 implements D-10 t_created=2026-08-31T15:34:04Z
+e W-10 blocks W-15 t_created=2026-08-31T15:34:27Z
+e W-10 implements D-10 t_created=2026-08-31T15:34:05Z
+e W-11 blocks W-15 t_created=2026-08-31T15:34:28Z
+e W-11 implements D-10 t_created=2026-08-31T15:34:06Z
+e W-12 blocks W-15 t_created=2026-08-31T15:34:30Z
+e W-12 implements D-10 t_created=2026-08-31T15:34:08Z
+e W-13 blocks W-15 t_created=2026-08-31T15:34:31Z
+e W-13 implements D-10 t_created=2026-08-31T15:34:09Z
+e W-14 blocks W-15 t_created=2026-08-31T15:34:32Z
+e W-14 implements D-10 t_created=2026-08-31T15:34:10Z
+e W-15 implements D-10 t_created=2026-08-31T15:34:11Z
+e W-16 blocks W-07 t_created=2026-08-31T15:34:12Z
+e W-16 blocks W-08 t_created=2026-08-31T15:34:13Z
+e W-16 blocks W-09 t_created=2026-08-31T15:34:14Z
+e W-16 implements D-10 t_created=2026-08-31T15:34:01Z
 e Y-02 distills D-08 t_created=2026-08-27T14:40:25Z
