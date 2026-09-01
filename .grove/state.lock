@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:7bb55d8157f67e34f7a63f6970e6f2a0d1042b4a8391aebb45958ef2720f1022
+# checksum: sha256:6b30e9234702ca100ce2060e0e658406be78e07b2fb1f94cc758466c0282432d
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -35,7 +35,7 @@ g G-06 status=verified fitness_kind=count t_created=2026-08-31T15:47:50Z t_updat
 g G-07 status=partial fitness_kind=count t_created=2026-08-31T19:05:01Z t_updated=2026-08-31T19:46:29Z "Assistant receives POM-aware structural page state"
   area: A-02
   fitness_target: 4
-  fitness_current: 2
+  fitness_current: 3
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -243,7 +243,7 @@ w W-08 type=feature status=done cynefin=clear t_created=2026-08-31T19:05:02Z t_u
   plan:
     | Copy only the accepted kernel and focused tests from Ayme PR 553 at commit 85272c530bfaeb51bfbc117a53504d587ec0127a.
 
-w W-09 type=feature status=progress cynefin=complicated session=host:fb79d5a1c35be112 session_at=2026-08-31T19:57:58Z t_created=2026-08-31T19:05:03Z t_updated=2026-08-31T19:57:58Z "Extract Playwright browser capture package"
+w W-09 type=feature status=done cynefin=complicated t_created=2026-08-31T19:05:03Z t_updated=2026-09-01T03:51:01Z "Extract Playwright browser capture package"
   goals: G-07
   fitness: G-07=+1
   surface: packages/playwright-browser, packages/webmcp/tsdown.config.ts, packages/webmcp/src/playwright-injected.d.ts, pnpm-lock.yaml
@@ -256,6 +256,10 @@ w W-09 type=feature status=progress cynefin=complicated session=host:fb79d5a1c35
     | Moving the existing extraction behind one private browser package lets WebMCP consume the fork seam without owning Playwright internals.
   evidence_strategy:
     | Test the package capture contract and preserved WebMCP behavior, then record typecheck, full test, and commit evidence.
+  evidence:
+    | f102a3e; exact Git package 9f727f03584f863d551f3b969e4fc634b2ed6fd8; generated artifact 331823 bytes, sha256 03f14c3f208da57cb641f0797328af31dc6182167a0d340bd57846617230cc24.
+    | pnpm install --frozen-lockfile passed; playwright-browser 1/1; structural-observation 100/100; pnpm check passed including WebMCP 9/9 and example E2E 6/6; formatting and boundaries clean.
+    | Two-axis review of 295ce2c found no spec or standards defects; coordinator verified exact Git playwright-core resolution and integrated as f102a3e.
 
 w W-10 type=feature status=proposed cynefin=complicated t_created=2026-08-31T19:05:04Z t_updated=2026-08-31T19:05:48Z "Render root-only POM structural page state"
   goals: G-07
