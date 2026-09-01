@@ -7,14 +7,14 @@
 | Measure | Count | Composition |
 | --- | --- | --- |
 | C (content) | 15 | validated B 1 · answered Q 2 · accepted D 10 · active Discovery 2 |
-| V (uncertainty) | 0 | open Q 0 · pending B 0 · W below DoR 0 |
+| V (uncertainty) | 2 | open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 2 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 12 | 0 | C: validated B 1 · answered Q 2 · accepted D 7 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
+| A-02 | Page Object interoperability | 13 | 2 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 2 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
 
@@ -29,6 +29,7 @@
 | G-05 | Vue package supports Vue 3.2 consumers | boolean; current=true | verified |
 | G-06 | Generated WebMCP Tools track live Page Objects | count; current=1 target=1 | verified |
 | G-07 | Assistant receives POM-aware structural page state | count; current=4 target=4 | verified |
+| G-08 | Structural page state is review-ready | count; current= target=2 | unverified |
 
 ## Work items
 
@@ -44,6 +45,8 @@
 | W-08 | feature | Add Playwright-free StructuralTree kernel | G-07 | clear | ⊤ | done |  |
 | W-09 | feature | Extract Playwright browser capture package | G-07 | complicated | ⊤ | done |  |
 | W-10 | feature | Render root-only POM structural page state | G-07 | complicated | ⊤ | done |  |
+| W-11 | feature | Project structural page state by policy | G-08 | complicated | ⊤ | ready | ★ |
+| W-12 | bug | Contain internal packages in packed WebMCP | G-08 | clear | ⊤ | ready |  |
 
 ## Decisions
 
@@ -93,6 +96,7 @@ graph TD
   G_05["G-05: Vue package supports Vue 3.2 consumers"]:::goal
   G_06["G-06: Generated WebMCP Tools track live Page Objects"]:::goal
   G_07["G-07: Assistant receives POM-aware structural page state"]:::goal
+  G_08["G-08: Structural page state is review-ready"]:::goal
   W_01["W-01: Establish the monorepo walking skeleton"]:::done
   W_02["W-02: Preserve spike behavior through package extraction"]:::done
   W_03["W-03: Extract Vue Page Object activation composable"]:::done
@@ -103,6 +107,8 @@ graph TD
   W_08["W-08: Add Playwright-free StructuralTree kernel"]:::done
   W_09["W-09: Extract Playwright browser capture package"]:::done
   W_10["W-10: Render root-only POM structural page state"]:::done
+  W_11["W-11: Project structural page state by policy"]:::ready,critical
+  W_12["W-12: Contain internal packages in packed WebMCP"]:::ready
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -146,7 +152,11 @@ graph TD
   W_09 -->|implements| D_10
   W_10 -->|implements| D_10
   W_10 -->|implements| D_11
+  W_11 -->|implements| D_10
+  W_11 -->|implements| D_11
+  W_12 -->|implements| D_04
   Y_02 -->|distills| D_08
+  class W_11 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff
