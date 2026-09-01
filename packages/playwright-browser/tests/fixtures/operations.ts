@@ -142,6 +142,99 @@ export async function observeInputEvents(page: BrowserPage) {
   return { value: input.value, events };
 }
 
+export async function observeActionContracts(page: BrowserPage) {
+  const button = page.locator('[data-fixture="save"]');
+  const buttonEvents: string[] = [];
+  const buttonTrusted: boolean[] = [];
+  const buttonElement = document.querySelector<HTMLElement>(
+    '[data-fixture="save"]'
+  );
+  if (!buttonElement) throw new Error("The action button fixture is missing.");
+  for (const type of [
+    "pointerdown",
+    "mousedown",
+    "mouseup",
+    "pointerup",
+    "click",
+  ])
+    buttonElement.addEventListener(type, (event) => {
+      buttonEvents.push(type);
+      buttonTrusted.push(event.isTrusted);
+    });
+
+  const hidden = page.locator('[data-fixture="hidden-action"]');
+  let hiddenClicks = 0;
+  document
+    .querySelector('[data-fixture="hidden-action"]')
+    ?.addEventListener("click", () => {
+      hiddenClicks += 1;
+    });
+
+  const input = page.locator("#message-input");
+  const inputEvents: string[] = [];
+  const inputTrusted: boolean[] = [];
+  const inputElement =
+    document.querySelector<HTMLInputElement>("#message-input");
+  if (!inputElement) throw new Error("The action input fixture is missing.");
+  for (const type of ["input", "change", "keydown", "keypress", "keyup"])
+    inputElement.addEventListener(type, (event) => {
+      inputEvents.push(
+        type === "input" || type === "change"
+          ? type
+          : `${type}:${(event as KeyboardEvent).key}`
+      );
+      inputTrusted.push(event.isTrusted);
+    });
+
+  let submits = 0;
+  inputElement.form?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    submits += 1;
+  });
+
+  await button.click({ trial: true, force: true, noWaitAfter: false });
+  await hidden.click({ force: false, trial: true });
+  await input.fill("hello", { force: true, timeout: 1 });
+  await input.press("Enter", { noWaitAfter: false, timeout: 1 });
+  await page
+    .locator('[data-fixture="navigate-action"]')
+    .click({ noWaitAfter: false });
+
+  const live = page.locator('[data-fixture="live-action"]');
+  let oldClicked = false;
+  let newClicked = false;
+  const oldTarget = document.querySelector<HTMLElement>(
+    '[data-fixture="live-action"]'
+  );
+  if (!oldTarget) throw new Error("The live action fixture is missing.");
+  oldTarget.addEventListener("click", () => {
+    oldClicked = true;
+  });
+  queueMicrotask(() => {
+    const replacement = document.createElement("button");
+    replacement.type = "button";
+    replacement.dataset.fixture = "live-action";
+    replacement.textContent = "New target";
+    replacement.addEventListener("click", () => {
+      newClicked = true;
+    });
+    oldTarget.replaceWith(replacement);
+  });
+  await live.click();
+
+  return {
+    buttonEvents,
+    buttonTrusted,
+    hiddenClicks,
+    inputEvents,
+    inputTrusted,
+    inputValue: inputElement.value,
+    liveTarget: { oldClicked, newClicked },
+    navigatedToHash: location.hash,
+    submits,
+  };
+}
+
 export async function observeAccessibilityOutput(page: BrowserPage) {
   const main = page.getByRole("main", { name: "Chromium parity fixture" });
   const heading = page.getByRole("heading", {

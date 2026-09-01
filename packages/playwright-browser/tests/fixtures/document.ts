@@ -23,6 +23,9 @@ export const parityDocument = `<!doctype html>
           <label for="message-input">Message</label>
           <input id="message-input" name="message" type="text" />
         </form>
+        <button type="button" data-fixture="hidden-action" hidden>Hidden</button>
+        <a data-fixture="navigate-action" href="#navigated">Navigate</a>
+        <button type="button" data-fixture="live-action">Old target</button>
       </section>
 
       <section aria-labelledby="state-title">

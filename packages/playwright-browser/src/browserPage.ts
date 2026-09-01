@@ -49,11 +49,22 @@ export type BrowserLocatorWaitForOptions = NonNullable<
 >;
 
 export type TraceEntry = {
-  operation: "click" | "fill" | "waitFor";
+  operation: "click" | "fill" | "press" | "waitFor";
   locator: string;
+  key?: string;
   state?: "attached" | "detached" | "visible" | "hidden";
   value?: string;
 };
+
+export type BrowserLocatorClickOptions = Parameters<
+  PlaywrightLocator["click"]
+>[0];
+export type BrowserLocatorFillOptions = Parameters<
+  PlaywrightLocator["fill"]
+>[1];
+export type BrowserLocatorPressOptions = Parameters<
+  PlaywrightLocator["press"]
+>[1];
 
 export interface BrowserPage {
   ariaSnapshot(options?: BrowserAriaSnapshotOptions): Promise<string>;
@@ -115,9 +126,9 @@ export interface BrowserLocator {
   isVisible(options?: BrowserLocatorVisibilityOptions): Promise<boolean>;
   textContent(options?: BrowserLocatorReadOptions): Promise<null | string>;
   ariaSnapshot(options?: BrowserAriaSnapshotOptions): Promise<string>;
-  fill(value: string): Promise<void>;
-  press(key: string): Promise<void>;
-  click(): Promise<void>;
+  fill(value: string, options?: BrowserLocatorFillOptions): Promise<void>;
+  press(key: string, options?: BrowserLocatorPressOptions): Promise<void>;
+  click(options?: BrowserLocatorClickOptions): Promise<void>;
   waitFor(options?: BrowserLocatorWaitForOptions): Promise<void>;
 }
 
@@ -398,7 +409,10 @@ export class BrowserLocatorImpl implements BrowserLocator {
     return this.requireSingleElement().textContent;
   }
 
-  async fill(value: string) {
+  async fill(value: string, options?: BrowserLocatorFillOptions) {
+    // Browser-emulated: Playwright actionability, trusted input, and navigation
+    // waiting are intentionally outside this package's promise.
+    void options;
     this.record({ operation: "fill", locator: this.label, value });
     await this.ownerPage.waitBeforeAction();
     const element = this.requireSingleElement();
@@ -421,7 +435,10 @@ export class BrowserLocatorImpl implements BrowserLocator {
     );
   }
 
-  async click() {
+  async click(options?: BrowserLocatorClickOptions) {
+    // Browser-emulated: DOM click has no Playwright device-input or navigation
+    // waiting semantics, and accepted actionability options are not promises.
+    void options;
     this.record({ operation: "click", locator: this.label });
     await this.ownerPage.waitBeforeClick(this.requireSingleElement());
     const element = this.requireSingleElement();
@@ -434,14 +451,24 @@ export class BrowserLocatorImpl implements BrowserLocator {
     );
   }
 
-  async press(key: string) {
+  async press(key: string, options?: BrowserLocatorPressOptions) {
+    // Browser-emulated: these are synthetic keyboard events, not trusted device
+    // input, and actionability/navigation options are intentionally unpromised.
+    void options;
+    this.record({ operation: "press", locator: this.label, key });
     await this.ownerPage.waitBeforeAction();
     const element = this.requireSingleElement();
-    dispatchKeyboardEvent(element, "keydown", key);
+    if (element instanceof HTMLElement || element instanceof SVGElement)
+      element.focus();
+    const keydown = dispatchKeyboardEvent(element, "keydown", key);
     dispatchKeyboardEvent(element, "keypress", key);
     dispatchKeyboardEvent(element, "keyup", key);
 
-    if (key === "Enter" && element instanceof HTMLInputElement)
+    if (
+      key === "Enter" &&
+      !keydown.defaultPrevented &&
+      element instanceof HTMLInputElement
+    )
       element.form?.requestSubmit();
   }
 
@@ -920,9 +947,13 @@ function dispatchKeyboardEvent(
   type: "keydown" | "keypress" | "keyup",
   key: string
 ) {
-  target.dispatchEvent(
-    new KeyboardEvent(type, { key, bubbles: true, cancelable: true })
-  );
+  const event = new KeyboardEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    key,
+  });
+  target.dispatchEvent(event);
+  return event;
 }
 
 function resolveLocatorElements(

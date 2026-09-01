@@ -107,6 +107,7 @@ describe("createBrowserPage", () => {
     expect(pressed).toEqual(["Enter"]);
     expect(runtime.trace.map((entry) => entry.operation)).toEqual([
       "fill",
+      "press",
       "click",
     ]);
   });

@@ -1,6 +1,7 @@
 import { expect, test } from "./fixtures/test";
 import {
   observeAbortCancellation,
+  observeActionContracts,
   observeAccessibilityOutput,
   observeDefaultTimeout,
   observeFinderFactories,
@@ -159,5 +160,29 @@ test("observes locator reads and state predicates in Chromium", async ({
     visibilityHidden: true,
     missingVisible: false,
     missingHidden: true,
+  });
+});
+
+test("runs Locator actions through the explicit browser-emulation contract", async ({
+  parity,
+}) => {
+  const actions = await parity.run(observeActionContracts);
+
+  expect(actions).toEqual({
+    buttonEvents: ["click"],
+    buttonTrusted: [false],
+    hiddenClicks: 1,
+    inputEvents: [
+      "input",
+      "change",
+      "keydown:Enter",
+      "keypress:Enter",
+      "keyup:Enter",
+    ],
+    inputTrusted: [false, false, false, false, false],
+    inputValue: "hello",
+    liveTarget: { oldClicked: false, newClicked: true },
+    navigatedToHash: "#navigated",
+    submits: 1,
   });
 });
