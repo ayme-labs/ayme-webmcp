@@ -6,12 +6,17 @@
   "exports": {
     ".": "./src/index.ts",
     "./catalog": "./src/catalog.ts",
-    "./currentSupport": "./src/currentSupport.ts"
+    "./currentSupport": "./src/currentSupport.ts",
+    "./injected": "./src/generated/injectedScript.js"
   },
   "scripts": {
     "build": "tsc --noEmit",
-    "lint": "eslint src tests playwright.config.ts --max-warnings 0",
-    "test": "vitest run",
+    "generate:runtime": "node scripts/generate-runtime.ts --update",
+    "check:runtime": "node scripts/generate-runtime.ts --check",
+    "verify:runtime": "node scripts/generate-runtime.ts --verify",
+    "smoke:runtime": "node scripts/smoke-runtime.ts",
+    "lint": "eslint src scripts tests playwright.config.ts --ignore-pattern src/generated --max-warnings 0",
+    "test": "pnpm run check:runtime && vitest run",
     "test:e2e": "playwright test --config playwright.config.ts --reporter=list",
     "typecheck": "tsc --noEmit"
   },
@@ -20,6 +25,7 @@
     "@ayme-dev/typescript-config": "workspace:*",
     "@playwright/test": "1.62.1",
     "@types/node": "^24.0.0",
+    "esbuild": "0.28.1",
     "eslint": "^10.9.1",
     "jsdom": "^30.0.1",
     "playwright-core": "1.62.1",

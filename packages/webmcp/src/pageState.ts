@@ -1,4 +1,4 @@
-import { InjectedScript } from "virtual:ayme-playwright-injected";
+import { InjectedScript } from "@ayme-dev/playwright-browser/injected";
 
 import type { ModelContextTool } from "@mcp-b/webmcp-types";
 

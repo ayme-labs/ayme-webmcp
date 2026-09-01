@@ -6,7 +6,8 @@ export const upstreamPlaywright = {
   publicSurfaceFingerprint:
     "sha256:6c688250f2b7061cec3a17ab8797671137b653f8c4e81a6df3190cb112a7579a",
   generatedSource: {
-    status: "pending" as const,
-    fingerprint: undefined,
+    status: "verified" as const,
+    fingerprint:
+      "sha256:7de5f27b28ba4a08ff4f7ee080f2adecc1847a7719dbf9d31ca032aa4e4d43ba",
   },
 } as const;
