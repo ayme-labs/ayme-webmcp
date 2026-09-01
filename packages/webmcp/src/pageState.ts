@@ -102,11 +102,15 @@ function appendCapturedRoot(
   if (!node || !parentRef) return tree;
 
   const boundary = capturedPomBoundary(node, tree);
-  const replacedTree = new StructuralTree(
-    removeNodes(tree.root, descendantRefs(boundary)),
+  return new StructuralTree(
+    replaceDescendantsWithBoundary(
+      tree.root,
+      parentRef,
+      descendantRefs(boundary),
+      boundary
+    ),
     refFactory
   );
-  return replacedTree.appendChild(parentRef, boundary);
 }
 
 function capturedPomBoundary(node: StructuralNode, tree: StructuralTree) {
@@ -139,26 +143,43 @@ function descendantRefs(node: StructuralNode) {
   return refs;
 }
 
-function removeNodes(
+function replaceDescendantsWithBoundary(
   node: StructuralNode,
-  refs: ReadonlySet<AriaRef>
+  parentRef: AriaRef,
+  refs: ReadonlySet<AriaRef>,
+  boundary: StructuralNode
 ): StructuralNode {
-  let changed = false;
-  const children: Array<StructuralNode | string> = [];
-  for (const child of node.children) {
-    if (typeof child === "string") {
-      children.push(child);
-      continue;
+  let boundaryInserted = false;
+
+  function replaceNode(current: StructuralNode): StructuralNode {
+    let changed = false;
+    const children: Array<StructuralNode | string> = [];
+    for (const child of current.children) {
+      if (typeof child === "string") {
+        children.push(child);
+        continue;
+      }
+      if (refs.has(child.ref)) {
+        changed = true;
+        if (current.ref === parentRef && !boundaryInserted) {
+          children.push(boundary);
+          boundaryInserted = true;
+        }
+        continue;
+      }
+      const updated = replaceNode(child);
+      if (updated !== child) changed = true;
+      children.push(updated);
     }
-    if (refs.has(child.ref)) {
+    if (current.ref === parentRef && !boundaryInserted) {
+      children.push(boundary);
+      boundaryInserted = true;
       changed = true;
-      continue;
     }
-    const updated = removeNodes(child, refs);
-    if (updated !== child) changed = true;
-    children.push(updated);
+    return changed ? copyNode(current, children) : current;
   }
-  return changed ? copyNode(node, children) : node;
+
+  return replaceNode(node);
 }
 
 function copyNode(

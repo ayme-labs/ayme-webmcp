@@ -104,6 +104,57 @@ describe("get_page_state", () => {
     );
   });
 
+  it("restores an omitted POM root at its distilled descendant's position", async () => {
+    document.body.innerHTML = `
+      <button id="preceding">Preceding</button>
+      <div id="pom-root"><button id="child">Nested child</button></div>
+      <button id="following">Following</button>
+    `;
+    const preceding = document.querySelector("#preceding");
+    const pomRoot = document.querySelector("#pom-root");
+    const child = document.querySelector("#child");
+    const following = document.querySelector("#following");
+    if (!preceding || !pomRoot || !child || !following)
+      throw new Error("Missing test roots.");
+
+    captureAriaSnapshot.mockReturnValue({
+      distilledText: `
+- generic [ref=e1]:
+  - button "Preceding" [ref=e2]
+  - button "Nested child" [ref=e4]
+  - button "Following" [ref=e5]
+`.trim(),
+      fullText: `
+- generic [ref=e1]:
+  - button "Preceding" [ref=e2]
+  - generic [ref=e3]:
+    - button "Nested child" [ref=e4]
+  - button "Following" [ref=e5]
+`.trim(),
+      refsByElement: new Map([
+        [document.body, "e1"],
+        [preceding, "e2"],
+        [pomRoot, "e3"],
+        [child, "e4"],
+        [following, "e5"],
+      ]),
+    });
+    listRegisteredPomRoots.mockResolvedValue([
+      { label: "ListPage.item", element: pomRoot },
+    ]);
+
+    await expect(getPageStateTool.execute()).resolves.toBe(
+      `
+- [ref=e1] generic:
+  - [ref=e2] button "Preceding"
+  - [ref=e3] generic:
+    - /pom: ListPage.item
+    - [ref=e4] button "Nested child"
+  - [ref=e5] button "Following"
+`.trim()
+    );
+  });
+
   it("resolves root candidates before capture and correlates only those candidates", async () => {
     document.body.innerHTML = '<button id="pre-capture">Pre-capture</button>';
     const preCaptureRoot = document.querySelector("#pre-capture");
