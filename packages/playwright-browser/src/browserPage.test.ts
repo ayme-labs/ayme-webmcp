@@ -1,3 +1,4 @@
+import type { Locator, Page } from "@playwright/test";
 import { describe, expect, it } from "vitest";
 
 import { createBrowserPage } from "./browserPage";
@@ -108,6 +109,56 @@ describe("createBrowserPage", () => {
       "fill",
       "click",
     ]);
+  });
+
+  it("matches the selected Page and Locator observation signatures", () => {
+    const runtime = createBrowserPage();
+    const page: Pick<
+      Page,
+      "ariaSnapshot" | "content" | "setDefaultTimeout" | "title" | "url"
+    > = runtime.page;
+    const locator: Pick<Locator, "ariaSnapshot" | "waitFor"> =
+      runtime.page.locator("body");
+
+    expect(page.url()).toBe(window.location.href);
+    expect(locator).toBeDefined();
+  });
+
+  it("observes page metadata and delegates ARIA rendering to the generated runtime", async () => {
+    document.documentElement.innerHTML = `<head><title>Observation fixture</title></head>
+      <body><main aria-label="Workspace"><button>Save</button></main></body>`;
+    const runtime = createBrowserPage();
+
+    const content = await runtime.page.content();
+    const snapshot = await runtime.page.ariaSnapshot({
+      boxes: true,
+      depth: 2,
+      mode: "ai",
+    });
+    const repeatedSnapshot = await runtime.page.ariaSnapshot({
+      boxes: true,
+      depth: 2,
+      mode: "ai",
+    });
+
+    expect(content).toContain("<title>Observation fixture</title>");
+    await expect(runtime.page.title()).resolves.toBe("Observation fixture");
+    expect(runtime.page.url()).toBe(window.location.href);
+    expect(snapshot).toContain('main "Workspace"');
+    expect(snapshot).toContain("[box=0,0,0,0]");
+    expect(repeatedSnapshot).toBe(snapshot);
+  });
+
+  it("rejects an aborted wait with the signal reason", async () => {
+    const runtime = createBrowserPage();
+    const controller = new AbortController();
+    const wait = runtime.page
+      .locator("#missing")
+      .waitFor({ signal: controller.signal, timeout: 0 });
+
+    controller.abort("fixture cancellation");
+
+    await expect(wait).rejects.toBe("fixture cancellation");
   });
 
   it("composes locators and keeps all() results live after its count snapshot", async () => {

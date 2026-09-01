@@ -8,6 +8,7 @@ import {
   observeInputEvents,
   observeLocatorReads,
   observeLocatorStates,
+  observePageObservation,
   observePerCallTimeout,
   observeStrictResolution,
 } from "./fixtures/operations";
@@ -55,6 +56,7 @@ test("observes the shared BrowserPage parity fixtures in Chromium", async ({
     singleCount: 1,
     multipleCount: 2,
     multipleClickRejected: true,
+    multipleWaitRejected: true,
   });
 
   await revealDelayedState(parity.page, 40);
@@ -110,6 +112,19 @@ test("observes the shared BrowserPage parity fixtures in Chromium", async ({
     postInsertionCount: 4,
     clicked: ["alpha", "inserted"],
   });
+
+  const observation = await parity.run(observePageObservation);
+  expect(observation).toEqual({
+    contentHasDoctype: true,
+    defaultTimeoutElapsedMs: expect.any(Number),
+    defaultTimeoutEnforced: true,
+    defaultSnapshotHasMain: true,
+    hasDeterministicBox: true,
+    hasRef: true,
+    title: "Chromium parity fixture",
+    url: "about:blank",
+  });
+  expect(observation.defaultTimeoutElapsedMs).toBeLessThan(250);
 });
 
 test("observes locator reads and state predicates in Chromium", async ({

@@ -12,7 +12,7 @@ export type InjectedScriptOptions = {
 
 export declare class InjectedScript {
   constructor(window: Window & typeof globalThis, options: InjectedScriptOptions);
-  ariaSnapshot(element: Element, options: { mode: "ai" | "default" | "codegen" }): string;
+  ariaSnapshot(element: Element, options: { boxes?: boolean; depth?: number; mode: "ai" | "default" | "codegen" }): string;
   elementState(element: Element, state: string): { matches: boolean };
   generateSelector(target: Element, options: { testIdAttributeName: string }): { selector: string };
   parseSelector(selector: string): unknown;

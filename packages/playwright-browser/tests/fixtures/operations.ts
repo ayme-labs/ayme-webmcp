@@ -44,6 +44,7 @@ export async function observeStrictResolution(page: BrowserPage) {
   const singleCount = await single.count();
   const multipleCount = await multiple.count();
   let multipleClickRejected = false;
+  let multipleWaitRejected = false;
 
   try {
     await multiple.click();
@@ -51,7 +52,18 @@ export async function observeStrictResolution(page: BrowserPage) {
     multipleClickRejected = true;
   }
 
-  return { singleCount, multipleCount, multipleClickRejected };
+  try {
+    await multiple.waitFor({ state: "attached", timeout: 30 });
+  } catch {
+    multipleWaitRejected = true;
+  }
+
+  return {
+    singleCount,
+    multipleCount,
+    multipleClickRejected,
+    multipleWaitRejected,
+  };
 }
 
 export async function observeDefaultTimeout(page: BrowserPage) {
@@ -88,19 +100,12 @@ export async function observeAbortCancellation(page: BrowserPage) {
   const controller = new AbortController();
   const browserWait = page
     .locator('[data-fixture="never-visible"]')
-    .waitFor({ state: "visible", timeout: 250 });
-  const pending = new Promise<void>((resolve, reject) => {
-    controller.signal.addEventListener(
-      "abort",
-      () => reject(controller.signal.reason),
-      { once: true }
-    );
-  });
+    .waitFor({ signal: controller.signal, state: "visible", timeout: 250 });
 
   controller.abort("fixture cancellation");
   let outcome: "cancelled" | "resolved" | "unexpected-error" = "resolved";
   try {
-    await Promise.race([browserWait, pending]);
+    await browserWait;
   } catch (error) {
     outcome =
       String(error) === "fixture cancellation"
@@ -260,5 +265,46 @@ export async function observeLocatorStates(page: BrowserPage) {
     visibilityHidden: await page.locator("#visibility-hidden").isHidden(),
     missingVisible: await page.locator("#missing").isVisible(),
     missingHidden: await page.locator("#missing").isHidden(),
+  };
+}
+
+export async function observePageObservation(page: BrowserPage) {
+  page.setDefaultTimeout(30);
+  const defaultTimeoutStartedAt = performance.now();
+  let defaultTimeoutEnforced = false;
+  try {
+    await page.locator('[data-fixture="never-visible"]').waitFor();
+  } catch (error) {
+    defaultTimeoutEnforced =
+      error instanceof Error && error.message.startsWith("Timed out waiting");
+  }
+  const main = page.getByRole("main", { name: "Chromium parity fixture" });
+  const defaultSnapshot = await page.ariaSnapshot({ depth: 1 });
+  const aiSnapshot = await main.ariaSnapshot({
+    boxes: true,
+    depth: 1,
+    mode: "ai",
+  });
+  const repeatedAiSnapshot = await main.ariaSnapshot({
+    boxes: true,
+    depth: 1,
+    mode: "ai",
+  });
+
+  return {
+    contentHasDoctype: (await page.content()).startsWith("<!DOCTYPE html>"),
+    defaultTimeoutElapsedMs: Math.round(
+      performance.now() - defaultTimeoutStartedAt
+    ),
+    defaultTimeoutEnforced,
+    defaultSnapshotHasMain: defaultSnapshot.includes(
+      'main "Chromium parity fixture"'
+    ),
+    hasDeterministicBox:
+      aiSnapshot === repeatedAiSnapshot &&
+      /\[box=-?\d+,-?\d+,\d+,\d+\]/.test(aiSnapshot),
+    hasRef: aiSnapshot.includes("[ref=e"),
+    title: await page.title(),
+    url: page.url(),
   };
 }

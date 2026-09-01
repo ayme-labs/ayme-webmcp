@@ -1,4 +1,7 @@
-import type { Page as PlaywrightPage } from "@playwright/test";
+import type {
+  Locator as PlaywrightLocator,
+  Page as PlaywrightPage,
+} from "@playwright/test";
 
 import { InjectedScript } from "./generated/injectedScript.js";
 
@@ -37,14 +40,24 @@ export type BrowserLocatorVisibilityOptions = {
   timeout?: number;
 };
 
+export type BrowserAriaSnapshotOptions = NonNullable<
+  Parameters<PlaywrightPage["ariaSnapshot"]>[0]
+>;
+
+export type BrowserLocatorWaitForOptions = NonNullable<
+  Parameters<PlaywrightLocator["waitFor"]>[0]
+>;
+
 export type TraceEntry = {
   operation: "click" | "fill" | "waitFor";
   locator: string;
-  state?: "visible" | "hidden";
+  state?: "attached" | "detached" | "visible" | "hidden";
   value?: string;
 };
 
 export interface BrowserPage {
+  ariaSnapshot(options?: BrowserAriaSnapshotOptions): Promise<string>;
+  content(): Promise<string>;
   getByAltText(text: BrowserText, options?: BrowserTextOptions): BrowserLocator;
   getByLabel(text: BrowserText, options?: BrowserTextOptions): BrowserLocator;
   getByPlaceholder(
@@ -56,6 +69,9 @@ export interface BrowserPage {
   getByText(text: BrowserText, options?: BrowserTextOptions): BrowserLocator;
   getByTitle(text: BrowserText, options?: BrowserTextOptions): BrowserLocator;
   locator(selector: string, options?: BrowserLocatorOptions): BrowserLocator;
+  setDefaultTimeout(timeout: number): void;
+  title(): Promise<string>;
+  url(): string;
 }
 
 export interface BrowserLocator {
@@ -98,13 +114,11 @@ export interface BrowserLocator {
   isHidden(options?: BrowserLocatorVisibilityOptions): Promise<boolean>;
   isVisible(options?: BrowserLocatorVisibilityOptions): Promise<boolean>;
   textContent(options?: BrowserLocatorReadOptions): Promise<null | string>;
+  ariaSnapshot(options?: BrowserAriaSnapshotOptions): Promise<string>;
   fill(value: string): Promise<void>;
   press(key: string): Promise<void>;
   click(): Promise<void>;
-  waitFor(options: {
-    state: "visible" | "hidden";
-    timeout?: number;
-  }): Promise<void>;
+  waitFor(options?: BrowserLocatorWaitForOptions): Promise<void>;
 }
 
 type BrowserPageOptions = {
@@ -431,52 +445,27 @@ export class BrowserLocatorImpl implements BrowserLocator {
       element.form?.requestSubmit();
   }
 
-  async waitFor(options: { state: "visible" | "hidden"; timeout?: number }) {
-    const timeout = options.timeout ?? 1_000;
+  async ariaSnapshot(options: BrowserAriaSnapshotOptions = {}) {
+    const element = await this.ownerPage.waitForLocator(
+      () => this.resolveElements(),
+      this.label,
+      options
+    );
+    return this.ownerPage.captureAriaSnapshot(element, options);
+  }
+
+  async waitFor(options: BrowserLocatorWaitForOptions = {}) {
+    const state = options.state ?? "visible";
     this.record({
       operation: "waitFor",
       locator: this.label,
-      state: options.state,
+      state,
     });
-
-    if (this.isInState(options.state)) return;
-
-    await new Promise<void>((resolve, reject) => {
-      const deadline = Date.now() + timeout;
-      let timeoutHandle: number | undefined;
-      const observer = new MutationObserver(() => check());
-
-      const finish = (error?: Error) => {
-        observer.disconnect();
-        if (timeoutHandle !== undefined)
-          this.ownerPage.window.clearTimeout(timeoutHandle);
-        if (error) reject(error);
-        else resolve();
-      };
-
-      const check = () => {
-        if (this.isInState(options.state)) {
-          finish();
-          return;
-        }
-        if (Date.now() >= deadline) {
-          finish(
-            new Error(
-              `Timed out waiting for ${this.label} to become ${options.state}.`
-            )
-          );
-          return;
-        }
-        timeoutHandle = this.ownerPage.window.setTimeout(check, 10);
-      };
-
-      observer.observe(this.ownerPage.document, {
-        attributes: true,
-        childList: true,
-        subtree: true,
-      });
-      timeoutHandle = this.ownerPage.window.setTimeout(check, 0);
-    });
+    await this.ownerPage.waitForLocator(
+      () => this.resolveElements(),
+      this.label,
+      { ...options, state }
+    );
   }
 
   resolveElements(scope?: Element) {
@@ -488,13 +477,6 @@ export class BrowserLocatorImpl implements BrowserLocator {
       this.requireSingleElement(),
       state
     ).matches;
-  }
-
-  private isInState(state: "visible" | "hidden") {
-    const elements = this.resolveElements();
-    return state === "visible"
-      ? elements.some(isVisible)
-      : elements.every((element) => !isVisible(element));
   }
 
   private requireSingleElement() {
@@ -560,6 +542,7 @@ export class BrowserPageImpl implements BrowserPage {
   readonly document: Document;
   readonly window: Window;
   readonly injectedScript: InjectedScript;
+  private defaultTimeout = 1_000;
 
   constructor(
     browserWindow: Window,
@@ -577,7 +560,7 @@ export class BrowserPageImpl implements BrowserPage {
         frameSeq: 0,
         isUnderTest: false,
         sdkLanguage: "javascript",
-        stableRafCount: 0,
+        stableRafCount: 1,
         testIdAttributeName: "data-testid",
       }
     );
@@ -617,6 +600,112 @@ export class BrowserPageImpl implements BrowserPage {
 
   async waitBetweenTypedCharacters() {
     await this.wait(this.pacing.typingIntervalMs);
+  }
+
+  async ariaSnapshot(options: BrowserAriaSnapshotOptions = {}) {
+    const body = await this.waitForLocator(
+      () => (this.document.body ? [this.document.body] : []),
+      "page",
+      options
+    );
+    return this.captureAriaSnapshot(body, options);
+  }
+
+  async content() {
+    const doctype = this.document.doctype
+      ? `<!DOCTYPE ${this.document.doctype.name}>`
+      : "";
+    return `${doctype}${this.document.documentElement.outerHTML}`;
+  }
+
+  setDefaultTimeout(timeout: number) {
+    if (!Number.isFinite(timeout) || timeout < 0)
+      throw new Error("Timeout must be a non-negative finite number.");
+    this.defaultTimeout = timeout;
+  }
+
+  async title() {
+    return this.document.title;
+  }
+
+  url() {
+    return this.window.location.href;
+  }
+
+  captureAriaSnapshot(element: Element, options: BrowserAriaSnapshotOptions) {
+    throwIfAborted(options.signal);
+    return this.injectedScript.ariaSnapshot(element, {
+      boxes: options.boxes,
+      depth: options.depth,
+      mode: options.mode ?? "default",
+    });
+  }
+
+  async waitForLocator(
+    resolve: () => Element[],
+    label: string,
+    options: BrowserLocatorWaitForOptions | BrowserAriaSnapshotOptions
+  ) {
+    const state =
+      "state" in options ? (options.state ?? "visible") : "attached";
+    const timeout = options.timeout ?? this.defaultTimeout;
+    const deadline = timeout === 0 ? undefined : Date.now() + timeout;
+
+    return new Promise<Element>((resolvePromise, reject) => {
+      let timeoutHandle: number | undefined;
+      let settled = false;
+      const observer = new MutationObserver(() => check());
+      const signal = options.signal;
+
+      const finish = (error?: unknown, element?: Element) => {
+        if (settled) return;
+        settled = true;
+        observer.disconnect();
+        if (timeoutHandle !== undefined)
+          this.window.clearTimeout(timeoutHandle);
+        signal?.removeEventListener("abort", onAbort);
+        if (error !== undefined) reject(error);
+        else resolvePromise(element as Element);
+      };
+
+      const onAbort = () => finish(signal?.reason ?? abortError());
+
+      const check = () => {
+        if (settled) return;
+        try {
+          throwIfAborted(signal);
+          const elements = resolve();
+          if (elements.length > 1)
+            throw new Error(
+              `strict mode violation: ${label} resolved to ${elements.length} elements`
+            );
+          const element = elements[0];
+          if (locatorStateMatches(this.injectedScript, element, state)) {
+            finish(undefined, element);
+            return;
+          }
+          if (deadline !== undefined && Date.now() >= deadline) {
+            finish(
+              new Error(`Timed out waiting for ${label} to become ${state}.`)
+            );
+            return;
+          }
+          if (timeoutHandle !== undefined)
+            this.window.clearTimeout(timeoutHandle);
+          timeoutHandle = this.window.setTimeout(check, 10);
+        } catch (error) {
+          finish(error);
+        }
+      };
+
+      signal?.addEventListener("abort", onAbort, { once: true });
+      observer.observe(this.document, {
+        attributes: true,
+        childList: true,
+        subtree: true,
+      });
+      check();
+    });
   }
 
   getByAltText(text: BrowserText, options?: BrowserTextOptions) {
@@ -989,4 +1078,23 @@ function sortInDocumentOrder(elements: Iterable<Element>) {
 
 function isElement(value: unknown): value is Element {
   return value instanceof Element;
+}
+
+function locatorStateMatches(
+  injectedScript: InjectedScript,
+  element: Element | undefined,
+  state: "attached" | "detached" | "visible" | "hidden"
+) {
+  if (state === "detached") return element === undefined;
+  if (!element) return state === "hidden";
+  if (state === "attached") return true;
+  return injectedScript.elementState(element, state).matches;
+}
+
+function throwIfAborted(signal: AbortSignal | undefined) {
+  if (signal?.aborted) throw signal.reason ?? abortError();
+}
+
+function abortError() {
+  return new DOMException("This operation was aborted", "AbortError");
 }
