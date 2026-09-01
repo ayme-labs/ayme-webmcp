@@ -337,3 +337,5 @@
 {"v":1,"session":"host:9f1a45ec71126599","cmd":"field","ts":"2026-09-01T05:34:26Z","inv":{"id":"W-10","field":"evidence","op":"field_pop_last"}}
 {"v":1,"session":"host:9f1a45ec71126599","cmd":"field","ts":"2026-09-01T05:44:08Z","inv":{"id":"W-10","field":"evidence","op":"field_pop_last"}}
 {"v":1,"session":"host:fb79d5a1c35be112","cmd":"resume","ts":"2026-09-01T05:46:42Z","inv":{"had_session_before":true,"id":"W-10","op":"session_restore_claim","old_session_at":"2026-09-01T04:32:59Z","old_session":"host:9f1a45ec71126599","had_session_at_before":true}}
+{"v":1,"session":"host:fb79d5a1c35be112","cmd":"field","ts":"2026-09-01T05:53:42Z","inv":{"id":"W-10","field":"evidence","op":"field_pop_last"}}
+{"v":1,"session":"host:fb79d5a1c35be112","cmd":"set","ts":"2026-09-01T05:54:16Z","inv":{"had_session_at_before":true,"old_w_status":"progress","had_session_before":true,"id":"W-10","op":"set_w_status_with_goals","goal_statuses":{"G-07":"partial"},"old_session_at":"2026-09-01T05:46:42Z","old_session":"host:fb79d5a1c35be112"}}

@@ -7,14 +7,14 @@
 | Measure | Count | Composition |
 | --- | --- | --- |
 | C (content) | 15 | validated B 1 · answered Q 2 · accepted D 10 · active Discovery 2 |
-| V (uncertainty) | 1 | open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 1 |
+| V (uncertainty) | 0 | open Q 0 · pending B 0 · W below DoR 0 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 12 | 1 | C: validated B 1 · answered Q 2 · accepted D 7 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 1 |
+| A-02 | Page Object interoperability | 12 | 0 | C: validated B 1 · answered Q 2 · accepted D 7 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
 
@@ -28,7 +28,7 @@
 | G-04 | Assistant can inspect the current page through ref-bearing state | count; current=1 target=1 | verified |
 | G-05 | Vue package supports Vue 3.2 consumers | boolean; current=true | verified |
 | G-06 | Generated WebMCP Tools track live Page Objects | count; current=1 target=1 | verified |
-| G-07 | Assistant receives POM-aware structural page state | count; current=3 target=4 | partial |
+| G-07 | Assistant receives POM-aware structural page state | count; current=4 target=4 | verified |
 
 ## Work items
 
@@ -43,7 +43,7 @@
 | W-07 | feature | Expose dual ARIA capture in Playwright fork | G-07 | complicated | ⊤ | done |  |
 | W-08 | feature | Add Playwright-free StructuralTree kernel | G-07 | clear | ⊤ | done |  |
 | W-09 | feature | Extract Playwright browser capture package | G-07 | complicated | ⊤ | done |  |
-| W-10 | feature | Render root-only POM structural page state | G-07 | complicated | ⊤ | progress | ★ |
+| W-10 | feature | Render root-only POM structural page state | G-07 | complicated | ⊤ | done |  |
 
 ## Decisions
 
@@ -102,7 +102,7 @@ graph TD
   W_07["W-07: Expose dual ARIA capture in Playwright fork"]:::done
   W_08["W-08: Add Playwright-free StructuralTree kernel"]:::done
   W_09["W-09: Extract Playwright browser capture package"]:::done
-  W_10["W-10: Render root-only POM structural page state"]:::progress,critical
+  W_10["W-10: Render root-only POM structural page state"]:::done
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -147,7 +147,6 @@ graph TD
   W_10 -->|implements| D_10
   W_10 -->|implements| D_11
   Y_02 -->|distills| D_08
-  class W_10 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff
