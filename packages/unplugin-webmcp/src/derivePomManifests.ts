@@ -1,5 +1,11 @@
 import path from "node:path";
 
+import {
+  compatibilityCatalog,
+  type CompatibilityMember,
+  type PlaywrightInterface,
+} from "@ayme-dev/playwright-browser/catalog";
+import { currentSupport } from "@ayme-dev/playwright-browser/currentSupport";
 import ts from "typescript";
 
 import type {
@@ -39,8 +45,14 @@ export function derivePomManifests(
 ): PomManifest[] {
   const absoluteFileName = path.resolve(fileName);
   const config = projectConfigFor(absoluteFileName, options);
+  const playwrightTestTypes = playwrightTestTypesFor(
+    absoluteFileName,
+    config.options
+  );
   const program = ts.createProgram({
-    rootNames: [...new Set([...config.fileNames, absoluteFileName])],
+    rootNames: [
+      ...new Set([...config.fileNames, absoluteFileName, playwrightTestTypes]),
+    ],
     options: {
       ...config.options,
       noEmit: true,
@@ -51,6 +63,11 @@ export function derivePomManifests(
     throw new Error(`Could not read POM source ${absoluteFileName}.`);
 
   const checker = program.getTypeChecker();
+  const compatibility = playwrightCompatibility(
+    checker,
+    program,
+    absoluteFileName
+  );
   const manifests: PomManifest[] = [];
   const components = new Map<ts.ClassDeclaration, PomComponentManifest>();
 
@@ -64,7 +81,8 @@ export function derivePomManifests(
       throw new Error("A WebMCP page object needs a class name.");
 
     const className = declaration.name.text;
-    const members = pomMembers(checker, declaration, components);
+    validatePomCompatibility(checker, declaration, compatibility);
+    const members = pomMembers(checker, declaration, components, compatibility);
     const tools = toolsForClass(checker, declaration);
 
     manifests.push({
@@ -116,7 +134,8 @@ function configError(configPath: string, diagnostic: ts.Diagnostic) {
 function pomMembers(
   checker: ts.TypeChecker,
   declaration: ts.ClassDeclaration,
-  components: Map<ts.ClassDeclaration, PomComponentManifest>
+  components: Map<ts.ClassDeclaration, PomComponentManifest>,
+  compatibility: PlaywrightCompatibility
 ): PomMemberManifest[] {
   return classMembers(checker, declaration).flatMap(
     (member): PomMemberManifest[] => {
@@ -131,7 +150,7 @@ function pomMembers(
       if (!memberInfo) return [];
       if (
         ts.isMethodDeclaration(member) &&
-        (toolDescription(member) !== undefined || member.parameters.length > 0)
+        (toolDecorator(member) !== undefined || member.parameters.length > 0)
       ) {
         return [];
       }
@@ -151,7 +170,8 @@ function pomMembers(
       const componentClassName = ensureComponentManifest(
         checker,
         component.declaration,
-        components
+        components,
+        compatibility
       );
       if (!componentClassName) return [];
       return [
@@ -208,7 +228,8 @@ function memberValueInfo(
 function ensureComponentManifest(
   checker: ts.TypeChecker,
   declaration: ts.ClassDeclaration,
-  components: Map<ts.ClassDeclaration, PomComponentManifest>
+  components: Map<ts.ClassDeclaration, PomComponentManifest>,
+  compatibility: PlaywrightCompatibility
 ) {
   const className = declaration.name?.text;
   if (!className) return undefined;
@@ -217,9 +238,10 @@ function ensureComponentManifest(
   if (existing) return existing.className;
 
   components.set(declaration, { className, members: [], tools: [] });
+  validatePomCompatibility(checker, declaration, compatibility);
   components.set(declaration, {
     className,
-    members: pomMembers(checker, declaration, components),
+    members: pomMembers(checker, declaration, components, compatibility),
     tools: toolsForClass(checker, declaration),
   });
   return className;
@@ -235,8 +257,8 @@ function toolsForClass(
   return classMembers(checker, declaration).flatMap((member) => {
     if (!isPublicInstanceMember(member) || !ts.isMethodDeclaration(member))
       return [];
-    const description = toolDescription(member);
-    if (description === undefined) return [];
+    const decorator = toolDecorator(member);
+    if (!decorator) return [];
     if (!member.name || !ts.isIdentifier(member.name)) {
       throw new Error(
         `WebMCP tool in ${className} needs an identifier method name.`
@@ -244,6 +266,7 @@ function toolsForClass(
     }
 
     const methodName = member.name.text;
+    const description = toolDescription(decorator, className, methodName);
     const parameters = member.parameters.map((parameter) =>
       toolParameter(checker, parameter, className, methodName)
     );
@@ -337,9 +360,9 @@ function hasWebMcpClassDecorator(declaration: ts.ClassDeclaration) {
   });
 }
 
-function toolDescription(
+function toolDecorator(
   declaration: ts.MethodDeclaration
-): string | undefined {
+): ts.CallExpression | undefined {
   for (const decorator of ts.getDecorators(declaration) ?? []) {
     if (!ts.isCallExpression(decorator.expression)) continue;
     const callee = decorator.expression.expression;
@@ -352,24 +375,265 @@ function toolDescription(
       continue;
     }
 
-    const options = decorator.expression.arguments[0];
-    if (!options || !ts.isObjectLiteralExpression(options)) return "";
-    const description = options.properties.find(
-      (property) =>
-        ts.isPropertyAssignment(property) &&
-        ts.isIdentifier(property.name) &&
-        property.name.text === "description"
-    );
-    if (
-      !description ||
-      !ts.isPropertyAssignment(description) ||
-      !ts.isStringLiteral(description.initializer)
-    ) {
-      return "";
-    }
-    return description.initializer.text;
+    return decorator.expression;
   }
   return undefined;
+}
+
+function toolDescription(
+  decorator: ts.CallExpression,
+  className: string,
+  methodName: string
+): string {
+  const options = decorator.arguments[0];
+  if (!options || !ts.isObjectLiteralExpression(options)) {
+    throw invalidToolDescription(className, methodName);
+  }
+  const description = options.properties.find(
+    (property) =>
+      ts.isPropertyAssignment(property) &&
+      ts.isIdentifier(property.name) &&
+      property.name.text === "description"
+  );
+  if (
+    !description ||
+    !ts.isPropertyAssignment(description) ||
+    !ts.isStringLiteral(description.initializer)
+  ) {
+    throw invalidToolDescription(className, methodName);
+  }
+  return description.initializer.text;
+}
+
+function invalidToolDescription(className: string, methodName: string) {
+  return new Error(
+    `WebMCP tool ${className}.${methodName} needs a string description.`
+  );
+}
+
+type PlaywrightCompatibility = {
+  catalog: ReadonlyMap<string, CompatibilityMember>;
+  selected: ReadonlySet<string>;
+  interfaces: Readonly<Record<PlaywrightInterface, ts.Type>>;
+};
+
+function playwrightCompatibility(
+  checker: ts.TypeChecker,
+  program: ts.Program,
+  fileName: string
+): PlaywrightCompatibility {
+  const catalog = new Map<string, CompatibilityMember>();
+  for (const member of compatibilityCatalog) {
+    const key = compatibilityKey(member.interface, member.member);
+    if (catalog.has(key))
+      throw new Error(
+        `Duplicate Playwright compatibility catalog member ${key}.`
+      );
+    catalog.set(key, member);
+  }
+
+  const interfaces = playwrightInterfaceTypes(checker, program, fileName);
+  const selected = new Set<string>();
+  for (const key of currentSupport) {
+    if (selected.has(key))
+      throw new Error(`Duplicate selected Playwright member ${key}.`);
+    selected.add(key);
+
+    const member = catalog.get(key);
+    if (!member)
+      throw new Error(
+        `Selected Playwright member ${key} is absent from the catalog.`
+      );
+    if (member.api !== "Full")
+      throw new Error(
+        `Selected Playwright member ${key} is not fully compatible in the catalog.`
+      );
+    if (
+      !checker.getPropertyOfType(interfaces[member.interface], member.member)
+    ) {
+      throw new Error(
+        `Selected Playwright member ${key} does not exist on @playwright/test ${member.interface}.`
+      );
+    }
+  }
+
+  return { catalog, selected, interfaces };
+}
+
+function playwrightInterfaceTypes(
+  checker: ts.TypeChecker,
+  program: ts.Program,
+  fileName: string
+): Record<PlaywrightInterface, ts.Type> {
+  const resolvedFileName = playwrightTestTypesFor(
+    fileName,
+    program.getCompilerOptions()
+  );
+
+  const sourceFile = program.getSourceFile(resolvedFileName);
+  const moduleSymbol = sourceFile && checker.getSymbolAtLocation(sourceFile);
+  if (!moduleSymbol)
+    throw new Error(
+      "Could not inspect @playwright/test required for Playwright compatibility diagnostics."
+    );
+
+  const exports = checker.getExportsOfModule(moduleSymbol);
+  return {
+    Page: exportedType(checker, exports, "Page"),
+    Locator: exportedType(checker, exports, "Locator"),
+  };
+}
+
+function playwrightTestTypesFor(fileName: string, options: ts.CompilerOptions) {
+  const resolved = ts.resolveModuleName(
+    "@playwright/test",
+    fileName,
+    options,
+    ts.sys
+  ).resolvedModule;
+  if (!resolved)
+    throw new Error(
+      "Could not resolve @playwright/test required for Playwright compatibility diagnostics."
+    );
+  return resolved.resolvedFileName;
+}
+
+function exportedType(
+  checker: ts.TypeChecker,
+  exports: readonly ts.Symbol[],
+  name: PlaywrightInterface
+): ts.Type {
+  const exported = exports.find((symbol) => symbol.getName() === name);
+  if (!exported)
+    throw new Error(
+      `Could not inspect @playwright/test ${name} required for Playwright compatibility diagnostics.`
+    );
+  const symbol =
+    exported.flags & ts.SymbolFlags.Alias
+      ? checker.getAliasedSymbol(exported)
+      : exported;
+  return checker.getDeclaredTypeOfSymbol(symbol);
+}
+
+function validatePomCompatibility(
+  checker: ts.TypeChecker,
+  declaration: ts.ClassDeclaration,
+  compatibility: PlaywrightCompatibility
+) {
+  const visited = new Set<ts.ClassDeclaration>();
+  const validateClass = (current: ts.ClassDeclaration) => {
+    if (visited.has(current)) return;
+    visited.add(current);
+    validatePlaywrightCalls(checker, current, compatibility);
+
+    const classType = declarationType(checker, current);
+    for (const baseType of checker.getBaseTypes(classType) ?? []) {
+      const baseDeclaration = baseType
+        .getSymbol()
+        ?.declarations?.find(ts.isClassDeclaration);
+      if (baseDeclaration) validateClass(baseDeclaration);
+    }
+  };
+
+  validateClass(declaration);
+}
+
+function declarationType(
+  checker: ts.TypeChecker,
+  declaration: ts.ClassDeclaration
+): ts.InterfaceType {
+  const symbol =
+    declaration.name && checker.getSymbolAtLocation(declaration.name);
+  if (!symbol) throw new Error("A WebMCP page object needs a class name.");
+  return checker.getDeclaredTypeOfSymbol(symbol) as ts.InterfaceType;
+}
+
+function validatePlaywrightCalls(
+  checker: ts.TypeChecker,
+  declaration: ts.ClassDeclaration,
+  compatibility: PlaywrightCompatibility
+) {
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression)
+    ) {
+      const interfaceName = playwrightInterfaceFor(
+        checker,
+        checker.getTypeAtLocation(node.expression.expression),
+        compatibility.interfaces
+      );
+      if (interfaceName) {
+        const key = compatibilityKey(interfaceName, node.expression.name.text);
+        const member = compatibility.catalog.get(key);
+        if (!member)
+          throw new Error(
+            `Playwright member ${key} is not classified in the compatibility catalog.`
+          );
+        if (member.api === "Unsupported")
+          throw new Error(
+            `Playwright member ${key} is architecturally unsupported.`
+          );
+        if (!compatibility.selected.has(key)) {
+          throw new Error(
+            `Playwright member ${key} is compatible but unavailable in the current browser runtime.`
+          );
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+
+  ts.forEachChild(declaration, visit);
+}
+
+function playwrightInterfaceFor(
+  checker: ts.TypeChecker,
+  type: ts.Type,
+  interfaces: Readonly<Record<PlaywrightInterface, ts.Type>>
+): PlaywrightInterface | undefined {
+  for (const interfaceName of ["Page", "Locator"] as const) {
+    if (sameTypeSymbol(checker, type, interfaces[interfaceName]))
+      return interfaceName;
+  }
+  return undefined;
+}
+
+function sameTypeSymbol(
+  checker: ts.TypeChecker,
+  left: ts.Type,
+  right: ts.Type
+) {
+  const checked = new Set<ts.Type>();
+  const matches = (candidate: ts.Type): boolean => {
+    if (checked.has(candidate)) return false;
+    checked.add(candidate);
+
+    const leftSymbol = resolvedTypeSymbol(checker, candidate);
+    const rightSymbol = resolvedTypeSymbol(checker, right);
+    if (leftSymbol !== undefined && leftSymbol === rightSymbol) return true;
+
+    const constraint = checker.getBaseConstraintOfType(candidate);
+    return (
+      constraint !== undefined &&
+      constraint !== candidate &&
+      matches(constraint)
+    );
+  };
+
+  return matches(left);
+}
+
+function resolvedTypeSymbol(checker: ts.TypeChecker, type: ts.Type) {
+  const symbol = type.aliasSymbol ?? type.getSymbol();
+  if (!symbol) return undefined;
+  return symbol.flags & ts.SymbolFlags.Alias
+    ? checker.getAliasedSymbol(symbol)
+    : symbol;
+}
+
+function compatibilityKey(interfaceName: PlaywrightInterface, member: string) {
+  return `${interfaceName}.${member}`;
 }
 
 function toolParameter(

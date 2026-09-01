@@ -3,9 +3,8 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 
-const expectedArtifactBytes = 331_512;
-const expectedArtifactSha256 =
-  "8517fd96ce7384ba9068116c21ebe3e2d0b61d123483df938b15aa4382ad92df";
+import { upstreamPlaywright } from "@ayme-dev/playwright-browser/upstream";
+
 const playwrightInjectedId = "virtual:ayme-playwright-injected";
 const resolvedPlaywrightInjectedId = `\0${playwrightInjectedId}`;
 
@@ -30,17 +29,23 @@ export function playwrightInjectedPlugin() {
 }
 
 function readInjectedScriptSource() {
+  const { captureSource } = upstreamPlaywright;
   const require = createRequire(import.meta.url);
-  const packagePath = require.resolve("playwright-core/package.json");
+  const packagePath = require.resolve(`${captureSource.package}/package.json`);
+  const ownPackagePath = resolve(
+    dirname(require.resolve("@ayme-dev/playwright-browser/upstream")),
+    "../package.json"
+  );
+  assertCaptureDependency(captureSource, ownPackagePath);
   const artifactPath = resolve(
     dirname(packagePath),
-    "src/generated/injectedScriptSource.ts"
+    captureSource.artifact.path
   );
   const artifact = readFileSync(artifactPath);
   const sha256 = createHash("sha256").update(artifact).digest("hex");
   if (
-    artifact.byteLength !== expectedArtifactBytes ||
-    sha256 !== expectedArtifactSha256
+    artifact.byteLength !== captureSource.artifact.bytes ||
+    sha256 !== captureSource.artifact.sha256
   ) {
     throw new Error(
       "The pinned playwright-core InjectedScript artifact does not match the reviewed build."
@@ -64,4 +69,25 @@ function readInjectedScriptSource() {
     );
   }
   return source;
+}
+
+function assertCaptureDependency(
+  captureSource: typeof upstreamPlaywright.captureSource,
+  packagePath: string
+) {
+  const packageManifest = JSON.parse(readFileSync(packagePath, "utf8")) as {
+    dependencies?: Record<string, string>;
+  };
+  const repository = captureSource.repository.replace(
+    "https://github.com/",
+    ""
+  );
+  const expectedDependency = `github:${repository}#path:/packages/${captureSource.package}&${captureSource.commit}`;
+  if (
+    packageManifest.dependencies?.[captureSource.package] !== expectedDependency
+  ) {
+    throw new Error(
+      "The playwright-core dependency does not match the reviewed capture source."
+    );
+  }
 }

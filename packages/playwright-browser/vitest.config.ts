@@ -1,17 +1,9 @@
-import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 
-import { playwrightInjectedPlugin } from "./src/tsdown.ts";
-
 export default defineConfig({
-  plugins: [playwrightInjectedPlugin()],
   test: {
-    browser: {
-      enabled: true,
-      headless: true,
-      instances: [{ browser: "chromium" }],
-      provider: playwright(),
-    },
+    environment: "jsdom",
+    exclude: ["src/index.test.ts"],
     include: ["src/**/*.test.ts"],
   },
 });

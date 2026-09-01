@@ -9,3 +9,7 @@ node_modules/
 .turbo/
 dist/
 test-results/
+
+# Pinned upstream browser artifact; regenerate with the package command.
+packages/playwright-browser/src/generated/
+packages/playwright-browser/source/

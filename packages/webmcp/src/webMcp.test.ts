@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { BrowserPage } from "./browserPage";
+import type { BrowserPage } from "@ayme-dev/playwright-browser";
 
 type PublishedTool = { name: string };
 

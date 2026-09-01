@@ -1,4 +1,4 @@
-import { ariaSnapshot } from "@ayme-dev/playwright-browser";
+import { ariaSnapshot } from "@ayme-dev/playwright-browser/capture";
 import type { ModelContextTool } from "@mcp-b/webmcp-types";
 
 const inputSchema = {

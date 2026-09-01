@@ -1,3 +1,3 @@
-import config from "@ayme-dev/eslint-config/base";
+import baseConfig from "@ayme-dev/eslint-config/base";
 
-export default config;
+export default baseConfig;

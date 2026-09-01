@@ -6,9 +6,9 @@ import type {
   PomMemberManifest,
   PomMemberObservation,
   RegisteredPomTool,
-  TraceEntry,
 } from "@ayme-dev/webmcp";
 import type { RegisteredPom } from "@ayme-dev/webmcp/internal";
+import type { TraceEntry } from "@ayme-dev/playwright-browser";
 
 type ToolArguments = Record<string, JsonValue>;
 

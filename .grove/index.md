@@ -6,7 +6,7 @@
 
 | Measure | Count | Composition |
 | --- | --- | --- |
-| C (content) | 11 | validated B 1 · answered Q 0 · accepted D 8 · active Discovery 2 |
+| C (content) | 12 | validated B 1 · answered Q 0 · accepted D 9 · active Discovery 2 |
 | V (uncertainty) | 0 | open Q 0 · pending B 0 · W below DoR 0 |
 
 ## Areas
@@ -14,7 +14,7 @@
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 8 | 0 | C: validated B 1 · answered Q 0 · accepted D 5 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
+| A-02 | Page Object interoperability | 9 | 0 | C: validated B 1 · answered Q 0 · accepted D 6 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
 
@@ -28,6 +28,7 @@
 | G-04 | Assistant can inspect the current page through ref-bearing state | count; current=1 target=1 | verified |
 | G-05 | Vue package supports Vue 3.2 consumers | boolean; current=true | verified |
 | G-06 | Generated WebMCP Tools track live Page Objects | count; current=1 target=1 | verified |
+| G-07 | Browser runtime executes the selected Playwright-compatible POM surface | count; current=10 target=10 | verified |
 
 ## Work items
 
@@ -39,6 +40,16 @@
 | W-04 | feature | Expose raw Playwright ARIA state through get_page_state | G-04 | complicated | ⊤ | done |  |
 | W-05 | feature | Enforce the Vue 3.2 support floor | G-05 | clear | ⊤ | done |  |
 | W-06 | feature | Synchronize tools with live Page Objects | G-06 | complicated | ⊤ | done |  |
+| W-07 | feature | Generate the pinned Playwright browser runtime | G-07 | complicated | ⊤ | done |  |
+| W-08 | feature | Enforce POM compatibility diagnostics | G-07 | complicated | ⊤ | done |  |
+| W-09 | feature | Establish the Chromium parity harness | G-07 | clear | ⊤ | done |  |
+| W-10 | feature | Implement Page and Locator finder factories | G-07 | complicated | ⊤ | done |  |
+| W-11 | feature | Implement Locator composition and collections | G-07 | complicated | ⊤ | done |  |
+| W-12 | feature | Implement Locator reads and state predicates | G-07 | complicated | ⊤ | done |  |
+| W-13 | feature | Implement waits, ARIA, and Page observation | G-07 | complicated | ⊤ | done |  |
+| W-14 | feature | Implement browser-emulated Locator actions | G-07 | complicated | ⊤ | done |  |
+| W-15 | feature | Integrate and verify Playwright browser compatibility | G-07 | complicated | ⊤ | done |  |
+| W-16 | feature | Establish the playwright-browser package contract | G-07 | complicated | ⊤ | done |  |
 
 ## Decisions
 
@@ -53,6 +64,7 @@
 | D-07 | Use structural POMs and explicit WebMCP exposure | accepted |  |
 | D-08 | Package Vue lifecycle integration separately | accepted |  |
 | D-09 | Let Ayme own live Page Object observation | accepted |  |
+| D-10 | Isolate browser-side Playwright compatibility | accepted |  |
 
 ## Open questions
 
@@ -83,12 +95,23 @@ graph TD
   G_04["G-04: Assistant can inspect the current page through ref-bearing state"]:::goal
   G_05["G-05: Vue package supports Vue 3.2 consumers"]:::goal
   G_06["G-06: Generated WebMCP Tools track live Page Objects"]:::goal
+  G_07["G-07: Browser runtime executes the selected Playwright-compatible POM surface"]:::goal
   W_01["W-01: Establish the monorepo walking skeleton"]:::done
   W_02["W-02: Preserve spike behavior through package extraction"]:::done
   W_03["W-03: Extract Vue Page Object activation composable"]:::done
   W_04["W-04: Expose raw Playwright ARIA state through get_page_state"]:::done
   W_05["W-05: Enforce the Vue 3.2 support floor"]:::done
   W_06["W-06: Synchronize tools with live Page Objects"]:::done
+  W_07["W-07: Generate the pinned Playwright browser runtime"]:::done
+  W_08["W-08: Enforce POM compatibility diagnostics"]:::done
+  W_09["W-09: Establish the Chromium parity harness"]:::done
+  W_10["W-10: Implement Page and Locator finder factories"]:::done
+  W_11["W-11: Implement Locator composition and collections"]:::done
+  W_12["W-12: Implement Locator reads and state predicates"]:::done
+  W_13["W-13: Implement waits, ARIA, and Page observation"]:::done
+  W_14["W-14: Implement browser-emulated Locator actions"]:::done
+  W_15["W-15: Integrate and verify Playwright browser compatibility"]:::done
+  W_16["W-16: Establish the playwright-browser package contract"]:::done
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -98,6 +121,7 @@ graph TD
   D_07["D-07: Use structural POMs and explicit WebMCP exposure"]:::decision
   D_08["D-08: Package Vue lifecycle integration separately"]:::decision
   D_09["D-09: Let Ayme own live Page Object observation"]:::decision
+  D_10["D-10: Isolate browser-side Playwright compatibility"]:::decision
   Q_01["Q-01: Choose the public activation interface"]:::question
   B_01["B-01: Vue 3.2.0 supports lifecycle integration"]:::assumption
   Y_01["Y-01: Shared Page Object behavior"]:::discovery
@@ -118,6 +142,35 @@ graph TD
   W_02 -->|produces| Y_01
   W_03 -->|implements| D_08
   W_06 -->|implements| D_09
+  W_07 ==>|blocks| W_10
+  W_07 ==>|blocks| W_11
+  W_07 ==>|blocks| W_12
+  W_07 ==>|blocks| W_13
+  W_07 ==>|blocks| W_14
+  W_07 -->|implements| D_10
+  W_08 ==>|blocks| W_15
+  W_08 -->|implements| D_10
+  W_09 ==>|blocks| W_10
+  W_09 ==>|blocks| W_11
+  W_09 ==>|blocks| W_12
+  W_09 ==>|blocks| W_13
+  W_09 ==>|blocks| W_14
+  W_09 -->|implements| D_10
+  W_10 ==>|blocks| W_15
+  W_10 -->|implements| D_10
+  W_11 ==>|blocks| W_15
+  W_11 -->|implements| D_10
+  W_12 ==>|blocks| W_15
+  W_12 -->|implements| D_10
+  W_13 ==>|blocks| W_15
+  W_13 -->|implements| D_10
+  W_14 ==>|blocks| W_15
+  W_14 -->|implements| D_10
+  W_15 -->|implements| D_10
+  W_16 ==>|blocks| W_07
+  W_16 ==>|blocks| W_08
+  W_16 ==>|blocks| W_09
+  W_16 -->|implements| D_10
   Y_02 -->|distills| D_08
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { captureAriaSnapshot } from "@ayme-dev/playwright-browser";
+import { captureAriaSnapshot } from "@ayme-dev/playwright-browser/capture";
 
 describe("Playwright browser capture", () => {
   it("captures distilled and full text with refs from the same DOM capture", () => {

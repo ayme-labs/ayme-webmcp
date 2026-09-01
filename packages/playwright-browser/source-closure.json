@@ -1,0 +1,119 @@
+{
+  "upstream": {
+    "commit": "26a9e470a7b3c7822084b09fb7f13902c5f37b51",
+    "repository": "https://github.com/microsoft/playwright.git",
+    "version": "1.62.1"
+  },
+  "files": [
+    {
+      "path": "packages/injected/src/ariaSnapshot.ts",
+      "sha256": "sha256:d6033d455965827ce57d43f2805bae439cb0325652cd84340c45d4095a15571f"
+    },
+    {
+      "path": "packages/injected/src/ariaSnapshotDistiller.ts",
+      "sha256": "sha256:788fb8baca7eb47080afb9a3a5dee8e42eceac91a6e0512c4a5faffa757e8314"
+    },
+    {
+      "path": "packages/injected/src/consoleApi.ts",
+      "sha256": "sha256:b4fa2c138df07f8b7241e14c39166b1e42797ba0d3d749b59577dc330773a7de"
+    },
+    {
+      "path": "packages/injected/src/domUtils.ts",
+      "sha256": "sha256:df5f09293f58ad756167d5cc160bb9ad598fbb59d491ccdc85f7c10a14d41773"
+    },
+    {
+      "path": "packages/injected/src/highlight.css",
+      "sha256": "sha256:c119d77b213a96de0e72c7d7e1c102189af89d8ebc1ba9c8303a2cdf0a8e6344"
+    },
+    {
+      "path": "packages/injected/src/highlight.ts",
+      "sha256": "sha256:73e2b95f951c33d34d25d80856b83573e618ba6a5adf30df77a313d06780655c"
+    },
+    {
+      "path": "packages/injected/src/injectedScript.ts",
+      "sha256": "sha256:8c9b8d4a975159d57e21e77eef78954fb21fb4b23053acd2019df6df71f15735"
+    },
+    {
+      "path": "packages/injected/src/layoutSelectorUtils.ts",
+      "sha256": "sha256:c87c2fefdfd3abc353a0fb9621ba2144ce80c04365e1aba36a5b667873d200e2"
+    },
+    {
+      "path": "packages/injected/src/roleSelectorEngine.ts",
+      "sha256": "sha256:77b5028b2a8bdb87b65d2b8a14c7a051f17dbee210c87835c542896d6576e61c"
+    },
+    {
+      "path": "packages/injected/src/roleUtils.ts",
+      "sha256": "sha256:21549ab98807e4c00aa7b07a9601b5fe8168f5cfaadb20d029092b9f57914033"
+    },
+    {
+      "path": "packages/injected/src/selectorEvaluator.ts",
+      "sha256": "sha256:8e83ecd19415dcb4b5ed6a805a3bffb68c3e999850dc6c612ae2c853e6c72abe"
+    },
+    {
+      "path": "packages/injected/src/selectorGenerator.ts",
+      "sha256": "sha256:cb8a77dbc0384faf0c0f0a2727b610cf3020c8e8c5c234c605db6b6eb9a4d2d8"
+    },
+    {
+      "path": "packages/injected/src/selectorUtils.ts",
+      "sha256": "sha256:8a75fee45afa0a16008a5d8c6dd51f8dabb568c9a9b13bc52dfef42e27e6afa6"
+    },
+    {
+      "path": "packages/injected/src/utilityScript.ts",
+      "sha256": "sha256:e472dab0527f2cac50ed825426dc5db6117a9cf1941a7fea93e91c84d58d89fa"
+    },
+    {
+      "path": "packages/injected/src/xpathSelectorEngine.ts",
+      "sha256": "sha256:5b73a267252e076078131ec34302c2be1b7fc916ef50f59a2b94fd68e53727c5"
+    },
+    {
+      "path": "packages/isomorphic/ariaSnapshot.ts",
+      "sha256": "sha256:c91c3f6ed94e11c7ced173f66b344b1489dd3f67fa68edd4c2322114e6c05590"
+    },
+    {
+      "path": "packages/isomorphic/cssParser.ts",
+      "sha256": "sha256:8dd56c492bac213b36bee46761749619cf14d263a5cc44280e7fc6e3ff23ba4b"
+    },
+    {
+      "path": "packages/isomorphic/cssTokenizer.ts",
+      "sha256": "sha256:beffbe943b63c10af3cfa325e163e7593f91f0824e18a5f7f77062b119e386bc"
+    },
+    {
+      "path": "packages/isomorphic/locatorGenerators.ts",
+      "sha256": "sha256:685ede435e6107d048eabd874acf41cc6eecb030593b4c90611d60ef10ddc829"
+    },
+    {
+      "path": "packages/isomorphic/locatorUtils.ts",
+      "sha256": "sha256:241bca55c6ccc87a9a897039186cf1e399aec6eb76c86f3590bfb5b82c9a08c1"
+    },
+    {
+      "path": "packages/isomorphic/selectorParser.ts",
+      "sha256": "sha256:45b58355acaa6a41980e17950b020690ac79821e5d2740ff50bb8e6bfa1b953a"
+    },
+    {
+      "path": "packages/isomorphic/stringUtils.ts",
+      "sha256": "sha256:8f57545a6f8d33898df7851e255618e3efdaae43c9590832538eabd9c0924a35"
+    },
+    {
+      "path": "packages/isomorphic/utilityScriptSerializers.ts",
+      "sha256": "sha256:4bed11185b9faa4df3a2153c679348feefd14c40e4859c6068256599b6599ccb"
+    },
+    {
+      "path": "packages/isomorphic/yaml.ts",
+      "sha256": "sha256:805b5de857749599fcf979b1e00b35ad89beb807c189e163fd264a891110dd29"
+    }
+  ],
+  "legalFiles": [
+    {
+      "path": "LICENSE",
+      "sha256": "sha256:45873d00a0dd243596deb4aa23b2493b3d1f0671921bf2538ea431d7380220eb"
+    },
+    {
+      "path": "NOTICE",
+      "sha256": "sha256:6d602191187b35b9b01d2cffa01c8469c2c8d9de8a96f1bf868e0f264f51c81d"
+    },
+    {
+      "path": "ThirdPartyNotices.txt",
+      "sha256": "sha256:a549d329bad8806fe279f0ecae0fc0270dec7e7c2dc8ec10f90e394f7c32b144"
+    }
+  ]
+}
