@@ -336,3 +336,4 @@
 {"v":1,"session":"host:9f1a45ec71126599","cmd":"field","ts":"2026-09-01T05:09:28Z","inv":{"id":"W-10","field":"evidence","op":"field_pop_last"}}
 {"v":1,"session":"host:9f1a45ec71126599","cmd":"field","ts":"2026-09-01T05:34:26Z","inv":{"id":"W-10","field":"evidence","op":"field_pop_last"}}
 {"v":1,"session":"host:9f1a45ec71126599","cmd":"field","ts":"2026-09-01T05:44:08Z","inv":{"id":"W-10","field":"evidence","op":"field_pop_last"}}
+{"v":1,"session":"host:fb79d5a1c35be112","cmd":"resume","ts":"2026-09-01T05:46:42Z","inv":{"had_session_before":true,"id":"W-10","op":"session_restore_claim","old_session_at":"2026-09-01T04:32:59Z","old_session":"host:9f1a45ec71126599","had_session_at_before":true}}
