@@ -86,7 +86,6 @@ export interface BrowserPage {
 }
 
 export interface BrowserLocator {
-  page(): BrowserPage;
   getByAltText(text: BrowserText, options?: BrowserTextOptions): BrowserLocator;
   getByLabel(text: BrowserText, options?: BrowserTextOptions): BrowserLocator;
   getByPlaceholder(
@@ -132,7 +131,7 @@ export interface BrowserLocator {
   waitFor(options?: BrowserLocatorWaitForOptions): Promise<void>;
 }
 
-type BrowserPageOptions = {
+export type BrowserPageOptions = {
   browserWindow?: Window;
   onTrace?: () => void;
   pacing?: BrowserInteractionPacing;
@@ -144,7 +143,13 @@ export type BrowserInteractionPacing = {
   typingIntervalMs?: number;
 };
 
-export class BrowserLocatorImpl implements BrowserLocator {
+export type BrowserPageRuntime = {
+  page: BrowserPage;
+  trace: TraceEntry[];
+  resetTrace(): void;
+};
+
+class BrowserLocatorImpl implements BrowserLocator {
   constructor(
     private readonly ownerPage: BrowserPageImpl,
     private readonly resolver: (scope?: Element) => Element[],
@@ -154,8 +159,8 @@ export class BrowserLocatorImpl implements BrowserLocator {
     private readonly selector?: string
   ) {}
 
-  page() {
-    return this.ownerPage;
+  belongsTo(page: BrowserPageImpl) {
+    return this.ownerPage === page;
   }
 
   getByAltText(text: BrowserText, options?: BrowserTextOptions) {
@@ -350,46 +355,50 @@ export class BrowserLocatorImpl implements BrowserLocator {
   }
 
   async getAttribute(name: string, options?: BrowserLocatorReadOptions) {
-    void options;
-    return this.requireSingleElement().getAttribute(name);
+    return (await this.waitForSingleElement(options)).getAttribute(name);
   }
 
   async innerHTML(options?: BrowserLocatorReadOptions) {
-    void options;
-    return this.requireSingleElement().innerHTML;
+    return (await this.waitForSingleElement(options)).innerHTML;
   }
 
   async innerText(options?: BrowserLocatorReadOptions) {
-    void options;
-    return getInnerText(this.requireSingleElement());
+    return getInnerText(await this.waitForSingleElement(options));
   }
 
   async inputValue(options?: BrowserLocatorReadOptions) {
-    void options;
-    const element = retargetToControl(this.requireSingleElement());
+    const element = retargetToControl(await this.waitForSingleElement(options));
     if (!isInputValueElement(element))
       throw new Error("Node is not an <input>, <textarea> or <select> element");
     return element.value;
   }
 
   async isChecked(options?: BrowserLocatorReadOptions) {
-    void options;
-    return this.elementState("checked");
+    return this.elementState(
+      await this.waitForSingleElement(options),
+      "checked"
+    );
   }
 
   async isDisabled(options?: BrowserLocatorReadOptions) {
-    void options;
-    return this.elementState("disabled");
+    return this.elementState(
+      await this.waitForSingleElement(options),
+      "disabled"
+    );
   }
 
   async isEditable(options?: BrowserLocatorReadOptions) {
-    void options;
-    return this.elementState("editable");
+    return this.elementState(
+      await this.waitForSingleElement(options),
+      "editable"
+    );
   }
 
   async isEnabled(options?: BrowserLocatorReadOptions) {
-    void options;
-    return this.elementState("enabled");
+    return this.elementState(
+      await this.waitForSingleElement(options),
+      "enabled"
+    );
   }
 
   async isHidden(options?: BrowserLocatorVisibilityOptions) {
@@ -405,8 +414,7 @@ export class BrowserLocatorImpl implements BrowserLocator {
   }
 
   async textContent(options?: BrowserLocatorReadOptions) {
-    void options;
-    return this.requireSingleElement().textContent;
+    return (await this.waitForSingleElement(options)).textContent;
   }
 
   async fill(value: string, options?: BrowserLocatorFillOptions) {
@@ -473,6 +481,13 @@ export class BrowserLocatorImpl implements BrowserLocator {
   }
 
   async ariaSnapshot(options: BrowserAriaSnapshotOptions = {}) {
+    if (options.mode === "ai") {
+      throwIfAborted(options.signal);
+      return this.ownerPage.captureAriaSnapshot(
+        this.requireSingleElement(),
+        options
+      );
+    }
     const element = await this.ownerPage.waitForLocator(
       () => this.resolveElements(),
       this.label,
@@ -499,11 +514,16 @@ export class BrowserLocatorImpl implements BrowserLocator {
     return this.resolver(scope).filter(isElement);
   }
 
-  private elementState(state: string) {
-    return this.ownerPage.injectedScript.elementState(
-      this.requireSingleElement(),
-      state
-    ).matches;
+  private elementState(element: Element, state: string) {
+    return this.ownerPage.injectedScript.elementState(element, state).matches;
+  }
+
+  private waitForSingleElement(options: BrowserLocatorReadOptions = {}) {
+    return this.ownerPage.waitForLocator(
+      () => this.resolveElements(),
+      this.label,
+      { ...options, state: "attached" }
+    );
   }
 
   private requireSingleElement() {
@@ -565,11 +585,11 @@ export class BrowserLocatorImpl implements BrowserLocator {
   }
 }
 
-export class BrowserPageImpl implements BrowserPage {
+class BrowserPageImpl implements BrowserPage {
   readonly document: Document;
   readonly window: Window;
   readonly injectedScript: InjectedScript;
-  private defaultTimeout = 1_000;
+  private defaultTimeout = 0;
 
   constructor(
     browserWindow: Window,
@@ -640,7 +660,9 @@ export class BrowserPageImpl implements BrowserPage {
 
   async content() {
     const doctype = this.document.doctype
-      ? `<!DOCTYPE ${this.document.doctype.name}>`
+      ? new (
+          this.window as Window & typeof globalThis
+        ).XMLSerializer().serializeToString(this.document.doctype)
       : "";
     return `${doctype}${this.document.documentElement.outerHTML}`;
   }
@@ -676,7 +698,8 @@ export class BrowserPageImpl implements BrowserPage {
     const state =
       "state" in options ? (options.state ?? "visible") : "attached";
     const timeout = options.timeout ?? this.defaultTimeout;
-    const deadline = timeout === 0 ? undefined : Date.now() + timeout;
+    const deadline =
+      timeout === 0 ? undefined : this.window.performance.now() + timeout;
 
     return new Promise<Element>((resolvePromise, reject) => {
       let timeoutHandle: number | undefined;
@@ -695,7 +718,7 @@ export class BrowserPageImpl implements BrowserPage {
         else resolvePromise(element as Element);
       };
 
-      const onAbort = () => finish(signal?.reason ?? abortError());
+      const onAbort = () => finish(abortError(signal?.reason));
 
       const check = () => {
         if (settled) return;
@@ -711,9 +734,12 @@ export class BrowserPageImpl implements BrowserPage {
             finish(undefined, element);
             return;
           }
-          if (deadline !== undefined && Date.now() >= deadline) {
+          if (
+            deadline !== undefined &&
+            this.window.performance.now() >= deadline
+          ) {
             finish(
-              new Error(`Timed out waiting for ${label} to become ${state}.`)
+              timeoutError(`Timed out waiting for ${label} to become ${state}.`)
             );
             return;
           }
@@ -876,7 +902,9 @@ export class BrowserPageImpl implements BrowserPage {
   }
 }
 
-export function createBrowserPage(options: BrowserPageOptions = {}) {
+export function createBrowserPage(
+  options: BrowserPageOptions = {}
+): BrowserPageRuntime {
   const trace: TraceEntry[] = [];
   const page = BrowserPageImpl.fromWindow(
     options.browserWindow ?? window,
@@ -962,7 +990,7 @@ function resolveLocatorElements(
   ownerPage?: BrowserPageImpl
 ): Element[] {
   if (locator instanceof BrowserLocatorImpl) {
-    if (ownerPage !== undefined && locator.page() !== ownerPage)
+    if (ownerPage !== undefined && !locator.belongsTo(ownerPage))
       throw new Error("Locators must belong to the same BrowserPage.");
     return locator.resolveElements(scope);
   }
@@ -1123,9 +1151,24 @@ function locatorStateMatches(
 }
 
 function throwIfAborted(signal: AbortSignal | undefined) {
-  if (signal?.aborted) throw signal.reason ?? abortError();
+  if (signal?.aborted) throw abortError(signal.reason);
 }
 
-function abortError() {
-  return new DOMException("This operation was aborted", "AbortError");
+function abortError(reason?: unknown) {
+  const cause =
+    reason === undefined
+      ? new DOMException("This operation was aborted", "AbortError")
+      : reason;
+  const error = new Error(
+    cause instanceof Error ? cause.message : String(cause),
+    { cause }
+  );
+  error.name = "AbortError";
+  return error;
+}
+
+function timeoutError(message: string) {
+  const error = new Error(message);
+  error.name = "TimeoutError";
+  return error;
 }

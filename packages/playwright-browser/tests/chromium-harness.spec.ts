@@ -4,11 +4,14 @@ import {
   observeActionContracts,
   observeAccessibilityOutput,
   observeDefaultTimeout,
+  observeDelayedReads,
   observeFinderFactories,
+  observeHiddenAndDetachedWaits,
   observeLocatorComposition,
   observeInputEvents,
   observeLocatorReads,
   observeLocatorStates,
+  observeNoImplicitDefaultTimeout,
   observePageObservation,
   observePerCallTimeout,
   observeStrictResolution,
@@ -95,6 +98,10 @@ test("observes the shared BrowserPage parity fixtures in Chromium", async ({
       'main "Chromium parity fixture"\n  heading "Chromium parity fixture"\n  button "Save"',
     roles: { main: 1, heading: 1, saveButton: 1 },
   });
+
+  await expect(
+    parity.run(async (page) => await page.ariaSnapshot({ depth: 3 }))
+  ).resolves.toBe(await parity.page.ariaSnapshot({ depth: 3 }));
 
   const composition = await parity.run(observeLocatorComposition);
   expect(composition).toEqual({
@@ -184,5 +191,84 @@ test("runs Locator actions through the explicit browser-emulation contract", asy
     liveTarget: { oldClicked: false, newClicked: true },
     navigatedToHash: "#navigated",
     submits: 1,
+  });
+});
+
+test("matches Playwright Page content and AI snapshot no-match behavior", async ({
+  parity,
+}) => {
+  await parity.reset(
+    `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html><head><title>Serialized</title></head><body></body></html>`
+  );
+
+  await expect(parity.run(async (page) => await page.content())).resolves.toBe(
+    await parity.page.content()
+  );
+
+  await parity.page.evaluate(() => {
+    setTimeout(() => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        '<div id="playwright-late"></div>'
+      );
+    }, 30);
+  });
+  await expect(
+    parity.page
+      .locator("#playwright-late")
+      .ariaSnapshot({ mode: "ai", timeout: 200 })
+  ).rejects.toThrow("does not match any element");
+
+  const runtimeResult = await parity.run(async (page) => {
+    setTimeout(() => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        '<div id="runtime-late"></div>'
+      );
+    }, 30);
+    try {
+      await page
+        .locator("#runtime-late")
+        .ariaSnapshot({ mode: "ai", timeout: 200 });
+      return "resolved";
+    } catch {
+      return "rejected";
+    }
+  });
+  expect(runtimeResult).toBe("rejected");
+});
+
+test("retries matched scalar reads and honors timeout and cancellation", async ({
+  parity,
+}) => {
+  expect(await parity.run(observeDelayedReads)).toEqual({
+    abortError: { cause: "read cancellation", name: "AbortError" },
+    reads: [
+      "attribute",
+      "<strong>markup</strong>",
+      "inner text",
+      "input value",
+      "text content",
+      true,
+      true,
+      true,
+      true,
+    ],
+    timedOut: true,
+  });
+});
+
+test("keeps Playwright's zero default timeout until configured", async ({
+  parity,
+}) => {
+  const elapsedMs = await parity.run(observeNoImplicitDefaultTimeout);
+  expect(elapsedMs).toBeGreaterThanOrEqual(1_000);
+  expect(elapsedMs).toBeLessThan(2_500);
+});
+
+test("waits for hidden and detached locator states", async ({ parity }) => {
+  await expect(parity.run(observeHiddenAndDetachedWaits)).resolves.toEqual({
+    detached: true,
+    hidden: true,
   });
 });

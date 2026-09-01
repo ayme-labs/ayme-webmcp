@@ -34,6 +34,16 @@ The publishable `@ayme-dev/webmcp` bundle inlines this private package and copie
 the Playwright license, notice, and third-party notices into its `dist` output;
 published consumers never resolve `@ayme-dev/playwright-browser` themselves.
 
+The pinned `Page` and `Locator` declaration fingerprint is token-normalized so
+comments and formatting do not create false drift. During an upstream upgrade,
+review the changed declarations and compatibility catalog, then print and record
+the reviewed fingerprint before checking it:
+
+```sh
+pnpm --filter @ayme-dev/playwright-browser fingerprint:surface
+pnpm --filter @ayme-dev/playwright-browser check:surface
+```
+
 The generator applies four deterministic, fail-closed output substitutions to
 the pinned bundle: it replaces `UtilityScript.evaluate`'s `global.eval` call;
 rejects custom selector-engine registration instead of evaluating its source;

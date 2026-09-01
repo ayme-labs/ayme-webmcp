@@ -90,13 +90,13 @@ describe("derivePomManifests", () => {
 
   it("checks inherited decorated tools", () => {
     expect(() => manifestFor("inheritedCompatibilityPom")).toThrow(
-      "Playwright member Locator.hover is architecturally unsupported."
+      "Playwright member Locator.hover is compatible but unavailable in the current browser runtime."
     );
   });
 
   it("checks generic inherited decorated tools", () => {
     expect(() => manifestFor("genericInheritedCompatibilityPom")).toThrow(
-      "Playwright member Locator.hover is architecturally unsupported."
+      "Playwright member Locator.hover is compatible but unavailable in the current browser runtime."
     );
   });
 

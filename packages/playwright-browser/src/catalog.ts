@@ -2,12 +2,36 @@ export type PlaywrightInterface = "Page" | "Locator";
 export type ApiCompatibility = "Full" | "Partial" | "Unsupported";
 export type ExecutionFidelity = "Matched" | "Browser-emulated";
 
-export type CompatibilityMember = {
+type CompatibilityMemberBase = {
   interface: PlaywrightInterface;
   member: string;
-  api: ApiCompatibility;
-  execution: ExecutionFidelity;
 };
+
+export type FullCompatibilityMember = CompatibilityMemberBase & {
+  api: "Full";
+  execution: ExecutionFidelity;
+  note?: string;
+  reason?: never;
+};
+
+export type PartialCompatibilityMember = CompatibilityMemberBase & {
+  api: "Partial";
+  execution: ExecutionFidelity;
+  note: string;
+  reason?: never;
+};
+
+export type UnsupportedCompatibilityMember = CompatibilityMemberBase & {
+  api: "Unsupported";
+  reason: string;
+  execution?: never;
+  note?: never;
+};
+
+export type CompatibilityMember =
+  | FullCompatibilityMember
+  | PartialCompatibilityMember
+  | UnsupportedCompatibilityMember;
 
 const pageMembers = [
   "evaluate",
@@ -201,8 +225,12 @@ const locatorMembers = [
 ] as const;
 
 const fullMatched = new Set([
+  "Page.$$eval",
+  "Page.$eval",
   "Page.ariaSnapshot",
   "Page.content",
+  "Page.evaluate",
+  "Page.getAttribute",
   "Page.getByAltText",
   "Page.getByLabel",
   "Page.getByPlaceholder",
@@ -210,16 +238,36 @@ const fullMatched = new Set([
   "Page.getByTestId",
   "Page.getByText",
   "Page.getByTitle",
+  "Page.hideHighlight",
+  "Page.innerHTML",
+  "Page.innerText",
+  "Page.inputValue",
+  "Page.isChecked",
+  "Page.isDisabled",
+  "Page.isEditable",
+  "Page.isEnabled",
+  "Page.isHidden",
+  "Page.isVisible",
+  "Page.localStorage",
   "Page.locator",
+  "Page.sessionStorage",
   "Page.setDefaultTimeout",
+  "Page.textContent",
   "Page.title",
   "Page.url",
+  "Page.viewportSize",
+  "Page.waitForTimeout",
   "Locator.all",
   "Locator.allInnerTexts",
   "Locator.allTextContents",
   "Locator.and",
   "Locator.ariaSnapshot",
+  "Locator.boundingBox",
   "Locator.count",
+  "Locator.describe",
+  "Locator.description",
+  "Locator.evaluate",
+  "Locator.evaluateAll",
   "Locator.filter",
   "Locator.first",
   "Locator.getAttribute",
@@ -230,6 +278,8 @@ const fullMatched = new Set([
   "Locator.getByTestId",
   "Locator.getByText",
   "Locator.getByTitle",
+  "Locator.hideHighlight",
+  "Locator.highlight",
   "Locator.innerHTML",
   "Locator.innerText",
   "Locator.inputValue",
@@ -241,19 +291,91 @@ const fullMatched = new Set([
   "Locator.isVisible",
   "Locator.last",
   "Locator.locator",
+  "Locator.normalize",
   "Locator.nth",
   "Locator.or",
   "Locator.page",
   "Locator.textContent",
+  "Locator.toString",
   "Locator.waitFor",
+  "Locator.waitForFunction",
 ]);
 
 const fullBrowserEmulated = new Set([
+  "Page.addLocatorHandler",
+  "Page.cancelPickLocator",
+  "Page.check",
+  "Page.clearPageErrors",
+  "Page.click",
+  "Page.clock",
+  "Page.dblclick",
+  "Page.dispatchEvent",
+  "Page.dragAndDrop",
+  "Page.exposeBinding",
+  "Page.exposeFunction",
+  "Page.fill",
+  "Page.focus",
+  "Page.hover",
+  "Page.keyboard",
+  "Page.mouse",
+  "Page.pageErrors",
+  "Page.pickLocator",
+  "Page.press",
+  "Page.removeLocatorHandler",
+  "Page.setChecked",
+  "Page.setContent",
+  "Page.tap",
+  "Page.touchscreen",
+  "Page.type",
+  "Page.uncheck",
+  "Locator.blur",
+  "Locator.check",
+  "Locator.clear",
   "Locator.click",
+  "Locator.dblclick",
+  "Locator.dispatchEvent",
+  "Locator.dragTo",
   "Locator.fill",
   "Locator.focus",
+  "Locator.hover",
   "Locator.press",
+  "Locator.pressSequentially",
+  "Locator.scrollIntoViewIfNeeded",
+  "Locator.selectText",
+  "Locator.setChecked",
+  "Locator.tap",
+  "Locator.type",
+  "Locator.uncheck",
 ]);
+
+const partialBrowserEmulated = new Map<string, string>([
+  [
+    "Page.selectOption",
+    "String and SelectOption inputs are supported; Playwright ElementHandle input branches are not.",
+  ],
+  [
+    "Page.setInputFiles",
+    "In-memory FilePayload inputs are supported; filesystem path inputs are unavailable in an in-page browser runtime.",
+  ],
+  [
+    "Locator.drop",
+    "Data items and in-memory file payloads are supported; filesystem path inputs are not.",
+  ],
+  [
+    "Locator.selectOption",
+    "String and SelectOption inputs are supported; Playwright ElementHandle input branches are not.",
+  ],
+  [
+    "Locator.setInputFiles",
+    "In-memory FilePayload inputs are supported; filesystem path inputs are unavailable in an in-page browser runtime.",
+  ],
+]);
+
+const unsupportedReasons: Record<PlaywrightInterface, string> = {
+  Page: "Requires Playwright-owned objects, browser-level control, or a lifetime outside the page runtime.",
+  Locator:
+    "Requires Playwright-owned frame or handle objects, or browser-level screenshot control.",
+};
 
 function classify(
   interfaceName: PlaywrightInterface,
@@ -274,11 +396,20 @@ function classify(
       api: "Full",
       execution: "Matched",
     };
+  const note = partialBrowserEmulated.get(key);
+  if (note)
+    return {
+      interface: interfaceName,
+      member,
+      api: "Partial",
+      execution: "Browser-emulated",
+      note,
+    };
   return {
     interface: interfaceName,
     member,
     api: "Unsupported",
-    execution: "Matched",
+    reason: unsupportedReasons[interfaceName],
   };
 }
 

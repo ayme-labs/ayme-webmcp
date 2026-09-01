@@ -11,12 +11,14 @@
   },
   "scripts": {
     "build": "tsc --noEmit",
+    "check:surface": "node scripts/public-surface-fingerprint.ts --check",
+    "fingerprint:surface": "node scripts/public-surface-fingerprint.ts --print",
     "generate:runtime": "node scripts/generate-runtime.ts --update",
     "check:runtime": "node scripts/generate-runtime.ts --check",
     "verify:runtime": "node scripts/generate-runtime.ts --verify",
     "smoke:runtime": "node scripts/smoke-runtime.ts",
     "lint": "eslint src scripts tests playwright.config.ts --ignore-pattern src/generated --max-warnings 0",
-    "test": "pnpm run check:runtime && vitest run",
+    "test": "pnpm run check:surface && pnpm run check:runtime && vitest run",
     "test:e2e": "playwright test --config playwright.config.ts --reporter=list",
     "typecheck": "tsc --noEmit"
   },

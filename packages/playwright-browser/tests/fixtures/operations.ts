@@ -77,6 +77,55 @@ export async function observeDefaultTimeout(page: BrowserPage) {
   };
 }
 
+export async function observeNoImplicitDefaultTimeout(page: BrowserPage) {
+  const locator = page.locator("#after-one-second");
+  const startedAt = performance.now();
+  setTimeout(() => {
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<div id="after-one-second"></div>'
+    );
+  }, 1_050);
+  await locator.waitFor({ state: "attached" });
+  return Math.round(performance.now() - startedAt);
+}
+
+export async function observeHiddenAndDetachedWaits(page: BrowserPage) {
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    '<div id="wait-hidden">Hidden later</div><div id="wait-detached">Detached later</div>'
+  );
+
+  const hidden = page.locator("#wait-hidden");
+  const detached = page.locator("#wait-detached");
+  const hiddenWait = hidden.waitFor({ state: "hidden", timeout: 250 });
+  const detachedWait = detached.waitFor({ state: "detached", timeout: 250 });
+
+  setTimeout(() => {
+    const hiddenElement = document.querySelector<HTMLElement>("#wait-hidden");
+    if (hiddenElement) hiddenElement.hidden = true;
+    document.querySelector("#wait-detached")?.remove();
+  }, 20);
+
+  await Promise.all([
+    hiddenWait,
+    detachedWait,
+    page.locator("#already-missing").waitFor({
+      state: "hidden",
+      timeout: 250,
+    }),
+    page.locator("#already-missing").waitFor({
+      state: "detached",
+      timeout: 250,
+    }),
+  ]);
+
+  return {
+    detached: document.querySelector("#wait-detached") === null,
+    hidden: document.querySelector<HTMLElement>("#wait-hidden")?.hidden,
+  };
+}
+
 export async function observePerCallTimeout(page: BrowserPage) {
   const missingState = page.getByRole("status", {
     name: "Never visible",
@@ -88,7 +137,9 @@ export async function observePerCallTimeout(page: BrowserPage) {
     await missingState.waitFor({ state: "visible", timeout: 30 });
   } catch (error) {
     outcome =
-      error instanceof Error && error.message.startsWith("Timed out waiting")
+      error instanceof Error &&
+      error.name === "TimeoutError" &&
+      error.message.startsWith("Timed out waiting")
         ? "timeout"
         : "unexpected-error";
   }
@@ -108,7 +159,9 @@ export async function observeAbortCancellation(page: BrowserPage) {
     await browserWait;
   } catch (error) {
     outcome =
-      String(error) === "fixture cancellation"
+      error instanceof Error &&
+      error.name === "AbortError" &&
+      error.cause === "fixture cancellation"
         ? "cancelled"
         : "unexpected-error";
   }
@@ -358,6 +411,65 @@ export async function observeLocatorStates(page: BrowserPage) {
     visibilityHidden: await page.locator("#visibility-hidden").isHidden(),
     missingVisible: await page.locator("#missing").isVisible(),
     missingHidden: await page.locator("#missing").isHidden(),
+  };
+}
+
+export async function observeDelayedReads(page: BrowserPage) {
+  const reads = Promise.all([
+    page.locator("#delayed-attribute").getAttribute("data-value"),
+    page.locator("#delayed-html").innerHTML(),
+    page.locator("#delayed-text").innerText(),
+    page.locator("#delayed-input").inputValue(),
+    page.locator("#delayed-content").textContent(),
+    page.locator("#delayed-checked").isChecked(),
+    page.locator("#delayed-disabled").isDisabled(),
+    page.locator("#delayed-editable").isEditable(),
+    page.locator("#delayed-enabled").isEnabled(),
+  ]);
+
+  setTimeout(() => {
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `<div id="delayed-attribute" data-value="attribute"></div>
+       <div id="delayed-html"><strong>markup</strong></div>
+       <div id="delayed-text">inner text</div>
+       <input id="delayed-input" value="input value" />
+       <div id="delayed-content">text content</div>
+       <input id="delayed-checked" type="checkbox" checked />
+       <button id="delayed-disabled" disabled></button>
+       <input id="delayed-editable" />
+       <button id="delayed-enabled"></button>`
+    );
+  }, 20);
+
+  let timedOut = false;
+  try {
+    await page.locator("#read-timeout").getAttribute("id", { timeout: 30 });
+  } catch (error) {
+    timedOut =
+      error instanceof Error &&
+      error.name === "TimeoutError" &&
+      error.message.startsWith("Timed out");
+  }
+
+  const controller = new AbortController();
+  const abortedRead = page.locator("#read-abort").innerText({
+    signal: controller.signal,
+    timeout: 0,
+  });
+  controller.abort("read cancellation");
+  let abortError: { cause?: unknown; name?: string } = {};
+  try {
+    await abortedRead;
+  } catch (error) {
+    if (error instanceof Error)
+      abortError = { cause: error.cause, name: error.name };
+  }
+
+  return {
+    abortError,
+    reads: await reads,
+    timedOut,
   };
 }
 

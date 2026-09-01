@@ -85,6 +85,44 @@ describe("the Playwright compatibility catalog", () => {
     );
   });
 
+  it("preserves the reviewed compatibility ceiling and required rationales", () => {
+    const counts = { Full: 0, Partial: 0, Unsupported: 0 };
+    const pageCounts = { Full: 0, Partial: 0, Unsupported: 0 };
+    const locatorCounts = { Full: 0, Partial: 0, Unsupported: 0 };
+    const executionCounts = { Matched: 0, "Browser-emulated": 0 };
+    for (const member of compatibilityCatalog) {
+      counts[member.api] += 1;
+      (member.interface === "Page" ? pageCounts : locatorCounts)[member.api] +=
+        1;
+      if (member.api !== "Unsupported") executionCounts[member.execution] += 1;
+    }
+
+    expect(counts).toEqual({ Full: 118, Partial: 5, Unsupported: 62 });
+    expect(pageCounts).toEqual({ Full: 58, Partial: 2, Unsupported: 56 });
+    expect(locatorCounts).toEqual({ Full: 60, Partial: 3, Unsupported: 6 });
+    expect(executionCounts).toEqual({
+      Matched: 74,
+      "Browser-emulated": 49,
+    });
+    expect(
+      compatibilityCatalog
+        .filter((member) => member.api === "Partial")
+        .map((member) => `${member.interface}.${member.member}`)
+    ).toEqual([
+      "Page.selectOption",
+      "Page.setInputFiles",
+      "Locator.drop",
+      "Locator.selectOption",
+      "Locator.setInputFiles",
+    ]);
+
+    for (const member of compatibilityCatalog) {
+      if (member.api === "Partial") expect(member.note.trim()).not.toBe("");
+      if (member.api === "Unsupported")
+        expect(member.reason.trim()).not.toBe("");
+    }
+  });
+
   it("keeps selected support separate, fully compatible, and browser-emulated only for actions", () => {
     const catalogByMember = new Map(
       compatibilityCatalog.map((member) => [
@@ -124,8 +162,6 @@ describe("the Playwright compatibility catalog", () => {
     expect(upstreamPlaywright).toMatchObject({
       package: "@playwright/test",
       version: testPackage.version,
-      publicSurfaceFingerprint:
-        "sha256:6c688250f2b7061cec3a17ab8797671137b653f8c4e81a6df3190cb112a7579a",
       generatedSource: {
         status: "verified",
         fingerprint:

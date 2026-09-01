@@ -33,7 +33,7 @@ describe("createBrowserPage", () => {
     );
     await expect(
       runtime.page.locator(".duplicate").getAttribute("data-kind")
-    ).rejects.toThrow("Expected one element");
+    ).rejects.toThrow("strict mode violation");
   });
 
   it("creates lazy Playwright-compatible finder locators", async () => {
@@ -159,7 +159,10 @@ describe("createBrowserPage", () => {
 
     controller.abort("fixture cancellation");
 
-    await expect(wait).rejects.toBe("fixture cancellation");
+    await expect(wait).rejects.toMatchObject({
+      cause: "fixture cancellation",
+      name: "AbortError",
+    });
   });
 
   it("composes locators and keeps all() results live after its count snapshot", async () => {

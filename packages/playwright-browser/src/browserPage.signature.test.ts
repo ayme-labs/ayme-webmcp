@@ -4,15 +4,11 @@ import { describe, expect, it } from "vitest";
 import type {
   BrowserLocator,
   BrowserLocatorFilterOptions,
+  BrowserLocatorOptions,
   BrowserPage,
-  BrowserRole,
-  BrowserRoleOptions,
-  BrowserText,
-  BrowserTextOptions,
-  BrowserTestId,
 } from "./browserPage";
 
-type Expect<T extends true> = T;
+type Expect<Value extends true> = Value;
 type Equal<Left, Right> =
   (<Value>() => Value extends Left ? 1 : 2) extends <
     Value,
@@ -20,8 +16,25 @@ type Equal<Left, Right> =
     ? true
     : false;
 type Flatten<Value> = { [Key in keyof Value]: Value[Key] };
+type MethodShape<Source, Name extends keyof Source> = Source[Name] extends (
+  ...args: infer Arguments
+) => infer Result
+  ? [arguments: Arguments, result: Result]
+  : never;
+type MethodShapes<Source, Names extends keyof Source> = {
+  [Name in Names]: MethodShape<Source, Name>;
+};
 
-type PageFinderNames =
+type CurrentSupport =
+  (typeof import("./currentSupport").currentSupport)[number];
+type MemberName<
+  Value,
+  Owner extends "Locator" | "Page",
+> = Value extends `${Owner}.${infer Name}` ? Name : never;
+type SelectedPageName = MemberName<CurrentSupport, "Page">;
+type SelectedLocatorName = MemberName<CurrentSupport, "Locator">;
+
+type FinderName =
   | "getByAltText"
   | "getByLabel"
   | "getByPlaceholder"
@@ -29,74 +42,15 @@ type PageFinderNames =
   | "getByTestId"
   | "getByText"
   | "getByTitle";
-
-type BrowserPageFinderParameters = {
-  [Name in PageFinderNames]: Parameters<BrowserPage[Name]>;
-};
-
-type BrowserLocatorFinderParameters = {
-  [Name in PageFinderNames]: Parameters<BrowserLocator[Name]>;
-};
-
-type PlaywrightPageFinderParameters = {
-  [Name in PageFinderNames]: Parameters<Page[Name]>;
-};
-
-type PlaywrightLocatorFinderParameters = {
-  [Name in PageFinderNames]: Parameters<Locator[Name]>;
-};
-
-type _FinderParametersMatch = Expect<
-  Equal<BrowserPageFinderParameters, PlaywrightPageFinderParameters>
->;
-type _LocatorFinderParametersMatch = Expect<
-  Equal<BrowserLocatorFinderParameters, PlaywrightLocatorFinderParameters>
->;
-type _RoleMatches = Expect<
-  Equal<BrowserRole, Parameters<Page["getByRole"]>[0]>
->;
-type _RoleOptionsMatch = Expect<
-  Equal<BrowserRoleOptions, NonNullable<Parameters<Page["getByRole"]>[1]>>
->;
-type _TextMatches = Expect<
-  Equal<BrowserText, Parameters<Page["getByText"]>[0]>
->;
-type _TextOptionsMatch = Expect<
-  Equal<BrowserTextOptions, NonNullable<Parameters<Page["getByText"]>[1]>>
->;
-type _TestIdMatches = Expect<
-  Equal<BrowserTestId, Parameters<Page["getByTestId"]>[0]>
->;
-type ExpectedLocatorCompositionSignatures = {
-  filter: (options?: BrowserLocatorFilterOptions) => BrowserLocator;
-  and: (locator: BrowserLocator) => BrowserLocator;
-  or: (locator: BrowserLocator) => BrowserLocator;
-  first: () => BrowserLocator;
-  last: () => BrowserLocator;
-  nth: (index: number) => BrowserLocator;
-  all: () => Promise<BrowserLocator[]>;
-  count: () => Promise<number>;
-};
-type ExpectedFilterOptions = {
-  has?: BrowserLocator;
-  hasNot?: BrowserLocator;
-  hasText?: string | RegExp;
-  hasNotText?: string | RegExp;
-  visible?: boolean;
-};
-type _LocatorCompositionSignaturesMatch = Expect<
-  Equal<
-    Pick<BrowserLocator, keyof ExpectedLocatorCompositionSignatures>,
-    ExpectedLocatorCompositionSignatures
-  >
->;
-type _FilterOptionsMatch = Expect<
-  Equal<Flatten<BrowserLocatorFilterOptions>, ExpectedFilterOptions>
->;
-type LocatorReadSurface = Pick<
-  Locator,
+type PageExactName =
+  "ariaSnapshot" | "content" | "setDefaultTimeout" | "title" | "url";
+type LocatorExactName =
   | "allInnerTexts"
   | "allTextContents"
+  | "ariaSnapshot"
+  | "click"
+  | "count"
+  | "fill"
   | "getAttribute"
   | "innerHTML"
   | "innerText"
@@ -107,40 +61,163 @@ type LocatorReadSurface = Pick<
   | "isEnabled"
   | "isHidden"
   | "isVisible"
+  | "press"
   | "textContent"
+  | "waitFor";
+type LocatorSelfName = "first" | "last" | "nth";
+
+type _PageCoverageMatchesSelection = Expect<
+  Equal<SelectedPageName, FinderName | PageExactName | "locator">
+>;
+type _LocatorCoverageMatchesSelection = Expect<
+  Equal<
+    SelectedLocatorName,
+    | FinderName
+    | LocatorExactName
+    | LocatorSelfName
+    | "all"
+    | "and"
+    | "filter"
+    | "locator"
+    | "or"
+  >
+>;
+type _BrowserPageExposesOnlySelection = Expect<
+  Equal<keyof BrowserPage, SelectedPageName>
+>;
+type _BrowserLocatorExposesOnlySelection = Expect<
+  Equal<keyof BrowserLocator, SelectedLocatorName>
+>;
+type _PageExactSignaturesMatch = Expect<
+  Equal<
+    MethodShapes<BrowserPage, PageExactName>,
+    MethodShapes<Page, PageExactName>
+  >
+>;
+type _LocatorExactSignaturesMatch = Expect<
+  Equal<
+    MethodShapes<BrowserLocator, LocatorExactName>,
+    MethodShapes<Locator, LocatorExactName>
+  >
 >;
 
-const locatorOptions: NonNullable<Parameters<Page["locator"]>[1]> = {
-  has: {} as Locator,
-  hasNot: {} as Locator,
-  hasNotText: /absent/,
-  hasText: "present",
+type BrowserPageFinderParameters = {
+  [Name in FinderName]: Parameters<BrowserPage[Name]>;
 };
-
-const browserLocatorOptions: NonNullable<
-  Parameters<BrowserPage["locator"]>[1]
-> = {
-  ...locatorOptions,
-  has: {} as BrowserLocator,
-  hasNot: {} as BrowserLocator,
+type BrowserLocatorFinderParameters = {
+  [Name in FinderName]: Parameters<BrowserLocator[Name]>;
 };
+type PlaywrightPageFinderParameters = {
+  [Name in FinderName]: Parameters<Page[Name]>;
+};
+type PlaywrightLocatorFinderParameters = {
+  [Name in FinderName]: Parameters<Locator[Name]>;
+};
+type BrowserPageFinderReturns = {
+  [Name in FinderName]: ReturnType<BrowserPage[Name]>;
+};
+type BrowserLocatorFinderReturns = {
+  [Name in FinderName]: ReturnType<BrowserLocator[Name]>;
+};
+type ExpectedFinderReturns = {
+  [Name in FinderName]: BrowserLocator;
+};
+type _PageFinderParametersMatch = Expect<
+  Equal<BrowserPageFinderParameters, PlaywrightPageFinderParameters>
+>;
+type _LocatorFinderParametersMatch = Expect<
+  Equal<BrowserLocatorFinderParameters, PlaywrightLocatorFinderParameters>
+>;
+type _PageFinderReturnsBrowserLocator = Expect<
+  Equal<BrowserPageFinderReturns, ExpectedFinderReturns>
+>;
+type _LocatorFinderReturnsBrowserLocator = Expect<
+  Equal<BrowserLocatorFinderReturns, ExpectedFinderReturns>
+>;
 
-describe("BrowserPage finder signatures", () => {
-  it("mirror the pinned Playwright finder parameter types", () => {
-    void (0 as unknown as _FinderParametersMatch);
+type ExpectedFilterOptions = {
+  has?: BrowserLocator;
+  hasNot?: BrowserLocator;
+  hasText?: string | RegExp;
+  hasNotText?: string | RegExp;
+  visible?: boolean;
+};
+type _PageLocatorParametersMatch = Expect<
+  Equal<
+    Parameters<BrowserPage["locator"]>,
+    [selector: string, options?: BrowserLocatorOptions]
+  >
+>;
+type _LocatorLocatorParametersMatch = Expect<
+  Equal<
+    Parameters<BrowserLocator["locator"]>,
+    [
+      selectorOrLocator: string | BrowserLocator,
+      options?: BrowserLocatorOptions,
+    ]
+  >
+>;
+type _LocatorOptionsMatch = Expect<
+  Equal<Flatten<BrowserLocatorOptions>, Omit<ExpectedFilterOptions, "visible">>
+>;
+type _FilterOptionsMatch = Expect<
+  Equal<Flatten<BrowserLocatorFilterOptions>, ExpectedFilterOptions>
+>;
+type _FilterSignatureMatches = Expect<
+  Equal<
+    MethodShape<BrowserLocator, "filter">,
+    [arguments: [options?: BrowserLocatorFilterOptions], result: BrowserLocator]
+  >
+>;
+type _SetOperationSignaturesMatch = Expect<
+  Equal<
+    Pick<BrowserLocator, "and" | "or">,
+    {
+      and(locator: BrowserLocator): BrowserLocator;
+      or(locator: BrowserLocator): BrowserLocator;
+    }
+  >
+>;
+type _SelfLocatorParametersMatch = Expect<
+  Equal<
+    { [Name in LocatorSelfName]: Parameters<BrowserLocator[Name]> },
+    { [Name in LocatorSelfName]: Parameters<Locator[Name]> }
+  >
+>;
+type _SelfLocatorReturnsMatch = Expect<
+  Equal<
+    { [Name in LocatorSelfName]: ReturnType<BrowserLocator[Name]> },
+    { [Name in LocatorSelfName]: BrowserLocator }
+  >
+>;
+type _AllSignatureMatches = Expect<
+  Equal<
+    MethodShape<BrowserLocator, "all">,
+    [arguments: Parameters<Locator["all"]>, result: Promise<BrowserLocator[]>]
+  >
+>;
+
+describe("BrowserPage and BrowserLocator signatures", () => {
+  it("cover the complete selection with pinned Playwright-compatible shapes", () => {
+    void (0 as unknown as _PageCoverageMatchesSelection);
+    void (0 as unknown as _LocatorCoverageMatchesSelection);
+    void (0 as unknown as _BrowserPageExposesOnlySelection);
+    void (0 as unknown as _BrowserLocatorExposesOnlySelection);
+    void (0 as unknown as _PageExactSignaturesMatch);
+    void (0 as unknown as _LocatorExactSignaturesMatch);
+    void (0 as unknown as _PageFinderParametersMatch);
     void (0 as unknown as _LocatorFinderParametersMatch);
-    void (0 as unknown as _RoleMatches);
-    void (0 as unknown as _RoleOptionsMatch);
-    void (0 as unknown as _TextMatches);
-    void (0 as unknown as _TextOptionsMatch);
-    void (0 as unknown as _TestIdMatches);
-    void (0 as unknown as _LocatorCompositionSignaturesMatch);
+    void (0 as unknown as _PageFinderReturnsBrowserLocator);
+    void (0 as unknown as _LocatorFinderReturnsBrowserLocator);
+    void (0 as unknown as _PageLocatorParametersMatch);
+    void (0 as unknown as _LocatorLocatorParametersMatch);
+    void (0 as unknown as _LocatorOptionsMatch);
     void (0 as unknown as _FilterOptionsMatch);
-    const locator = undefined as unknown as BrowserLocator;
-    const playwrightReadSurface: LocatorReadSurface = locator;
-    expect(playwrightReadSurface).toBe(locator);
-    expect(
-      Object.keys({ ...locatorOptions, ...browserLocatorOptions })
-    ).toHaveLength(4);
+    void (0 as unknown as _FilterSignatureMatches);
+    void (0 as unknown as _SetOperationSignaturesMatch);
+    void (0 as unknown as _SelfLocatorParametersMatch);
+    void (0 as unknown as _SelfLocatorReturnsMatch);
+    void (0 as unknown as _AllSignatureMatches);
+    expect(true).toBe(true);
   });
 });

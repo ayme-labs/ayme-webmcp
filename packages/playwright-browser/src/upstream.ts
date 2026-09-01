@@ -4,7 +4,7 @@ export const upstreamPlaywright = {
   version: "1.62.1",
   provenance: "https://github.com/microsoft/playwright/tree/v1.62.1",
   publicSurfaceFingerprint:
-    "sha256:6c688250f2b7061cec3a17ab8797671137b653f8c4e81a6df3190cb112a7579a",
+    "sha256:d744ea045173c374852011c71578dc9dbba481d71ce40c846f5cd85530799f95",
   generatedSource: {
     status: "verified" as const,
     fingerprint:
