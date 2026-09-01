@@ -3,9 +3,9 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 
-const expectedArtifactBytes = 331_823;
+const expectedArtifactBytes = 331_512;
 const expectedArtifactSha256 =
-  "03f14c3f208da57cb641f0797328af31dc6182167a0d340bd57846617230cc24";
+  "8517fd96ce7384ba9068116c21ebe3e2d0b61d123483df938b15aa4382ad92df";
 const playwrightInjectedId = "virtual:ayme-playwright-injected";
 const resolvedPlaywrightInjectedId = `\0${playwrightInjectedId}`;
 

@@ -19,7 +19,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "playwright-core": "github:enekesabel/playwright#path:/packages/playwright-core&9f727f03584f863d551f3b969e4fc634b2ed6fd8"
+    "playwright-core": "github:enekesabel/playwright#path:/packages/playwright-core&b25d782e3fbdf21abdae60e974e49b78ca07e828"
   },
   "devDependencies": {
     "@ayme-dev/eslint-config": "workspace:*",
