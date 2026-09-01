@@ -36,6 +36,24 @@ export const parityDocument = `<!doctype html>
           Ready
         </p>
       </section>
+
+      <section aria-labelledby="composition-title">
+        <h2 id="composition-title">Locator composition</h2>
+        <article data-fixture="composition-card" data-card="alpha">
+          <span data-fixture="composition-badge">Featured</span>
+          <h3>Alpha</h3>
+          <button type="button">Alpha action</button>
+        </article>
+        <article data-fixture="composition-card" data-card="beta">
+          <h3>Beta</h3>
+          <button type="button">Beta action</button>
+        </article>
+        <article data-fixture="composition-card" data-card="gamma">
+          <span data-fixture="composition-badge">Featured</span>
+          <h3>Gamma</h3>
+          <button type="button">Gamma action</button>
+        </article>
+      </section>
     </main>
   </body>
 </html>`;

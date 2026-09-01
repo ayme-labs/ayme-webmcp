@@ -66,6 +66,10 @@ export interface BrowserLocator {
     options?: BrowserLocatorOptions
   ): BrowserLocator;
   filter(options?: BrowserLocatorFilterOptions): BrowserLocator;
+  and(locator: BrowserLocator): BrowserLocator;
+  or(locator: BrowserLocator): BrowserLocator;
+  first(): BrowserLocator;
+  last(): BrowserLocator;
   nth(index: number): BrowserLocator;
   all(): Promise<BrowserLocator[]>;
   count(): Promise<number>;
@@ -93,7 +97,7 @@ export type BrowserInteractionPacing = {
 export class BrowserLocatorImpl implements BrowserLocator {
   constructor(
     private readonly ownerPage: BrowserPageImpl,
-    private readonly resolver: () => Element[],
+    private readonly resolver: (scope?: Element) => Element[],
     private readonly label: string,
     private readonly trace: TraceEntry[],
     private readonly onTrace?: () => void,
@@ -171,8 +175,8 @@ export class BrowserLocatorImpl implements BrowserLocator {
   filter(options: BrowserLocatorFilterOptions = {}) {
     return new BrowserLocatorImpl(
       this.ownerPage,
-      () =>
-        this.resolveElements().filter((element) => {
+      (scope) =>
+        this.resolveElements(scope).filter((element) => {
           if (
             options.hasText !== undefined &&
             !matchesText(element, options.hasText)
@@ -185,17 +189,14 @@ export class BrowserLocatorImpl implements BrowserLocator {
             return false;
           if (
             options.has !== undefined &&
-            !resolveLocatorElements(options.has).some((candidate) =>
-              element.contains(candidate)
-            )
+            !resolveLocatorElements(options.has, element, this.ownerPage).length
           ) {
             return false;
           }
           if (
             options.hasNot !== undefined &&
-            resolveLocatorElements(options.hasNot).some((candidate) =>
-              element.contains(candidate)
-            )
+            resolveLocatorElements(options.hasNot, element, this.ownerPage)
+              .length
           ) {
             return false;
           }
@@ -212,6 +213,45 @@ export class BrowserLocatorImpl implements BrowserLocator {
     );
   }
 
+  and(locator: BrowserLocator) {
+    return new BrowserLocatorImpl(
+      this.ownerPage,
+      (scope) => {
+        const other = new Set(
+          resolveLocatorElements(locator, scope, this.ownerPage)
+        );
+        return this.resolveElements(scope).filter((element) =>
+          other.has(element)
+        );
+      },
+      `${this.label}.and(...)`,
+      this.trace,
+      this.onTrace
+    );
+  }
+
+  or(locator: BrowserLocator): BrowserLocator {
+    return new BrowserLocatorImpl(
+      this.ownerPage,
+      (scope) =>
+        sortInDocumentOrder([
+          ...this.resolveElements(scope),
+          ...resolveLocatorElements(locator, scope, this.ownerPage),
+        ]),
+      `${this.label}.or(...)`,
+      this.trace,
+      this.onTrace
+    );
+  }
+
+  first() {
+    return this.nth(0);
+  }
+
+  last() {
+    return this.nth(-1);
+  }
+
   getSelector() {
     return this.selector;
   }
@@ -219,7 +259,8 @@ export class BrowserLocatorImpl implements BrowserLocator {
   private createFinder(selector: string, label: string) {
     return new BrowserLocatorImpl(
       this.ownerPage,
-      () => this.ownerPage.querySelectorAll(selector, this.resolveElements()),
+      (scope) =>
+        this.ownerPage.querySelectorAll(selector, this.resolveElements(scope)),
       label,
       this.trace,
       this.onTrace,
@@ -230,9 +271,9 @@ export class BrowserLocatorImpl implements BrowserLocator {
   nth(index: number) {
     return new BrowserLocatorImpl(
       this.ownerPage,
-      () => {
-        const elements = this.resolveElements();
-        const element = elements[index];
+      (scope) => {
+        const elements = this.resolveElements(scope);
+        const element = elements[index < 0 ? elements.length + index : index];
         return element ? [element] : [];
       },
       `${this.label}.nth(${index})`,
@@ -242,16 +283,8 @@ export class BrowserLocatorImpl implements BrowserLocator {
   }
 
   async all() {
-    return this.resolveElements().map(
-      (element, index) =>
-        new BrowserLocatorImpl(
-          this.ownerPage,
-          () => (element.isConnected ? [element] : []),
-          `${this.label}.all()[${index}]`,
-          this.trace,
-          this.onTrace
-        )
-    );
+    const count = this.resolveElements().length;
+    return Array.from({ length: count }, (_, index) => this.nth(index));
   }
 
   async count() {
@@ -353,8 +386,8 @@ export class BrowserLocatorImpl implements BrowserLocator {
     });
   }
 
-  resolveElements() {
-    return this.resolver().filter(isElement);
+  resolveElements(scope?: Element) {
+    return this.resolver(scope).filter(isElement);
   }
 
   private isInState(state: "visible" | "hidden") {
@@ -534,7 +567,8 @@ export class BrowserPageImpl implements BrowserPage {
   locator(selector: string, options: BrowserLocatorOptions = {}) {
     const composedSelector = appendLocatorOptions(selector, options);
     return this.createLocator(
-      () => this.querySelectorAll(composedSelector, [this.document]),
+      (scope) =>
+        this.querySelectorAll(composedSelector, [scope ?? this.document]),
       `page.locator(${JSON.stringify(selector)})`,
       composedSelector
     );
@@ -555,14 +589,14 @@ export class BrowserPageImpl implements BrowserPage {
 
   private createFinder(selector: string, label: string) {
     return this.createLocator(
-      () => this.querySelectorAll(selector, [this.document]),
+      (scope) => this.querySelectorAll(selector, [scope ?? this.document]),
       label,
       selector
     );
   }
 
   private createLocator(
-    resolver: () => Element[],
+    resolver: (scope?: Element) => Element[],
     label: string,
     selector?: string
   ) {
@@ -652,9 +686,20 @@ function isVisible(element: Element) {
 
 function matchesText(element: Element, pattern: string | RegExp) {
   const text = element.textContent ?? "";
-  return typeof pattern === "string"
-    ? text.includes(pattern)
-    : pattern.test(text);
+  if (typeof pattern === "string")
+    return normalizeText(text)
+      .toLowerCase()
+      .includes(normalizeText(pattern).toLowerCase());
+
+  const lastIndex = pattern.lastIndex;
+  pattern.lastIndex = 0;
+  const matches = pattern.test(text);
+  pattern.lastIndex = lastIndex;
+  return matches;
+}
+
+function normalizeText(value: string) {
+  return value.replace(/\s+/g, " ").trim();
 }
 
 function dispatchKeyboardEvent(
@@ -667,8 +712,16 @@ function dispatchKeyboardEvent(
   );
 }
 
-function resolveLocatorElements(locator: BrowserLocator) {
-  if (locator instanceof BrowserLocatorImpl) return locator.resolveElements();
+function resolveLocatorElements(
+  locator: BrowserLocator,
+  scope?: Element,
+  ownerPage?: BrowserPageImpl
+): Element[] {
+  if (locator instanceof BrowserLocatorImpl) {
+    if (ownerPage !== undefined && locator.page() !== ownerPage)
+      throw new Error("Locators must belong to the same BrowserPage.");
+    return locator.resolveElements(scope);
+  }
   throw new Error(
     "Unsupported locator implementation. Use the Ayme browser runtime."
   );
@@ -799,6 +852,15 @@ function escapeRegexForSelector(regex: RegExp) {
   return String(regex)
     .replace(/(^|[^\\])(\\\\)*(["'`])/g, "$1$2\\$3")
     .replace(/>>/g, "\\>\\>");
+}
+
+function sortInDocumentOrder(elements: Iterable<Element>) {
+  return [...new Set(elements)].sort((left, right) => {
+    const position = left.compareDocumentPosition(right);
+    if (position & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
+    if (position & Node.DOCUMENT_POSITION_PRECEDING) return 1;
+    return 0;
+  });
 }
 
 function isElement(value: unknown): value is Element {

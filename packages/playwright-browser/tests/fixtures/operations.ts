@@ -174,3 +174,47 @@ export async function observeAccessibilityOutput(page: BrowserPage) {
     },
   };
 }
+
+export async function observeLocatorComposition(page: BrowserPage) {
+  const cards = page.locator('[data-fixture="composition-card"]');
+  const badges = page.locator('[data-fixture="composition-badge"]');
+  const alpha = page.locator('[data-card="alpha"]');
+  const gamma = page.locator('[data-card="gamma"]');
+
+  const selected = alpha.or(gamma);
+  const selectedAll = await selected.all();
+  const clicked: string[] = [];
+  document.body.addEventListener("click", (event) => {
+    const card = (event.target as HTMLElement).closest<HTMLElement>(
+      '[data-fixture="composition-card"]'
+    );
+    if (card) clicked.push(card.dataset.card ?? "missing");
+  });
+  await selectedAll[0].locator("button").click();
+
+  const allCards = await cards.all();
+  const inserted = document.createElement("article");
+  inserted.dataset.fixture = "composition-card";
+  inserted.dataset.card = "inserted";
+  inserted.innerHTML = '<button type="button">Inserted action</button>';
+  document.querySelector('[data-card="alpha"]')?.before(inserted);
+
+  await allCards[0].locator("button").click();
+
+  return {
+    hasBadge: await cards.filter({ has: badges }).count(),
+    hasNotBadge: await cards.filter({ hasNot: badges }).count(),
+    hasText: await cards.filter({ hasText: "alpha" }).count(),
+    hasNotText: await cards.filter({ hasNotText: "beta" }).count(),
+    hasTextRegex: await cards.filter({ hasText: /GAMMA/i }).count(),
+    and: await cards.and(page.locator('[data-card="beta"]')).count(),
+    or: await selected.count(),
+    first: await cards.first().count(),
+    last: await cards.last().count(),
+    nth: await cards.nth(1).count(),
+    negativeNth: await cards.nth(-1).count(),
+    allCount: allCards.length,
+    postInsertionCount: await cards.count(),
+    clicked,
+  };
+}

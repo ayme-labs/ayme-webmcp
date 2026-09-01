@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type {
   BrowserLocator,
+  BrowserLocatorFilterOptions,
   BrowserPage,
   BrowserRole,
   BrowserRoleOptions,
@@ -18,6 +19,7 @@ type Equal<Left, Right> =
   >() => Value extends Right ? 1 : 2
     ? true
     : false;
+type Flatten<Value> = { [Key in keyof Value]: Value[Key] };
 
 type PageFinderNames =
   | "getByAltText"
@@ -65,6 +67,32 @@ type _TextOptionsMatch = Expect<
 type _TestIdMatches = Expect<
   Equal<BrowserTestId, Parameters<Page["getByTestId"]>[0]>
 >;
+type ExpectedLocatorCompositionSignatures = {
+  filter: (options?: BrowserLocatorFilterOptions) => BrowserLocator;
+  and: (locator: BrowserLocator) => BrowserLocator;
+  or: (locator: BrowserLocator) => BrowserLocator;
+  first: () => BrowserLocator;
+  last: () => BrowserLocator;
+  nth: (index: number) => BrowserLocator;
+  all: () => Promise<BrowserLocator[]>;
+  count: () => Promise<number>;
+};
+type ExpectedFilterOptions = {
+  has?: BrowserLocator;
+  hasNot?: BrowserLocator;
+  hasText?: string | RegExp;
+  hasNotText?: string | RegExp;
+  visible?: boolean;
+};
+type _LocatorCompositionSignaturesMatch = Expect<
+  Equal<
+    Pick<BrowserLocator, keyof ExpectedLocatorCompositionSignatures>,
+    ExpectedLocatorCompositionSignatures
+  >
+>;
+type _FilterOptionsMatch = Expect<
+  Equal<Flatten<BrowserLocatorFilterOptions>, ExpectedFilterOptions>
+>;
 
 const locatorOptions: NonNullable<Parameters<Page["locator"]>[1]> = {
   has: {} as Locator,
@@ -90,6 +118,8 @@ describe("BrowserPage finder signatures", () => {
     void (0 as unknown as _TextMatches);
     void (0 as unknown as _TextOptionsMatch);
     void (0 as unknown as _TestIdMatches);
+    void (0 as unknown as _LocatorCompositionSignaturesMatch);
+    void (0 as unknown as _FilterOptionsMatch);
     expect(
       Object.keys({ ...locatorOptions, ...browserLocatorOptions })
     ).toHaveLength(4);

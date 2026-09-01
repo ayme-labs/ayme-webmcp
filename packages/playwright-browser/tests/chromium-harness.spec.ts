@@ -4,6 +4,7 @@ import {
   observeAccessibilityOutput,
   observeDefaultTimeout,
   observeFinderFactories,
+  observeLocatorComposition,
   observeInputEvents,
   observePerCallTimeout,
   observeStrictResolution,
@@ -87,5 +88,23 @@ test("observes the shared BrowserPage parity fixtures in Chromium", async ({
     output:
       'main "Chromium parity fixture"\n  heading "Chromium parity fixture"\n  button "Save"',
     roles: { main: 1, heading: 1, saveButton: 1 },
+  });
+
+  const composition = await parity.run(observeLocatorComposition);
+  expect(composition).toEqual({
+    hasBadge: 2,
+    hasNotBadge: 2,
+    hasText: 1,
+    hasNotText: 3,
+    hasTextRegex: 1,
+    and: 1,
+    or: 2,
+    first: 1,
+    last: 1,
+    nth: 1,
+    negativeNth: 1,
+    allCount: 3,
+    postInsertionCount: 4,
+    clicked: ["alpha", "inserted"],
   });
 });

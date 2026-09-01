@@ -77,4 +77,66 @@ describe("createBrowserPage", () => {
       "click",
     ]);
   });
+
+  it("composes locators and keeps all() results live after its count snapshot", async () => {
+    document.body.innerHTML = `
+      <article data-card="alpha">
+        <span data-badge>Featured</span>
+        <h2>Alpha</h2>
+        <button data-item="alpha">Alpha</button>
+      </article>
+      <article data-card="beta">
+        <h2>Beta</h2>
+        <button data-item="beta">Beta</button>
+      </article>
+      <article data-card="gamma">
+        <span data-badge>Featured</span>
+        <h2>Gamma</h2>
+        <button data-item="gamma">Gamma</button>
+      </article>`;
+    const runtime = createBrowserPage();
+    const cards = runtime.page.locator("[data-card]");
+    const items = runtime.page.locator("[data-item]");
+
+    expect(await cards.filter({ hasText: "alpha" }).count()).toBe(1);
+    expect(await cards.filter({ hasNotText: "beta" }).count()).toBe(2);
+    expect(
+      await cards.filter({ has: runtime.page.locator("[data-badge]") }).count()
+    ).toBe(2);
+    expect(
+      await cards
+        .filter({ hasNot: runtime.page.locator("[data-badge]") })
+        .count()
+    ).toBe(1);
+
+    expect(
+      await items.and(runtime.page.locator('[data-item="beta"]')).count()
+    ).toBe(1);
+    expect(
+      await items
+        .filter({ hasText: "alpha" })
+        .or(items.filter({ hasText: "gamma" }))
+        .count()
+    ).toBe(2);
+    expect(await items.first().count()).toBe(1);
+    expect(await items.last().count()).toBe(1);
+    expect(await items.nth(1).count()).toBe(1);
+    expect(await items.nth(-1).count()).toBe(1);
+
+    const allItems = await items.all();
+    expect(allItems).toHaveLength(3);
+    const clicked: string[] = [];
+    document.body.addEventListener("click", (event) => {
+      const item = (event.target as HTMLElement).closest<HTMLElement>(
+        "[data-item]"
+      );
+      if (item) clicked.push(item.dataset.item ?? "missing");
+    });
+    const inserted = document.createElement("button");
+    inserted.dataset.item = "inserted";
+    document.body.prepend(inserted);
+
+    await allItems[0].click();
+    expect(clicked).toEqual(["inserted"]);
+  });
 });
