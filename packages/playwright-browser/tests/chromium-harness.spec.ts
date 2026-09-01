@@ -3,11 +3,45 @@ import {
   observeAbortCancellation,
   observeAccessibilityOutput,
   observeDefaultTimeout,
+  observeFinderFactories,
   observeInputEvents,
   observePerCallTimeout,
   observeStrictResolution,
 } from "./fixtures/operations";
 import { revealDelayedState } from "./fixtures/dom";
+
+test("matches finder factories and lazy descendant composition in Chromium", async ({
+  parity,
+}) => {
+  await parity.reset(`
+    <!doctype html>
+    <main id="finder-root">
+      <section data-testid="profile-card" title="Profile details">
+        <img alt="Profile photo" />
+        <label for="name">Username</label>
+        <input id="name" placeholder="Your username" />
+        <button aria-label="Save profile">Save</button>
+        <p>Unique finder text</p>
+      </section>
+    </main>`);
+
+  await expect(parity.run(observeFinderFactories)).resolves.toEqual({
+    altText: 1,
+    exactAltText: 0,
+    label: 1,
+    placeholder: 1,
+    role: 1,
+    testId: 1,
+    text: 1,
+    title: 1,
+    descendantRole: 1,
+    descendantLocator: 1,
+    locatorOptions: 1,
+    locatorHas: 1,
+    locatorHasNot: 1,
+    lazy: 1,
+  });
+});
 
 test("observes the shared BrowserPage parity fixtures in Chromium", async ({
   parity,

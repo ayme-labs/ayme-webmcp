@@ -1,5 +1,41 @@
 import type { BrowserLocator, BrowserPage } from "@ayme-dev/playwright-browser";
 
+export async function observeFinderFactories(page: BrowserPage) {
+  const lateFinder = page.getByText("Added after construction");
+  document
+    .querySelector("main")
+    ?.insertAdjacentHTML("beforeend", "<p>Added after construction</p>");
+
+  return {
+    altText: await page.getByAltText("photo").count(),
+    exactAltText: await page.getByAltText("photo", { exact: true }).count(),
+    label: await page.getByLabel("User").count(),
+    placeholder: await page.getByPlaceholder("username").count(),
+    role: await page.getByRole("button", { name: "Save" }).count(),
+    testId: await page.getByTestId("profile-card").count(),
+    text: await page.getByText("Unique finder").count(),
+    title: await page.getByTitle("details").count(),
+    descendantRole: await page
+      .locator("#finder-root")
+      .getByRole("button", { name: "Save" })
+      .count(),
+    descendantLocator: await page
+      .locator("#finder-root")
+      .locator("section")
+      .count(),
+    locatorOptions: await page
+      .locator("section", { hasText: "finder text" })
+      .count(),
+    locatorHas: await page
+      .locator("section", { has: page.getByText("Unique finder") })
+      .count(),
+    locatorHasNot: await page
+      .locator("section", { hasNot: page.getByText("Missing finder") })
+      .count(),
+    lazy: await lateFinder.count(),
+  };
+}
+
 export async function observeStrictResolution(page: BrowserPage) {
   const single: BrowserLocator = page.getByRole("button", { name: "Save" });
   const multiple: BrowserLocator = page.getByRole("button", {

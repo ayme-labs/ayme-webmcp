@@ -27,7 +27,14 @@ export const parityDocument = `<!doctype html>
 
       <section aria-labelledby="state-title">
         <h2 id="state-title">Delayed state</h2>
-        <p role="status" data-fixture="delayed-state" hidden>Ready</p>
+        <p
+          role="status"
+          aria-label="Ready"
+          data-fixture="delayed-state"
+          hidden
+        >
+          Ready
+        </p>
       </section>
     </main>
   </body>

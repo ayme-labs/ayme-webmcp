@@ -1,14 +1,31 @@
-export type BrowserRole = string;
+import type { Page as PlaywrightPage } from "@playwright/test";
 
-export type BrowserLocatorFilterOptions = {
-  hasText?: string | RegExp;
-  hasNotText?: string | RegExp;
+import { InjectedScript } from "./generated/injectedScript.js";
+
+export type BrowserRole = Parameters<PlaywrightPage["getByRole"]>[0];
+
+export type BrowserText = Parameters<PlaywrightPage["getByText"]>[0];
+
+export type BrowserTestId = Parameters<PlaywrightPage["getByTestId"]>[0];
+
+export type BrowserRoleOptions = NonNullable<
+  Parameters<PlaywrightPage["getByRole"]>[1]
+>;
+
+export type BrowserTextOptions = NonNullable<
+  Parameters<PlaywrightPage["getByText"]>[1]
+>;
+
+export type BrowserLocatorOptions = Omit<
+  NonNullable<Parameters<PlaywrightPage["locator"]>[1]>,
+  "has" | "hasNot"
+> & {
   has?: BrowserLocator;
   hasNot?: BrowserLocator;
 };
 
-export type BrowserRoleOptions = {
-  name?: string;
+export type BrowserLocatorFilterOptions = BrowserLocatorOptions & {
+  visible?: boolean;
 };
 
 export type TraceEntry = {
@@ -19,15 +36,36 @@ export type TraceEntry = {
 };
 
 export interface BrowserPage {
+  getByAltText(text: BrowserText, options?: BrowserTextOptions): BrowserLocator;
+  getByLabel(text: BrowserText, options?: BrowserTextOptions): BrowserLocator;
+  getByPlaceholder(
+    text: BrowserText,
+    options?: BrowserTextOptions
+  ): BrowserLocator;
   getByRole(role: BrowserRole, options?: BrowserRoleOptions): BrowserLocator;
-  locator(selector: string): BrowserLocator;
+  getByTestId(testId: BrowserTestId): BrowserLocator;
+  getByText(text: BrowserText, options?: BrowserTextOptions): BrowserLocator;
+  getByTitle(text: BrowserText, options?: BrowserTextOptions): BrowserLocator;
+  locator(selector: string, options?: BrowserLocatorOptions): BrowserLocator;
 }
 
 export interface BrowserLocator {
   page(): BrowserPage;
+  getByAltText(text: BrowserText, options?: BrowserTextOptions): BrowserLocator;
+  getByLabel(text: BrowserText, options?: BrowserTextOptions): BrowserLocator;
+  getByPlaceholder(
+    text: BrowserText,
+    options?: BrowserTextOptions
+  ): BrowserLocator;
   getByRole(role: BrowserRole, options?: BrowserRoleOptions): BrowserLocator;
-  locator(selector: string): BrowserLocator;
-  filter(options: BrowserLocatorFilterOptions): BrowserLocator;
+  getByTestId(testId: BrowserTestId): BrowserLocator;
+  getByText(text: BrowserText, options?: BrowserTextOptions): BrowserLocator;
+  getByTitle(text: BrowserText, options?: BrowserTextOptions): BrowserLocator;
+  locator(
+    selectorOrLocator: string | BrowserLocator,
+    options?: BrowserLocatorOptions
+  ): BrowserLocator;
+  filter(options?: BrowserLocatorFilterOptions): BrowserLocator;
   nth(index: number): BrowserLocator;
   all(): Promise<BrowserLocator[]>;
   count(): Promise<number>;
@@ -58,37 +96,79 @@ export class BrowserLocatorImpl implements BrowserLocator {
     private readonly resolver: () => Element[],
     private readonly label: string,
     private readonly trace: TraceEntry[],
-    private readonly onTrace?: () => void
+    private readonly onTrace?: () => void,
+    private readonly selector?: string
   ) {}
 
   page() {
     return this.ownerPage;
   }
 
+  getByAltText(text: BrowserText, options?: BrowserTextOptions) {
+    return this.createFinder(
+      getByAltTextSelector(text, options),
+      `${this.label}.getByAltText(${JSON.stringify(text)})`
+    );
+  }
+
+  getByLabel(text: BrowserText, options?: BrowserTextOptions) {
+    return this.createFinder(
+      getByLabelSelector(text, options),
+      `${this.label}.getByLabel(${JSON.stringify(text)})`
+    );
+  }
+
+  getByPlaceholder(text: BrowserText, options?: BrowserTextOptions) {
+    return this.createFinder(
+      getByPlaceholderSelector(text, options),
+      `${this.label}.getByPlaceholder(${JSON.stringify(text)})`
+    );
+  }
+
   getByRole(role: BrowserRole, options: BrowserRoleOptions = {}) {
-    return new BrowserLocatorImpl(
-      this.ownerPage,
-      () => findByRole(this.resolveElements(), role, options),
-      `${this.label}.getByRole(${JSON.stringify(role)}, ${JSON.stringify(options)})`,
-      this.trace,
-      this.onTrace
+    return this.createFinder(
+      getByRoleSelector(role, options),
+      `${this.label}.getByRole(${JSON.stringify(role)}, ${JSON.stringify(options)})`
     );
   }
 
-  locator(selector: string) {
-    return new BrowserLocatorImpl(
-      this.ownerPage,
-      () =>
-        this.resolveElements().flatMap((root) =>
-          Array.from(root.querySelectorAll(selector))
-        ),
-      `${this.label}.locator(${JSON.stringify(selector)})`,
-      this.trace,
-      this.onTrace
+  getByTestId(testId: BrowserTestId) {
+    return this.createFinder(
+      getByTestIdSelector(testId),
+      `${this.label}.getByTestId(${JSON.stringify(testId)})`
     );
   }
 
-  filter(options: BrowserLocatorFilterOptions) {
+  getByText(text: BrowserText, options?: BrowserTextOptions) {
+    return this.createFinder(
+      getByTextSelector(text, options),
+      `${this.label}.getByText(${JSON.stringify(text)})`
+    );
+  }
+
+  getByTitle(text: BrowserText, options?: BrowserTextOptions) {
+    return this.createFinder(
+      getByTitleSelector(text, options),
+      `${this.label}.getByTitle(${JSON.stringify(text)})`
+    );
+  }
+
+  locator(
+    selectorOrLocator: string | BrowserLocator,
+    options: BrowserLocatorOptions = {}
+  ): BrowserLocator {
+    const selector =
+      typeof selectorOrLocator === "string"
+        ? selectorOrLocator
+        : resolveLocatorSelector(selectorOrLocator);
+    const composedSelector = appendLocatorOptions(selector, options);
+    return this.createFinder(
+      composedSelector,
+      `${this.label}.locator(${JSON.stringify(selector)})`
+    );
+  }
+
+  filter(options: BrowserLocatorFilterOptions = {}) {
     return new BrowserLocatorImpl(
       this.ownerPage,
       () =>
@@ -119,11 +199,31 @@ export class BrowserLocatorImpl implements BrowserLocator {
           ) {
             return false;
           }
+          if (
+            options.visible !== undefined &&
+            isVisible(element) !== options.visible
+          )
+            return false;
           return true;
         }),
       `${this.label}.filter(...)`,
       this.trace,
       this.onTrace
+    );
+  }
+
+  getSelector() {
+    return this.selector;
+  }
+
+  private createFinder(selector: string, label: string) {
+    return new BrowserLocatorImpl(
+      this.ownerPage,
+      () => this.ownerPage.querySelectorAll(selector, this.resolveElements()),
+      label,
+      this.trace,
+      this.onTrace,
+      selector
     );
   }
 
@@ -322,6 +422,7 @@ export class BrowserLocatorImpl implements BrowserLocator {
 export class BrowserPageImpl implements BrowserPage {
   readonly document: Document;
   readonly window: Window;
+  private readonly injectedScript: InjectedScript;
 
   constructor(
     browserWindow: Window,
@@ -331,6 +432,18 @@ export class BrowserPageImpl implements BrowserPage {
   ) {
     this.window = browserWindow;
     this.document = browserWindow.document;
+    this.injectedScript = new InjectedScript(
+      browserWindow as Window & typeof globalThis,
+      {
+        browserName: "chromium",
+        customEngines: [],
+        frameSeq: 0,
+        isUnderTest: false,
+        sdkLanguage: "javascript",
+        stableRafCount: 0,
+        testIdAttributeName: "data-testid",
+      }
+    );
   }
 
   static fromWindow(
@@ -369,27 +482,97 @@ export class BrowserPageImpl implements BrowserPage {
     await this.wait(this.pacing.typingIntervalMs);
   }
 
+  getByAltText(text: BrowserText, options?: BrowserTextOptions) {
+    return this.createFinder(
+      getByAltTextSelector(text, options),
+      `page.getByAltText(${JSON.stringify(text)})`
+    );
+  }
+
+  getByLabel(text: BrowserText, options?: BrowserTextOptions) {
+    return this.createFinder(
+      getByLabelSelector(text, options),
+      `page.getByLabel(${JSON.stringify(text)})`
+    );
+  }
+
+  getByPlaceholder(text: BrowserText, options?: BrowserTextOptions) {
+    return this.createFinder(
+      getByPlaceholderSelector(text, options),
+      `page.getByPlaceholder(${JSON.stringify(text)})`
+    );
+  }
+
   getByRole(role: BrowserRole, options: BrowserRoleOptions = {}) {
-    return this.createLocator(
-      () => findByRole([this.document.documentElement], role, options),
+    return this.createFinder(
+      getByRoleSelector(role, options),
       `page.getByRole(${JSON.stringify(role)}, ${JSON.stringify(options)})`
     );
   }
 
-  locator(selector: string) {
-    return this.createLocator(
-      () => Array.from(this.document.querySelectorAll(selector)),
-      `page.locator(${JSON.stringify(selector)})`
+  getByTestId(testId: BrowserTestId) {
+    return this.createFinder(
+      getByTestIdSelector(testId),
+      `page.getByTestId(${JSON.stringify(testId)})`
     );
   }
 
-  private createLocator(resolver: () => Element[], label: string) {
+  getByText(text: BrowserText, options?: BrowserTextOptions) {
+    return this.createFinder(
+      getByTextSelector(text, options),
+      `page.getByText(${JSON.stringify(text)})`
+    );
+  }
+
+  getByTitle(text: BrowserText, options?: BrowserTextOptions) {
+    return this.createFinder(
+      getByTitleSelector(text, options),
+      `page.getByTitle(${JSON.stringify(text)})`
+    );
+  }
+
+  locator(selector: string, options: BrowserLocatorOptions = {}) {
+    const composedSelector = appendLocatorOptions(selector, options);
+    return this.createLocator(
+      () => this.querySelectorAll(composedSelector, [this.document]),
+      `page.locator(${JSON.stringify(selector)})`,
+      composedSelector
+    );
+  }
+
+  querySelectorAll(selector: string, roots: readonly (Document | Element)[]) {
+    const parsedSelector = this.injectedScript.parseSelector(selector);
+    const elements = new Set<Element>();
+    for (const root of roots) {
+      for (const element of this.injectedScript.querySelectorAll(
+        parsedSelector,
+        root
+      ))
+        elements.add(element);
+    }
+    return [...elements];
+  }
+
+  private createFinder(selector: string, label: string) {
+    return this.createLocator(
+      () => this.querySelectorAll(selector, [this.document]),
+      label,
+      selector
+    );
+  }
+
+  private createLocator(
+    resolver: () => Element[],
+    label: string,
+    selector?: string
+  ) {
     return new BrowserLocatorImpl(
       this,
       resolver,
       label,
       this.trace,
-      this.onTrace
+      this.onTrace,
+      selector
     );
   }
 
@@ -458,72 +641,6 @@ export function createBrowserPage(options: BrowserPageOptions = {}) {
   };
 }
 
-function findByRole(
-  roots: readonly Element[],
-  role: BrowserRole,
-  options: BrowserRoleOptions
-) {
-  const candidates = roots.flatMap((root) => [
-    root,
-    ...Array.from(root.querySelectorAll("*")),
-  ]);
-  return candidates.filter((element) => {
-    if (roleFor(element) !== role) return false;
-    return (
-      options.name === undefined ||
-      accessibleName(element) === normalizeText(options.name)
-    );
-  });
-}
-
-function roleFor(element: Element): string | undefined {
-  const explicitRole = element.getAttribute("role")?.trim().split(/\s+/, 1)[0];
-  if (explicitRole) return explicitRole;
-
-  const tagName = element.tagName.toLowerCase();
-  if (tagName === "button") return "button";
-  if (tagName === "textarea") return "textbox";
-  if (/^h[1-6]$/.test(tagName)) return "heading";
-  if (tagName === "input") {
-    const type = (element.getAttribute("type") ?? "text").toLowerCase();
-    if (["button", "image", "reset", "submit"].includes(type)) return "button";
-    if (type === "checkbox") return "checkbox";
-    if (type === "radio") return "radio";
-    if (type === "search") return "searchbox";
-    if (!["hidden", "file", "range", "color"].includes(type)) return "textbox";
-  }
-  if (element.getAttribute("contenteditable") === "true") return "textbox";
-  return undefined;
-}
-
-function accessibleName(element: Element) {
-  const ariaLabel = element.getAttribute("aria-label");
-  if (ariaLabel) return normalizeText(ariaLabel);
-
-  const labelledBy = element.getAttribute("aria-labelledby");
-  if (labelledBy) {
-    const text = labelledBy
-      .split(/\s+/)
-      .map((id) => element.ownerDocument.getElementById(id)?.textContent ?? "")
-      .join(" ");
-    if (normalizeText(text)) return normalizeText(text);
-  }
-
-  const associatedLabel = labelFor(element);
-  if (associatedLabel) return normalizeText(associatedLabel.textContent ?? "");
-
-  return normalizeText(element.textContent ?? "");
-}
-
-function labelFor(element: Element) {
-  const wrappingLabel = element.closest("label");
-  if (wrappingLabel) return wrappingLabel;
-  if (!element.id) return undefined;
-  return Array.from(element.ownerDocument.querySelectorAll("label")).find(
-    (label) => label.htmlFor === element.id
-  );
-}
-
 function isVisible(element: Element) {
   if (!element.isConnected || element.getAttribute("aria-hidden") === "true")
     return false;
@@ -550,15 +667,138 @@ function dispatchKeyboardEvent(
   );
 }
 
-function normalizeText(value: string) {
-  return value.replace(/\s+/g, " ").trim();
-}
-
 function resolveLocatorElements(locator: BrowserLocator) {
   if (locator instanceof BrowserLocatorImpl) return locator.resolveElements();
   throw new Error(
     "Unsupported locator implementation. Use the Ayme browser runtime."
   );
+}
+
+function resolveLocatorSelector(locator: BrowserLocator): string {
+  if (locator instanceof BrowserLocatorImpl) {
+    const selector: string | undefined = locator.getSelector();
+    if (selector !== undefined) return selector;
+  }
+  throw new Error(
+    "Unsupported locator implementation. Use the Ayme browser runtime."
+  );
+}
+
+function appendLocatorOptions(
+  selector: string,
+  options: BrowserLocatorOptions
+) {
+  if (options.hasText)
+    selector += ` >> internal:has-text=${escapeForTextSelector(options.hasText, false)}`;
+  if (options.hasNotText)
+    selector += ` >> internal:has-not-text=${escapeForTextSelector(options.hasNotText, false)}`;
+  if (options.has)
+    selector += ` >> internal:has=${JSON.stringify(resolveLocatorSelector(options.has))}`;
+  if (options.hasNot)
+    selector += ` >> internal:has-not=${JSON.stringify(resolveLocatorSelector(options.hasNot))}`;
+  return selector;
+}
+
+function getByTestIdSelector(testId: string | RegExp) {
+  return `internal:testid=[data-testid=${escapeForAttributeSelector(testId, true)}]`;
+}
+
+function getByLabelSelector(
+  text: string | RegExp,
+  options?: BrowserTextOptions
+) {
+  return `internal:label=${escapeForTextSelector(text, !!options?.exact)}`;
+}
+
+function getByAltTextSelector(
+  text: string | RegExp,
+  options?: BrowserTextOptions
+) {
+  return getByAttributeTextSelector("alt", text, options);
+}
+
+function getByTitleSelector(
+  text: string | RegExp,
+  options?: BrowserTextOptions
+) {
+  return getByAttributeTextSelector("title", text, options);
+}
+
+function getByPlaceholderSelector(
+  text: string | RegExp,
+  options?: BrowserTextOptions
+) {
+  return getByAttributeTextSelector("placeholder", text, options);
+}
+
+function getByTextSelector(
+  text: string | RegExp,
+  options?: BrowserTextOptions
+) {
+  return `internal:text=${escapeForTextSelector(text, !!options?.exact)}`;
+}
+
+function getByRoleSelector(
+  role: BrowserRole,
+  options: BrowserRoleOptions = {}
+) {
+  const props: string[][] = [];
+  for (const [name, value] of [
+    ["checked", options.checked],
+    ["disabled", options.disabled],
+    ["selected", options.selected],
+    ["expanded", options.expanded],
+    ["include-hidden", options.includeHidden],
+    ["level", options.level],
+    ["name", options.name],
+    ["description", options.description],
+    ["pressed", options.pressed],
+  ] as const) {
+    if (value === undefined) continue;
+    props.push([
+      name,
+      typeof value === "string" || value instanceof RegExp
+        ? escapeForAttributeSelector(value, !!options.exact)
+        : String(value),
+    ]);
+  }
+  return `internal:role=${role}${props
+    .map(([name, value]) => `[${name}=${value}]`)
+    .join("")}`;
+}
+
+function getByAttributeTextSelector(
+  attribute: string,
+  text: string | RegExp,
+  options?: BrowserTextOptions
+) {
+  return `internal:attr=[${attribute}=${escapeForAttributeSelector(
+    text,
+    !!options?.exact
+  )}]`;
+}
+
+function escapeForTextSelector(text: string | RegExp, exact: boolean) {
+  if (typeof text !== "string") return escapeRegexForSelector(text);
+  return `${JSON.stringify(text)}${exact ? "s" : "i"}`;
+}
+
+function escapeForAttributeSelector(value: string | RegExp, exact: boolean) {
+  if (typeof value !== "string") return escapeRegexForSelector(value);
+  return `"${value.replace(/\\/g, "\\\\").replace(/["]/g, '\\"')}"${
+    exact ? "s" : "i"
+  }`;
+}
+
+function escapeRegexForSelector(regex: RegExp) {
+  if (
+    regex.unicode ||
+    (regex as RegExp & { unicodeSets?: boolean }).unicodeSets
+  )
+    return String(regex);
+  return String(regex)
+    .replace(/(^|[^\\])(\\\\)*(["'`])/g, "$1$2\\$3")
+    .replace(/>>/g, "\\>\\>");
 }
 
 function isElement(value: unknown): value is Element {
