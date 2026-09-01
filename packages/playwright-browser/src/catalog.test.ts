@@ -1,10 +1,10 @@
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { resolve } from "node:path";
 
-import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
+import { readPlaywrightPublicSurface } from "../scripts/playwright-public-surface";
 import {
   compatibilityCatalog,
   currentSupport,
@@ -164,8 +164,6 @@ describe("the Playwright compatibility catalog", () => {
       version: testPackage.version,
       generatedSource: {
         status: "verified",
-        fingerprint:
-          "sha256:7de5f27b28ba4a08ff4f7ee080f2adecc1847a7719dbf9d31ca032aa4e4d43ba",
       },
     });
   });
@@ -186,33 +184,9 @@ describe("the Playwright compatibility catalog", () => {
 });
 
 function membersFromPinnedPlaywrightTypes() {
-  const path = join(
-    dirname(require.resolve("playwright-core/package.json")),
-    "types/types.d.ts"
-  );
-  const source = ts.createSourceFile(
-    path,
-    readFileSync(path, "utf8"),
-    ts.ScriptTarget.Latest
-  );
-  const members = new Map<string, string[]>();
-
-  for (const statement of source.statements) {
-    if (!ts.isInterfaceDeclaration(statement)) continue;
-    if (statement.name.text !== "Page" && statement.name.text !== "Locator")
-      continue;
-    members.set(
-      statement.name.text,
-      [
-        ...new Set(
-          statement.members.map((member) => member.name?.getText(source))
-        ),
-      ].filter((member): member is string => Boolean(member))
-    );
-  }
-
+  const surface = readPlaywrightPublicSurface();
   return {
-    Page: members.get("Page") ?? [],
-    Locator: members.get("Locator") ?? [],
+    Page: surface.Page.map(({ name }) => name),
+    Locator: surface.Locator.map(({ name }) => name),
   };
 }

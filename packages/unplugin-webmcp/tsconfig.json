@@ -1,4 +1,4 @@
 {
   "extends": "@ayme-dev/typescript-config/library.json",
-  "include": ["src/**/*.ts"]
+  "include": ["scripts/**/*.ts", "src/**/*.ts"]
 }

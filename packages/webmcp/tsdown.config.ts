@@ -1,20 +1,24 @@
 import { defineConfig } from "tsdown";
 
+import { upstreamPlaywright } from "@ayme-dev/playwright-browser/upstream";
+
+const playwrightSource = `../playwright-browser/source/playwright-${upstreamPlaywright.version}`;
+
 export default defineConfig({
   clean: true,
   copy: [
     {
-      from: "../playwright-browser/source/playwright-1.62.1/LICENSE",
+      from: `${playwrightSource}/LICENSE`,
       rename: "PLAYWRIGHT_LICENSE",
       to: "dist",
     },
     {
-      from: "../playwright-browser/source/playwright-1.62.1/NOTICE",
+      from: `${playwrightSource}/NOTICE`,
       rename: "PLAYWRIGHT_NOTICE",
       to: "dist",
     },
     {
-      from: "../playwright-browser/source/playwright-1.62.1/ThirdPartyNotices.txt",
+      from: `${playwrightSource}/ThirdPartyNotices.txt`,
       rename: "PLAYWRIGHT_THIRD_PARTY_NOTICES.txt",
       to: "dist",
     },

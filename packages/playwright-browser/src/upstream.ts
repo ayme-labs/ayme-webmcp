@@ -1,10 +1,12 @@
 /** Pinned inputs are reviewed here before changing catalog or generated source. */
+const version = "1.62.1";
+
 export const upstreamPlaywright = {
   package: "@playwright/test",
-  version: "1.62.1",
-  provenance: "https://github.com/microsoft/playwright/tree/v1.62.1",
+  version,
+  provenance: `https://github.com/microsoft/playwright/tree/v${version}`,
   publicSurfaceFingerprint:
-    "sha256:d744ea045173c374852011c71578dc9dbba481d71ce40c846f5cd85530799f95",
+    "sha256:614480ae0d18f583f75f1358bf3813e984e98ef2fec83bc4a9f160f0793b4268",
   generatedSource: {
     status: "verified" as const,
     fingerprint:

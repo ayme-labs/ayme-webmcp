@@ -167,9 +167,6 @@ importers:
 
   packages/unplugin-webmcp:
     dependencies:
-      "@ayme-dev/playwright-browser":
-        specifier: workspace:*
-        version: link:../playwright-browser
       "@ayme-dev/webmcp":
         specifier: workspace:*
         version: link:../webmcp
@@ -186,6 +183,9 @@ importers:
       "@ayme-dev/eslint-config":
         specifier: workspace:*
         version: link:../eslint-config
+      "@ayme-dev/playwright-browser":
+        specifier: workspace:*
+        version: link:../playwright-browser
       "@ayme-dev/typescript-config":
         specifier: workspace:*
         version: link:../typescript-config

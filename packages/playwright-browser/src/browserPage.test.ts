@@ -184,6 +184,9 @@ describe("createBrowserPage", () => {
     const runtime = createBrowserPage();
     const cards = runtime.page.locator("[data-card]");
     const items = runtime.page.locator("[data-item]");
+    const featuredBadges = runtime.page
+      .locator("[data-badge]")
+      .filter({ hasText: "Featured" });
 
     expect(await cards.filter({ hasText: "alpha" }).count()).toBe(1);
     expect(await cards.filter({ hasNotText: "beta" }).count()).toBe(2);
@@ -195,6 +198,37 @@ describe("createBrowserPage", () => {
         .filter({ hasNot: runtime.page.locator("[data-badge]") })
         .count()
     ).toBe(1);
+    expect(await cards.locator(featuredBadges).count()).toBe(2);
+    expect(
+      await runtime.page.locator("[data-card]", { has: featuredBadges }).count()
+    ).toBe(2);
+    expect(
+      await runtime.page
+        .locator("[data-card]", { hasNot: featuredBadges })
+        .count()
+    ).toBe(1);
+    expect(
+      await runtime.page
+        .locator("body")
+        .locator("[data-card]", { has: featuredBadges })
+        .count()
+    ).toBe(2);
+    expect(
+      await runtime.page
+        .locator("body")
+        .locator("[data-card]", { hasNot: featuredBadges })
+        .count()
+    ).toBe(1);
+
+    const otherPage = createBrowserPage().page;
+    expect(() => cards.locator(otherPage.locator("[data-badge]"))).toThrow(
+      "Locators must belong to the same BrowserPage."
+    );
+    expect(() =>
+      runtime.page.locator("[data-card]", {
+        has: otherPage.locator("[data-badge]"),
+      })
+    ).toThrow("Locators must belong to the same BrowserPage.");
 
     expect(
       await items.and(runtime.page.locator('[data-item="beta"]')).count()

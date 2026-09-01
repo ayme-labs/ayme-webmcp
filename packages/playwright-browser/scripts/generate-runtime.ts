@@ -6,8 +6,13 @@ import { join, resolve } from "node:path";
 
 import { build } from "esbuild";
 
+import { upstreamPlaywright } from "@ayme-dev/playwright-browser/upstream";
+
 const packageRoot = resolve(import.meta.dirname, "..");
-const storedSourceRoot = resolve(packageRoot, "source/playwright-1.62.1");
+const storedSourceRoot = resolve(
+  packageRoot,
+  `source/playwright-${upstreamPlaywright.version}`
+);
 const sourceRoot = materializeSourceTree(storedSourceRoot);
 const generatedRoot = resolve(packageRoot, "src/generated");
 const closurePath = resolve(packageRoot, "source-closure.json");
@@ -46,7 +51,7 @@ const closure = {
   upstream: {
     commit: "26a9e470a7b3c7822084b09fb7f13902c5f37b51",
     repository: "https://github.com/microsoft/playwright.git",
-    version: "1.62.1",
+    version: upstreamPlaywright.version,
   },
   files: await Promise.all(
     files.map(async (path) => ({
@@ -206,9 +211,9 @@ function provenanceSource(closure: string, runtime: string) {
         )
       ),
       license: "Apache-2.0",
-      notice: "../../source/playwright-1.62.1/NOTICE",
+      notice: `../../source/playwright-${upstreamPlaywright.version}/NOTICE`,
       outputHash: sha256(runtime),
-      thirdPartyNotices: "../../source/playwright-1.62.1/ThirdPartyNotices.txt",
+      thirdPartyNotices: `../../source/playwright-${upstreamPlaywright.version}/ThirdPartyNotices.txt`,
       upstream: JSON.parse(closure).upstream,
     },
     null,

@@ -7,7 +7,8 @@
     ".": "./src/index.ts",
     "./catalog": "./src/catalog.ts",
     "./currentSupport": "./src/currentSupport.ts",
-    "./injected": "./src/generated/injectedScript.js"
+    "./injected": "./src/generated/injectedScript.js",
+    "./upstream": "./src/upstream.ts"
   },
   "scripts": {
     "build": "tsc --noEmit",

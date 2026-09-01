@@ -52,6 +52,58 @@ test("matches finder factories and lazy descendant composition in Chromium", asy
   });
 });
 
+test("matches filtered locator composition in Chromium", async ({ parity }) => {
+  await parity.reset(`
+    <article data-card="alpha"><span data-badge>Featured</span></article>
+    <article data-card="beta"><span data-badge>Standard</span></article>
+    <article data-card="gamma"><span data-badge>Featured</span></article>`);
+
+  const playwrightBadges = parity.page
+    .locator("[data-badge]")
+    .filter({ hasText: "Featured" });
+  const expected = {
+    locator: await parity.page
+      .locator("[data-card]")
+      .locator(playwrightBadges)
+      .count(),
+    has: await parity.page
+      .locator("[data-card]", { has: playwrightBadges })
+      .count(),
+    hasNot: await parity.page
+      .locator("[data-card]", { hasNot: playwrightBadges })
+      .count(),
+    locatorHas: await parity.page
+      .locator("body")
+      .locator("[data-card]", { has: playwrightBadges })
+      .count(),
+    locatorHasNot: await parity.page
+      .locator("body")
+      .locator("[data-card]", { hasNot: playwrightBadges })
+      .count(),
+  };
+
+  await expect(
+    parity.run(async (page) => {
+      const badges = page
+        .locator("[data-badge]")
+        .filter({ hasText: "Featured" });
+      return {
+        locator: await page.locator("[data-card]").locator(badges).count(),
+        has: await page.locator("[data-card]", { has: badges }).count(),
+        hasNot: await page.locator("[data-card]", { hasNot: badges }).count(),
+        locatorHas: await page
+          .locator("body")
+          .locator("[data-card]", { has: badges })
+          .count(),
+        locatorHasNot: await page
+          .locator("body")
+          .locator("[data-card]", { hasNot: badges })
+          .count(),
+      };
+    })
+  ).resolves.toEqual(expected);
+});
+
 test("observes the shared BrowserPage parity fixtures in Chromium", async ({
   parity,
 }) => {

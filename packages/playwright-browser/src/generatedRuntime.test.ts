@@ -25,6 +25,7 @@ describe("the generated Playwright browser runtime", () => {
       )
     ).not.toContain("coreBundle.js");
     expect(runtimeProvenance.outputHash).toBe(sha256(runtime));
+    expect(runtimeProvenance.upstream.version).toBe(upstreamPlaywright.version);
     expect(upstreamPlaywright.generatedSource).toMatchObject({
       status: "verified",
       fingerprint: runtimeProvenance.outputHash,
@@ -40,7 +41,11 @@ describe("the generated Playwright browser runtime", () => {
       expect(
         sha256(
           readFileSync(
-            resolve(process.cwd(), "source/playwright-1.62.1", legalFile.path)
+            resolve(
+              process.cwd(),
+              `source/playwright-${upstreamPlaywright.version}`,
+              legalFile.path
+            )
           )
         )
       ).toBe(legalFile.sha256);

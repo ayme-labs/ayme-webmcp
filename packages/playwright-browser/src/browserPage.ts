@@ -155,8 +155,8 @@ class BrowserLocatorImpl implements BrowserLocator {
     private readonly resolver: (scope?: Element) => Element[],
     private readonly label: string,
     private readonly trace: TraceEntry[],
-    private readonly onTrace?: () => void,
-    private readonly selector?: string
+    private readonly onTrace: (() => void) | undefined,
+    private readonly selector: string
   ) {}
 
   belongsTo(page: BrowserPageImpl) {
@@ -219,11 +219,23 @@ class BrowserLocatorImpl implements BrowserLocator {
     const selector =
       typeof selectorOrLocator === "string"
         ? selectorOrLocator
-        : resolveLocatorSelector(selectorOrLocator);
-    const composedSelector = appendLocatorOptions(selector, options);
+        : resolveLocatorSelector(selectorOrLocator, this.ownerPage);
+    const composedSelector = appendLocatorOptions(
+      selector,
+      options,
+      this.ownerPage
+    );
+    const locatorSelector = appendLocatorOptions(
+      typeof selectorOrLocator === "string"
+        ? `${this.selector} >> ${selector}`
+        : `${this.selector} >> internal:chain=${JSON.stringify(selector)}`,
+      options,
+      this.ownerPage
+    );
     return this.createFinder(
       composedSelector,
-      `${this.label}.locator(${JSON.stringify(selector)})`
+      `${this.label}.locator(${JSON.stringify(selector)})`,
+      locatorSelector
     );
   }
 
@@ -264,11 +276,13 @@ class BrowserLocatorImpl implements BrowserLocator {
         }),
       `${this.label}.filter(...)`,
       this.trace,
-      this.onTrace
+      this.onTrace,
+      appendLocatorOptions(this.selector, options, this.ownerPage)
     );
   }
 
   and(locator: BrowserLocator) {
+    const locatorSelector = resolveLocatorSelector(locator, this.ownerPage);
     return new BrowserLocatorImpl(
       this.ownerPage,
       (scope) => {
@@ -281,11 +295,13 @@ class BrowserLocatorImpl implements BrowserLocator {
       },
       `${this.label}.and(...)`,
       this.trace,
-      this.onTrace
+      this.onTrace,
+      `${this.selector} >> internal:and=${JSON.stringify(locatorSelector)}`
     );
   }
 
   or(locator: BrowserLocator): BrowserLocator {
+    const locatorSelector = resolveLocatorSelector(locator, this.ownerPage);
     return new BrowserLocatorImpl(
       this.ownerPage,
       (scope) =>
@@ -295,7 +311,8 @@ class BrowserLocatorImpl implements BrowserLocator {
         ]),
       `${this.label}.or(...)`,
       this.trace,
-      this.onTrace
+      this.onTrace,
+      `${this.selector} >> internal:or=${JSON.stringify(locatorSelector)}`
     );
   }
 
@@ -311,7 +328,11 @@ class BrowserLocatorImpl implements BrowserLocator {
     return this.selector;
   }
 
-  private createFinder(selector: string, label: string) {
+  private createFinder(
+    selector: string,
+    label: string,
+    locatorSelector = `${this.selector} >> ${selector}`
+  ) {
     return new BrowserLocatorImpl(
       this.ownerPage,
       (scope) =>
@@ -319,7 +340,7 @@ class BrowserLocatorImpl implements BrowserLocator {
       label,
       this.trace,
       this.onTrace,
-      selector
+      locatorSelector
     );
   }
 
@@ -333,7 +354,8 @@ class BrowserLocatorImpl implements BrowserLocator {
       },
       `${this.label}.nth(${index})`,
       this.trace,
-      this.onTrace
+      this.onTrace,
+      `${this.selector} >> nth=${index}`
     );
   }
 
@@ -811,7 +833,7 @@ class BrowserPageImpl implements BrowserPage {
   }
 
   locator(selector: string, options: BrowserLocatorOptions = {}) {
-    const composedSelector = appendLocatorOptions(selector, options);
+    const composedSelector = appendLocatorOptions(selector, options, this);
     return this.createLocator(
       (scope) =>
         this.querySelectorAll(composedSelector, [scope ?? this.document]),
@@ -844,7 +866,7 @@ class BrowserPageImpl implements BrowserPage {
   private createLocator(
     resolver: (scope?: Element) => Element[],
     label: string,
-    selector?: string
+    selector: string
   ) {
     return new BrowserLocatorImpl(
       this,
@@ -999,10 +1021,14 @@ function resolveLocatorElements(
   );
 }
 
-function resolveLocatorSelector(locator: BrowserLocator): string {
+function resolveLocatorSelector(
+  locator: BrowserLocator,
+  ownerPage: BrowserPageImpl
+): string {
   if (locator instanceof BrowserLocatorImpl) {
-    const selector: string | undefined = locator.getSelector();
-    if (selector !== undefined) return selector;
+    if (!locator.belongsTo(ownerPage))
+      throw new Error("Locators must belong to the same BrowserPage.");
+    return locator.getSelector();
   }
   throw new Error(
     "Unsupported locator implementation. Use the Ayme browser runtime."
@@ -1011,16 +1037,19 @@ function resolveLocatorSelector(locator: BrowserLocator): string {
 
 function appendLocatorOptions(
   selector: string,
-  options: BrowserLocatorOptions
+  options: BrowserLocatorFilterOptions,
+  ownerPage: BrowserPageImpl
 ) {
   if (options.hasText)
     selector += ` >> internal:has-text=${escapeForTextSelector(options.hasText, false)}`;
   if (options.hasNotText)
     selector += ` >> internal:has-not-text=${escapeForTextSelector(options.hasNotText, false)}`;
   if (options.has)
-    selector += ` >> internal:has=${JSON.stringify(resolveLocatorSelector(options.has))}`;
+    selector += ` >> internal:has=${JSON.stringify(resolveLocatorSelector(options.has, ownerPage))}`;
   if (options.hasNot)
-    selector += ` >> internal:has-not=${JSON.stringify(resolveLocatorSelector(options.hasNot))}`;
+    selector += ` >> internal:has-not=${JSON.stringify(resolveLocatorSelector(options.hasNot, ownerPage))}`;
+  if (options.visible !== undefined)
+    selector += ` >> visible=${options.visible ? "true" : "false"}`;
   return selector;
 }
 

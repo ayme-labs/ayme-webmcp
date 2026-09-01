@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:dab9719a821e4c404a5b13c1bb08e691e2cd64bc7de0d4026d705a005f1e6370
+# checksum: sha256:322915c153cf70c2d1b49e0f83f40d1c6ea44ad85abad6deaf0966be661f5228
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -320,7 +320,7 @@ w W-14 type=feature status=done cynefin=complicated t_created=2026-08-31T15:29:2
   evidence:
     | Integrated W-10 through W-14 package typecheck, lint, pinned-runtime verification, Vitest (5 files, 19 tests), and Chromium parity (4 tests) passed; click, fill, and press retain exact Playwright option shapes while their browser-emulated DOM outcomes and negative contracts are explicit.
 
-w W-15 type=feature status=done cynefin=complicated t_created=2026-08-31T15:29:35Z t_updated=2026-09-01T10:27:31Z "Integrate and verify Playwright browser compatibility"
+w W-15 type=feature status=done cynefin=complicated t_created=2026-08-31T15:29:35Z t_updated=2026-09-01T11:28:23Z "Integrate and verify Playwright browser compatibility"
   goals: G-07
   fitness: G-07=+1
   surface: packages/playwright-browser, packages/webmcp, packages/unplugin-webmcp, apps/example-vue
@@ -333,6 +333,7 @@ w W-15 type=feature status=done cynefin=complicated t_created=2026-08-31T15:29:3
     | Inspect the combined diff and exported symbols; run all affected package and example checks plus the complete workspace verification matrix.
   evidence:
     | Integrated clean package cut and exact 47-member BrowserPage/BrowserLocator selection; compile-time signatures enforce exactly 13 Page and 34 Locator members. Restored exhaustive catalog to 118 Full, 5 Partial, and 62 Unsupported with current support separate. Deterministic Page/Locator surface fingerprint and pinned 24-file generated-runtime fingerprints verify. Package 20/20 unit-contract tests and 8/8 Chromium parity tests pass; unplugin 14/14 tests and example 1/1 unit plus 5/5 E2E tests pass. Full pnpm run check passed before main rebase; independent Standards and Spec remediation reviews report no findings.
+    | Post-rebase remediation verified the public unplugin pack excludes @ayme-dev/playwright-browser imports and dependency metadata; the canonical Page/Locator surface is now resolved from @playwright/test exports with inherited members and fingerprint sha256:614480ae0d18f583f75f1358bf3813e984e98ef2fec83bc4a9f160f0793b4268; generated-runtime provenance shares the canonical upstream version; derived locator composition passes direct Playwright comparison. Full pnpm run check passes with 20/20 package unit-contract tests, 9/9 Chromium parity tests, 14/14 unplugin tests, and 6/6 example E2E tests.
 
 w W-16 type=feature status=done cynefin=complicated t_created=2026-08-31T15:28:58Z t_updated=2026-08-31T17:34:31Z "Establish the playwright-browser package contract"
   goals: G-07
