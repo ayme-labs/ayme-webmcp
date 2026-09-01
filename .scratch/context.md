@@ -428,3 +428,18 @@
   - Status: Accepted
   - Content: Resolve collection members into their existing indexed component paths, then apply the same root rule to each instance: zero matches are absent, exactly one observable match is decorated, and multiple matches are ambiguous and absent. A uniquely resolved eligible root omitted from the ARIA tree may receive a synthetic ref.
   - Sources: PR #9 component observation behavior, P-019, W-10 acceptance criteria, and the approved implementation plan.
+
+- P-064 — Preserve public distillation through synchronous dual builds
+  - Origin: User
+  - Area: A-002
+  - Status: Accepted
+  - Content: `captureAriaSnapshot` builds the distilled snapshot and the private `refs: "all"` snapshot synchronously inside one injected operation. Element-cached refs keep both views in one ref namespace, while separate tree objects prevent full refs from changing Playwright's ref-sensitive public distillation rules.
+  - Sources: Playwright PR #7 commit `b25d782e3fbdf21abdae60e974e49b78ca07e828`, focused review, and 132 passing cross-browser ARIA tests.
+  - Supersedes: P-004
+
+- P-065 — Merge the reviewed Playwright capture seam
+  - Origin: User
+  - Area: A-004
+  - Status: Accepted
+  - Content: Merge Playwright PR #7 after reviewing the final synchronous dual-build change, then pin its tested feature head in the browser package before continuing structural integration.
+  - Sources: Playwright PR #7, tested head `b25d782e3fbdf21abdae60e974e49b78ca07e828`, and merge commit `89c26677fa14a0eb35eacd1b62046665ab22e42f`.
