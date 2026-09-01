@@ -63,4 +63,92 @@ describe("get_page_state", () => {
 `.trim()
     );
   });
+
+  it("reparents an omitted POM root without duplicating a distilled descendant", async () => {
+    document.body.innerHTML = `
+      <div id="pom-root">
+        <button id="child">Nested child</button>
+      </div>
+    `;
+    const pomRoot = document.querySelector("#pom-root");
+    const child = document.querySelector("#child");
+    if (!pomRoot || !child) throw new Error("Missing test roots.");
+
+    captureAriaSnapshot.mockReturnValue({
+      distilledText: `
+- generic [ref=e1]:
+  - button "Nested child" [ref=e3]
+`.trim(),
+      fullText: `
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - button "Nested child" [ref=e3]
+`.trim(),
+      refsByElement: new Map([
+        [document.body, "e1"],
+        [pomRoot, "e2"],
+        [child, "e3"],
+      ]),
+    });
+    listRegisteredPomRoots.mockResolvedValue([
+      { label: "ListPage.item", element: pomRoot },
+    ]);
+
+    await expect(getPageStateTool.execute()).resolves.toBe(
+      `
+- [ref=e1] generic:
+  - [ref=e2] generic:
+    - /pom: ListPage.item
+    - [ref=e3] button "Nested child"
+`.trim()
+    );
+  });
+
+  it("resolves root candidates before capture and correlates only those candidates", async () => {
+    document.body.innerHTML = '<button id="pre-capture">Pre-capture</button>';
+    const preCaptureRoot = document.querySelector("#pre-capture");
+    if (!preCaptureRoot) throw new Error("Missing pre-capture root.");
+    let rootsResolved = false;
+
+    listRegisteredPomRoots.mockImplementation(async () => {
+      await Promise.resolve();
+      rootsResolved = true;
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        '<button id="post-capture">Post-capture</button>'
+      );
+      return [{ label: "ListPage.preCapture", element: preCaptureRoot }];
+    });
+    captureAriaSnapshot.mockImplementation(() => {
+      expect(rootsResolved).toBe(true);
+      const postCaptureRoot = document.querySelector("#post-capture");
+      if (!postCaptureRoot) throw new Error("Missing post-capture root.");
+      return {
+        distilledText: `
+- generic [ref=e1]:
+  - button "Pre-capture" [ref=e2]
+  - button "Post-capture" [ref=e3]
+`.trim(),
+        fullText: `
+- generic [ref=e1]:
+  - button "Pre-capture" [ref=e2]
+  - button "Post-capture" [ref=e3]
+`.trim(),
+        refsByElement: new Map([
+          [document.body, "e1"],
+          [preCaptureRoot, "e2"],
+          [postCaptureRoot, "e3"],
+        ]),
+      };
+    });
+
+    await expect(getPageStateTool.execute()).resolves.toBe(
+      `
+- [ref=e1] generic:
+  - [ref=e2] button "Pre-capture":
+    - /pom: ListPage.preCapture
+  - [ref=e3] button "Post-capture"
+`.trim()
+    );
+  });
 });

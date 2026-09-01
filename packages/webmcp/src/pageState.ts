@@ -28,6 +28,7 @@ export const getPageStateTool = {
 } satisfies ModelContextTool<Record<string, never>, string>;
 
 async function capturePageState() {
+  const roots = await listRegisteredPomRoots();
   const capture = captureAriaSnapshot(document.body);
   const refFactory = new SyntheticAriaRefFactory();
   let tree = StructuralTree.fromAriaSnapshotYaml(
@@ -40,7 +41,7 @@ async function capturePageState() {
   );
   const properties = new Map<AriaRef, StructuralNodeProperty[]>();
 
-  for (const root of await listRegisteredPomRoots()) {
+  for (const root of roots) {
     if (root.element.ownerDocument !== document || !isVisible(root.element))
       continue;
     const rawRef = capture.refsByElement.get(root.element);
@@ -51,7 +52,8 @@ async function capturePageState() {
         fullTree,
         ref,
         root.element,
-        capture.refsByElement
+        capture.refsByElement,
+        refFactory
       );
     } else {
       const parentRef = capturedParentRef(
@@ -91,12 +93,89 @@ function appendCapturedRoot(
   fullTree: StructuralTree,
   ref: AriaRef,
   element: Element,
-  refsByElement: ReadonlyMap<Element, string>
+  refsByElement: ReadonlyMap<Element, string>,
+  refFactory: SyntheticAriaRefFactory
 ) {
   if (tree.hasNode(ref)) return tree;
   const node = fullTree.getNode(ref);
   const parentRef = capturedParentRef(tree, element, refsByElement);
-  return node && parentRef ? tree.appendChild(parentRef, node) : tree;
+  if (!node || !parentRef) return tree;
+
+  const boundary = capturedPomBoundary(node, tree);
+  const replacedTree = new StructuralTree(
+    removeNodes(tree.root, descendantRefs(boundary)),
+    refFactory
+  );
+  return replacedTree.appendChild(parentRef, boundary);
+}
+
+function capturedPomBoundary(node: StructuralNode, tree: StructuralTree) {
+  return copyNode(
+    node,
+    node.children.flatMap((child) =>
+      typeof child === "string" ? [] : existingDescendants(child, tree)
+    )
+  );
+}
+
+function existingDescendants(
+  node: StructuralNode,
+  tree: StructuralTree
+): StructuralNode[] {
+  const existing = tree.getNode(node.ref);
+  if (existing) return [existing];
+  return node.children.flatMap((child) =>
+    typeof child === "string" ? [] : existingDescendants(child, tree)
+  );
+}
+
+function descendantRefs(node: StructuralNode) {
+  const refs = new Set<AriaRef>();
+  for (const child of node.children) {
+    if (typeof child === "string") continue;
+    refs.add(child.ref);
+    for (const ref of descendantRefs(child)) refs.add(ref);
+  }
+  return refs;
+}
+
+function removeNodes(
+  node: StructuralNode,
+  refs: ReadonlySet<AriaRef>
+): StructuralNode {
+  let changed = false;
+  const children: Array<StructuralNode | string> = [];
+  for (const child of node.children) {
+    if (typeof child === "string") {
+      children.push(child);
+      continue;
+    }
+    if (refs.has(child.ref)) {
+      changed = true;
+      continue;
+    }
+    const updated = removeNodes(child, refs);
+    if (updated !== child) changed = true;
+    children.push(updated);
+  }
+  return changed ? copyNode(node, children) : node;
+}
+
+function copyNode(
+  node: StructuralNode,
+  children: readonly (StructuralNode | string)[]
+) {
+  return new StructuralNode({
+    ref: node.ref,
+    status: node.status,
+    role: node.role,
+    name: node.name,
+    state: node.state,
+    cursorPointer: node.cursorPointer,
+    props: node.props,
+    children: [...children],
+    enrichment: node.enrichment,
+  });
 }
 
 function capturedParentRef(
