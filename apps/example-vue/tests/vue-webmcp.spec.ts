@@ -221,10 +221,17 @@ test("publishes the current page as ref-bearing ARIA state", async ({
   if (typeof snapshot !== "string") return;
 
   const archiveRefs = [
-    ...snapshot.matchAll(/button "Archive item-[12]"[^\n]*\[ref=(e\d+)\]/g),
+    ...snapshot.matchAll(/\[ref=(e\d+)\] button "Archive item-[12]"/g),
   ].map((match) => match[1]);
   expect(archiveRefs).toHaveLength(2);
   expect(new Set(archiveRefs).size).toBe(2);
+  expect(snapshot).toMatch(
+    /- \[ref=e\d+\] listitem:\n\s+- \/pom: ListPage\.items\[0\]/
+  );
+  expect(snapshot).toMatch(
+    /- \[ref=e\d+\] listitem:\n\s+- \/pom: ListPage\.items\[1\]/
+  );
+  expect(snapshot).not.toContain("/pom: ListPage.archiveDialog");
 });
 
 test("runs the same POM behavior through registered WebMCP tools", async ({

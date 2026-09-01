@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:da499ecabdf65e93f86add19fa6c006bdde5f360aa86a6c247cc878ffc3057e5
+# checksum: sha256:a7c35594efbc601cfc6a97dd0b60c77f96f09b943efb4b70c47bcf8a24f00dcb
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -262,10 +262,10 @@ w W-09 type=feature status=done cynefin=complicated t_created=2026-08-31T19:05:0
     | Two-axis review of 295ce2c found no spec or standards defects; coordinator verified exact Git playwright-core resolution and integrated as f102a3e.
     | PR #13 https://github.com/ayme-labs/ayme-webmcp/pull/13 is open; head 06f19d3. CI Check and Vue 3.2 compatibility both passed. Turbo test now passes PLAYWRIGHT_BROWSERS_PATH through the package boundary; the red-capable probe confirmed the path is preserved.
 
-w W-10 type=feature status=proposed cynefin=complicated t_created=2026-08-31T19:05:04Z t_updated=2026-08-31T19:05:48Z "Render root-only POM structural page state"
+w W-10 type=feature status=progress cynefin=complicated session=host:9f1a45ec71126599 session_at=2026-09-01T04:32:59Z t_created=2026-08-31T19:05:04Z t_updated=2026-09-01T05:09:28Z "Render root-only POM structural page state"
   goals: G-07
   fitness: G-07=+1
-  surface: packages/webmcp, apps/example-vue
+  surface: packages/webmcp, apps/example-vue, packages/structural-observation
   ac:
     | get_page_state returns the accepted compact StructuralTree format and annotates registered Page Object roots only.
     | Matched observable roots use real refs from the same capture, while only uniquely resolved eligible omitted roots receive synthetic s_* refs.
@@ -276,6 +276,8 @@ w W-10 type=feature status=proposed cynefin=complicated t_created=2026-08-31T19:
     | Composing the registry, browser capture, and StructuralTree at get_page_state can expose POM roots without changing live POM action dispatch.
   evidence_strategy:
     | Use golden contract tests and browser integration tests for correlation and exclusions, then run the repository check command and verify GitHub CI.
+  evidence:
+    | Implementation verification: structural-observation and webmcp unit, lint, and typecheck suites; example Vue Playwright E2E (6 passed); repository pnpm check (exit 0). W-10 remains progress because final PR/CI evidence is coordinator-owned.
 
 d D-01 status=superseded t_created=2026-08-27T08:43:08Z t_updated=2026-08-27T11:48:35Z "Use the five-workspace monorepo layout"
   context:

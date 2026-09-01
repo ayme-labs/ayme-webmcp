@@ -38,6 +38,8 @@
     "vitest": "^4.1.11"
   },
   "dependencies": {
+    "@ayme-dev/playwright-browser": "workspace:*",
+    "@ayme-dev/structural-observation": "workspace:*",
     "@mcp-b/webmcp-types": "^5.0.1"
   }
 }

@@ -7,14 +7,14 @@
 | Measure | Count | Composition |
 | --- | --- | --- |
 | C (content) | 15 | validated B 1 · answered Q 2 · accepted D 10 · active Discovery 2 |
-| V (uncertainty) | 0 | open Q 0 · pending B 0 · W below DoR 0 |
+| V (uncertainty) | 1 | open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 1 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 12 | 0 | C: validated B 1 · answered Q 2 · accepted D 7 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
+| A-02 | Page Object interoperability | 12 | 1 | C: validated B 1 · answered Q 2 · accepted D 7 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 1 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
 
@@ -43,7 +43,7 @@
 | W-07 | feature | Expose dual ARIA capture in Playwright fork | G-07 | complicated | ⊤ | done |  |
 | W-08 | feature | Add Playwright-free StructuralTree kernel | G-07 | clear | ⊤ | done |  |
 | W-09 | feature | Extract Playwright browser capture package | G-07 | complicated | ⊤ | done |  |
-| W-10 | feature | Render root-only POM structural page state | G-07 | complicated | ⊤ | proposed | ★ |
+| W-10 | feature | Render root-only POM structural page state | G-07 | complicated | ⊤ | progress | ★ |
 
 ## Decisions
 
@@ -102,7 +102,7 @@ graph TD
   W_07["W-07: Expose dual ARIA capture in Playwright fork"]:::done
   W_08["W-08: Add Playwright-free StructuralTree kernel"]:::done
   W_09["W-09: Extract Playwright browser capture package"]:::done
-  W_10["W-10: Render root-only POM structural page state"]:::feature,critical
+  W_10["W-10: Render root-only POM structural page state"]:::progress,critical
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision

@@ -15,3 +15,9 @@ export type {
 } from "./StructuralNode";
 export { StructuralTree } from "./StructuralTree";
 export { SyntheticAriaRefFactory } from "./SyntheticAriaRefFactory";
+export { renderCompactStructuralNodeForest } from "./CompactStructuralTreeRenderer";
+export type {
+  StructuralIdentity,
+  StructuralNodeForestSource,
+  StructuralNodeProperty,
+} from "./CompactStructuralTreeRenderer";

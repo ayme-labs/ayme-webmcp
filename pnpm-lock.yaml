@@ -187,6 +187,12 @@ importers:
 
   packages/webmcp:
     dependencies:
+      "@ayme-dev/playwright-browser":
+        specifier: workspace:*
+        version: link:../playwright-browser
+      "@ayme-dev/structural-observation":
+        specifier: workspace:*
+        version: link:../structural-observation
       "@mcp-b/webmcp-types":
         specifier: ^5.0.1
         version: 5.0.1
@@ -194,9 +200,6 @@ importers:
       "@ayme-dev/eslint-config":
         specifier: workspace:*
         version: link:../eslint-config
-      "@ayme-dev/playwright-browser":
-        specifier: workspace:*
-        version: link:../playwright-browser
       "@ayme-dev/typescript-config":
         specifier: workspace:*
         version: link:../typescript-config
