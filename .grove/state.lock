@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:1488e7a99236c8ff6b8de2099c0c4bbdaa507183978e7fab091af485f8db2240
+# checksum: sha256:fd24936ae04d7db71c489c0f40e59b9a99cf12fc965d54a00b75f6ff6759017e
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -32,7 +32,17 @@ g G-06 status=verified fitness_kind=count t_created=2026-08-31T15:47:50Z t_updat
   fitness_target: 1
   fitness_current: 1
 
-g G-07 status=verified fitness_kind=count t_created=2026-09-02T07:13:35Z t_updated=2026-09-02T07:59:00Z "POM barrel imports remain browser-loadable"
+g G-07 status=verified fitness_kind=count t_created=2026-08-31T19:05:01Z t_updated=2026-09-01T05:54:16Z "Assistant receives POM-aware structural page state"
+  area: A-02
+  fitness_target: 4
+  fitness_current: 4
+
+g G-08 status=verified fitness_kind=count t_created=2026-09-01T09:29:11Z t_updated=2026-09-01T14:05:35Z "Structural page state is review-ready"
+  area: A-02
+  fitness_target: 2
+  fitness_current: 3
+
+g G-09 status=verified fitness_kind=count t_created=2026-09-02T07:13:35Z t_updated=2026-09-02T07:59:00Z "POM barrel imports remain browser-loadable"
   area: A-02
   fitness_target: 1
   fitness_current: 1
@@ -207,9 +217,142 @@ w W-06 type=feature status=done cynefin=complicated t_created=2026-08-31T15:48:1
   plan:
     | Implement one red-green slice at a time at the registry activation seam, active-tool listing seam, WebMCP publication seam, and Vue example user-flow seam.
 
-w W-07 type=feature status=done cynefin=complicated t_created=2026-09-02T07:13:57Z t_updated=2026-09-02T07:59:00Z "Mitigate Playwright-tainted POM barrels"
+w W-07 type=feature status=done cynefin=complicated t_created=2026-08-31T19:05:01Z t_updated=2026-08-31T19:46:29Z "Expose dual ARIA capture in Playwright fork"
   goals: G-07
   fitness: G-07=+1
+  surface: external/playwright
+  ac:
+    | captureAriaSnapshot(root) returns distilledText, fullText, and refsByElement from one ARIA capture.
+    | The distilled and full text reuse the same literal Playwright refs, and the full text retains nodes omitted by the distilled view with refs on every represented node.
+    | refsByElement maps represented DOM elements to the refs emitted in that capture.
+    | Existing public ariaSnapshot behavior and tests remain unchanged.
+  hypothesis:
+    | A focused InjectedScript extension can expose the existing ARIA snapshot data without duplicating Playwright accessibility semantics.
+  evidence_strategy:
+    | Run focused Playwright ARIA snapshot tests proving the dual capture contract, then run the relevant existing snapshot suite and type checks.
+  evidence:
+    | Playwright v1.62.1 baseline 26a9e470; commit 36ca183773f5. Dual capture returns exactly distilledText, fullText, refsByElement from one generated ARIA tree. Focused test passed Chromium, Firefox, WebKit (3/3); changed-file ESLint and TypeScript passed; broader ARIA suites passed; full Chromium library 4,854 passed, 91 skipped, with one isolated pre-browser ECONNREFUSED unrelated to the diff. Coordinator standards/spec review found no functional or standards defect after two P3 hardening corrections.
+  plan:
+    | Port the experiment to the exact Playwright 1.62.1 baseline and commit the smallest internal extension.
+
+w W-08 type=feature status=done cynefin=clear t_created=2026-08-31T19:05:02Z t_updated=2026-08-31T19:48:56Z "Add Playwright-free StructuralTree kernel"
+  goals: G-07
+  fitness: G-07=+1
+  surface: packages/structural-observation, package.json, pnpm-lock.yaml, turbo.json
+  ac:
+    | The private JIT package @ayme-dev/structural-observation exports the proven StructuralNode, StructuralTree, StructuralTypes, and SyntheticAriaRefFactory kernel.
+    | The package depends on neither Playwright nor WebMCP and contains no capture, session, timeline, tracing, or framework integration code.
+    | Focused ported tests cover node identity, tree projection and reconciliation behavior, and synthetic ref allocation through the package interface.
+    | Package tests, workspace type checking, and the full repository test suite pass.
+  hypothesis:
+    | Copying the proven kernel from Ayme PR 553 preserves its behavior while giving WebMCP a small independent domain package.
+  evidence_strategy:
+    | Use red-green vertical slices at the package export seam, then record focused test, typecheck, full test, and commit evidence.
+  evidence:
+    | Baseline 500b1e8; commit b3199e24a3e8. Exact Ayme PR 553 kernel ported through @ayme-dev/structural-observation with only Playwright-free AriaNode/schema and CounterIdFactory import adaptations. Package tests 100/100, package lint/typecheck passed, workspace typecheck 5/5, full repository tests 8/8, boundary check 70 files clean, repository format clean, lockfile limited to the 22-line importer. Coordinator standards/spec reviews found no findings.
+  plan:
+    | Copy only the accepted kernel and focused tests from Ayme PR 553 at commit 85272c530bfaeb51bfbc117a53504d587ec0127a.
+
+w W-09 type=feature status=done cynefin=complicated t_created=2026-08-31T19:05:03Z t_updated=2026-09-01T04:27:24Z "Extract Playwright browser capture package"
+  goals: G-07
+  fitness: G-07=+1
+  surface: packages/playwright-browser, packages/webmcp/tsdown.config.ts, packages/webmcp/src/playwright-injected.d.ts, pnpm-lock.yaml
+  ac:
+    | The private JIT package @ayme-dev/playwright-browser owns Playwright InjectedScript extraction and the captureAriaSnapshot browser adapter.
+    | The package pins the reviewed Playwright fork commit and exposes only the internal dual-capture contract needed by WebMCP.
+    | packages/webmcp no longer owns the virtual InjectedScript extraction while existing raw get_page_state behavior remains unchanged.
+    | Focused package tests, workspace type checking, and the full repository test suite pass.
+  hypothesis:
+    | Moving the existing extraction behind one private browser package lets WebMCP consume the fork seam without owning Playwright internals.
+  evidence_strategy:
+    | Test the package capture contract and preserved WebMCP behavior, then record typecheck, full test, and commit evidence.
+  evidence:
+    | f102a3e; exact Git package 9f727f03584f863d551f3b969e4fc634b2ed6fd8; generated artifact 331823 bytes, sha256 03f14c3f208da57cb641f0797328af31dc6182167a0d340bd57846617230cc24.
+    | pnpm install --frozen-lockfile passed; playwright-browser 1/1; structural-observation 100/100; pnpm check passed including WebMCP 9/9 and example E2E 6/6; formatting and boundaries clean.
+    | Two-axis review of 295ce2c found no spec or standards defects; coordinator verified exact Git playwright-core resolution and integrated as f102a3e.
+    | PR #13 https://github.com/ayme-labs/ayme-webmcp/pull/13 is open; head 06f19d3. CI Check and Vue 3.2 compatibility both passed. Turbo test now passes PLAYWRIGHT_BROWSERS_PATH through the package boundary; the red-capable probe confirmed the path is preserved.
+
+w W-10 type=feature status=done cynefin=complicated t_created=2026-08-31T19:05:04Z t_updated=2026-09-01T05:54:16Z "Render root-only POM structural page state"
+  goals: G-07
+  fitness: G-07=+1
+  surface: packages/webmcp, apps/example-vue, packages/structural-observation
+  ac:
+    | get_page_state returns the accepted compact StructuralTree format and annotates registered Page Object roots only.
+    | Matched observable roots use real refs from the same capture, while only uniquely resolved eligible omitted roots receive synthetic s_* refs.
+    | Hidden, missing, ambiguous, and cross-frame roots remain absent from agent-visible structural state, and child-frame documents are not traversed.
+    | POM member notation, external ref actions, collection address replacement, and highlighting remain absent.
+    | The integration pull request is open and every required CI check passes.
+  hypothesis:
+    | Composing the registry, browser capture, and StructuralTree at get_page_state can expose POM roots without changing live POM action dispatch.
+  evidence_strategy:
+    | Use golden contract tests and browser integration tests for correlation and exclusions, then run the repository check command and verify GitHub CI.
+  evidence:
+    | Implementation verification: structural-observation and webmcp unit, lint, and typecheck suites; example Vue Playwright E2E (6 passed); repository pnpm check (exit 0). W-10 remains progress because final PR/CI evidence is coordinator-owned.
+    | Correction pass: public get_page_state tests prove omitted-root reparenting keeps a distilled descendant exactly once beneath its POM boundary and resolves candidates before capture; removed duplicate playwright-browser devDependency. WebMCP focused test, lint, and typecheck plus repository pnpm check all passed. W-10 remains progress pending coordinator PR/CI evidence.
+    | Ordering correction: public get_page_state contract proves an omitted POM boundary replaces its retained descendant at that sibling slot, preserving preceding and following sibling order. WebMCP focused test, lint, and typecheck plus repository pnpm check passed. W-10 remains progress pending coordinator PR/CI evidence.
+    | PR #11 https://github.com/ayme-labs/ayme-webmcp/pull/11 at head 1790bc54514a066a603c6300c4e9074eabd23286; required CI/Check and CI/Vue 3.2 compatibility checks passed.
+
+w W-11 type=feature status=done cynefin=complicated t_created=2026-09-01T09:29:12Z t_updated=2026-09-01T13:28:44Z "Project structural page state by policy"
+  goals: G-08
+  fitness: G-08=+1
+  surface: packages/structural-observation/src, packages/webmcp/src/pageState.ts, packages/webmcp/src/pageState.test.ts
+  ac:
+    | Structural tree construction assigns synthetic refs only to capture-anchored omitted POM root wrappers, while unrepresented leaf roots remain absent.
+    | Real POM roots are placed from full-tree ancestry and retained subtree order without a separate DOM visibility traversal.
+    | Output projection controls /pom rendering through the established Ayme structural policy, while rendering remains data-only.
+    | Focused tests cover retained real roots, anchored omitted roots, sibling order, and omission of unsupported roots.
+    | No browser capture interface, package manifest, lockfile, iframe support, or POM action addressing changes are introduced.
+  hypothesis:
+    | Separating tree construction from output projection will preserve capture identity while reusing the established Ayme decoration policy.
+  evidence_strategy:
+    | Run focused structural-observation and WebMCP page-state tests, then package lint and typecheck commands inside Devbox.
+  evidence:
+    | Commit cbddf125 (feat: project structural page state by policy). Green: structural-observation 105 tests, webmcp 17 tests, both packages lint 0 warnings + typecheck clean, Vue E2E page-state contract passed, Prettier clean, grove check ok.
+  plan:
+    | Port the minimum established Ayme projection policy, derive placement from the captured full tree, and stop if leaf synthetics require browser expansion.
+
+w W-12 type=bug status=done cynefin=clear t_created=2026-09-01T09:30:23Z t_updated=2026-09-01T14:33:13Z "Contain internal packages in packed WebMCP"
+  goals: G-08
+  fitness: G-08=+1
+  surface: packages/webmcp/package.json, packages/webmcp/tsdown.config.ts, packages/webmcp/src, packages/webmcp/test, pnpm-lock.yaml
+  ac:
+    | Both internal JIT packages are build-time dependencies of WebMCP and are always bundled into its distribution.
+    | The packed WebMCP artifact contains no unresolved imports of private internal packages.
+    | A packed-consumer test installs and imports the artifact from a temporary consumer project.
+    | No structural page-state behavior or public browser capture contract changes are introduced.
+  repro:
+    | Packing WebMCP currently permits private internal package imports to remain as consumer-visible runtime dependencies.
+  evidence_strategy:
+    | Commit a failing packed-consumer regression test before the fix, then record the green test, adjacent package checks, and both commit SHAs.
+  evidence:
+    | RED 3ea5be08 (test(webmcp): cover packed consumer boundary): packed-manifest exposed @ayme-dev/playwright-browser and @ayme-dev/structural-observation as consumer-visible dependencies; internal.mjs contained unresolved bare import of @ayme-dev/structural-observation; consumer npm install failed with 404.
+    | GREEN 2ae0e928 (fix(webmcp): bundle internal build packages): WebMCP 18 tests passed (17 unit + 1 packed-consumer with fresh build/pack/offline-install/import), lint 0 warnings, strict typecheck clean, build 508KB with no private package references in recursively scanned .mjs/.d.mts, Turbo boundaries valid, Prettier clean, git diff --check clean, lockfile 15-line minimal diff, grove check ok.
+    | CI-RACE 6ce7c9dc (fix(webmcp): isolate packed consumer build): CI run 33517827698 / job 99889229759 failed because packedConsumer.test.ts ran the normal WebMCP build while Turbo ran tests/builds in parallel; tsdown clean:true recreated the shared packages/webmcp/dist, transiently removing the chunk imported by dist/internal.mjs during the example app test. Correction builds into a unique temporary staging package via tsdown --out-dir, then packs that staging directory; packed-consumer regression retains manifest/artifact/offline-import coverage without mutating shared dist. Coordinator verified: WebMCP 18/18 tests, WebMCP lint, WebMCP typecheck, turbo run test --force 9/9 tasks 0 cached, boundaries over 82 files, git diff --check, grove check. Independent standards review: no actionable findings; shared packages/webmcp/dist verified byte-for-byte unchanged.
+    | CI-STORE 03aa306f (fix(webmcp): install packed consumer dependencies): CI run 33519310124 / job 99894220862. The first race fix succeeded — the previous missing shared-dist chunk failure did not recur. Fresh CI instead exposed the invalid offline-store assumption: legitimate public runtime dependency @mcp-b/webmcp-types@5.1.0 was absent from the empty pnpm store, causing ERR_PNPM_NO_OFFLINE_TARBALL. Minimal fix removes --offline from the isolated consumer install and corrects the contract comment. Explicit private dependency rejection in the manifest, recursive private-reference rejection in .mjs/.d.mts, local tarball packing, isolated consumer installation, and imports of both entry points remain intact. Verification: WebMCP 18/18 tests, lint, typecheck, Prettier, git diff --check, grove check; forced Turbo test 9/9 and 0 cached; coordinator also ran WebMCP 18/18 using a deliberately empty pnpm store. Independent spec review: no findings. Independent standards review: stale offline comment corrected; otherwise smallest correct fix.
+  plan:
+    | Move both internal packages to build-time dependencies, always bundle them, and verify the packed artifact in isolation.
+
+w W-13 type=feature status=done cynefin=complicated t_created=2026-09-02T08:44:52Z t_updated=2026-09-02T09:50:35Z "Correct structural page-state projection"
+  goals: G-08
+  fitness: G-08=+1
+  surface: packages/structural-observation/src, packages/webmcp/src, apps/example-vue/tests/vue-webmcp.spec.ts
+  ac:
+    | Captured synthetic POM siblings retain DOM order for either registration order.
+    | Synthetic wrappers render only their structural ref and children, without wrapper role or text.
+    | Duplicate identical POM bindings render once while distinct labels remain deterministic.
+    | get_page_state describes top-level structural state, root POM decoration, real refs, and synthetic refs.
+  hypothesis:
+    | Keeping registration observation independent while fixing the shared structural projection will correct the output with minimal churn.
+  evidence_strategy:
+    | Focused StructuralTree and get_page_state tests, package typechecks, full repository test suite, grove check, and two-axis review against 285a5dec843ff7fef7f5904378880128112ad452.
+  evidence:
+    | Autosquashed implementation deac003195616fea045374fab3b115d478f42e78. Post-autosquash pnpm run check passed: build, lint, typecheck, all package tests including 105 structural-observation tests and 22 WebMCP tests, six Playwright end-to-end tests, Prettier, and Turbo boundaries over 82 files. Independent fixed-point standards and spec reviews against 285a5dec843ff7fef7f5904378880128112ad452 found no actionable findings. Ponytail retained the direct synthetic-ref prefix check as the smallest current solution.
+  plan:
+    | Use vertical tests at the public placement and tool execution seams, then apply the smallest shared projection fixes.
+
+w W-14 type=feature status=done cynefin=complicated t_created=2026-09-02T07:13:57Z t_updated=2026-09-02T07:59:00Z "Mitigate Playwright-tainted POM barrels"
+  goals: G-09
+  fitness: G-09=+1
   surface: packages/unplugin-webmcp/src/index.ts, packages/unplugin-webmcp/src/rewritePomImports.ts, packages/unplugin-webmcp/src/rewritePomImports.test.ts, apps/example-vue/playwright/pom/ListPage.ts, apps/example-vue/playwright/pom/components.ts, apps/example-vue/tests/vue-webmcp.spec.ts
   ac:
     | A browser-loaded POM importing a selected symbol through a local barrel loads in Vite when an unused branch imports @playwright/test at runtime.
@@ -276,7 +419,7 @@ d D-03 status=accepted t_created=2026-08-27T08:43:12Z t_updated=2026-08-27T08:43
   validation:
     | The root test command runs package tasks, and the real example application test passes.
 
-d D-04 status=accepted t_created=2026-08-27T08:43:14Z t_updated=2026-08-27T08:43:22Z "Enforce dependency direction with Turbo Boundaries"
+d D-04 status=accepted t_created=2026-08-27T08:43:14Z t_updated=2026-09-01T09:30:33Z "Enforce dependency direction with Turbo Boundaries"
   context:
     | The monorepo needs lightweight enforcement of the agreed dependency direction.
   options:
@@ -319,11 +462,39 @@ d D-09 status=accepted t_created=2026-08-31T15:47:55Z t_updated=2026-08-31T15:48
   decision:
     | See ADR-0009: docs/adr/0009-let-ayme-own-live-page-object-observation.md.
 
+d D-10 status=accepted t_created=2026-08-31T18:36:54Z t_updated=2026-09-02T09:50:35Z "Use capture-scoped Structural Refs"
+  decision:
+    | See ADR-0010: docs/adr/0010-use-capture-scoped-structural-refs.md.
+
+d D-11 status=accepted t_created=2026-08-31T18:37:10Z t_updated=2026-09-02T09:50:35Z "Capture only the top-level document"
+  decision:
+    | See ADR-0011: docs/adr/0011-capture-only-the-top-level-document.md.
+
 q Q-01 status=deferred cynefin=complicated t_created=2026-08-27T12:43:03Z t_updated=2026-08-27T14:13:29Z "Choose the public activation interface"
   why:
     | The spike useAymePage function combines Vue lifecycle management with framework-neutral runtime behavior. W-02 separates those responsibilities but intentionally does not choose the final public interface.
   exit:
     | Compare an explicit runtime object with a direct activation function against the packaged implementation, then agree on naming, disposal, and whether one activation may manage several Page Objects.
+
+q Q-02 status=answered cynefin=complicated t_created=2026-08-31T19:05:06Z t_updated=2026-09-01T04:27:24Z "Choose the compact structural output contract"
+  why:
+    | The first integration needs one accepted representative output before its renderer and golden test are implemented.
+  hypothesis:
+    | Use the Ayme experiment's ref-first tree syntax and add /pom only on explicit registered roots.
+  exit:
+    | Record the accepted literal example and map it to a golden integration test.
+  outcome:
+    | Render ref-first compact StructuralTree output. The first literal contract is: - [ref=e1] listitem:; child - /pom: ListPage.items[0]; child - [ref=e2] button "Archive item-1". Emit /pom only for explicit nested Page Object roots.
+
+q Q-03 status=answered cynefin=complicated t_created=2026-08-31T19:05:06Z t_updated=2026-09-01T04:27:25Z "Choose multiple POM root match behavior"
+  why:
+    | PR 9 decides live tool availability by root count but does not decide how several matched elements map into structural state.
+  hypothesis:
+    | Decorate every matched occurrence with a real Playwright ref and synthesize a ref only when one eligible omitted root resolves uniquely.
+  exit:
+    | Record accepted behavior for zero, one, and multiple matches with observable and omitted roots.
+  outcome:
+    | Resolve collection members to their existing indexed component paths. For every indexed or singular root: zero matches are absent, exactly one observable match is decorated, and multiple matches are ambiguous and absent. A uniquely resolved eligible ARIA-omitted root may receive a synthetic ref.
 
 b B-01 status=validated cynefin=complicated t_created=2026-08-31T13:49:50Z t_updated=2026-08-31T13:49:50Z "Vue 3.2.0 supports lifecycle integration"
   vm:
@@ -345,6 +516,12 @@ y Y-02 status=active t_created=2026-08-27T14:40:25Z t_updated=2026-08-27T14:40:2
   invariant:
     | A framework integration can own Page Object activation and disposal for its lifecycle while the core runtime remains framework-neutral.
 
+y Y-03 status=active t_created=2026-09-02T09:50:35Z t_updated=2026-09-02T09:50:35Z "Synthetic roots are observation-only"
+  tags: Structural Page State, Structural Ref, Page Object Root
+  surface: packages/structural-observation/src, packages/webmcp/src
+  invariant:
+    | Structural Page State keeps a captured top-level document's observable hierarchy separate from Page Object decoration. A synthetic Structural Ref identifies a Page Object Root omitted from the distilled tree, carries page-state identity and Page Object association only, and must not represent ARIA semantics or Playwright actionability.
+
 a A-01 status=present t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:42:21Z "Repository foundation"
   surface: apps, packages, package.json, pnpm-workspace.yaml, pnpm-lock.yaml, turbo.json, devbox.json, devbox.lock, .gitignore
 
@@ -354,6 +531,8 @@ e B-01 targets W-05 t_created=2026-08-31T13:49:50Z
 e D-05 supersedes D-01 t_created=2026-08-27T11:48:25Z
 e Q-01 asks D-06 t_created=2026-08-27T12:43:04Z
 e Q-01 asks W-03 t_created=2026-08-27T14:13:29Z
+e Q-02 asks W-10 t_created=2026-08-31T19:05:06Z
+e Q-03 asks W-10 t_created=2026-08-31T19:05:06Z
 e W-01 implements D-01 t_created=2026-08-27T08:43:22Z
 e W-01 implements D-02 t_created=2026-08-27T08:43:22Z
 e W-01 implements D-03 t_created=2026-08-27T08:43:22Z
@@ -364,4 +543,20 @@ e W-02 implements D-07 t_created=2026-08-27T12:43:19Z
 e W-02 produces Y-01 t_created=2026-08-27T13:24:26Z
 e W-03 implements D-08 t_created=2026-08-27T14:13:29Z
 e W-06 implements D-09 t_created=2026-08-31T15:48:44Z
+e W-07 blocks W-09 t_created=2026-08-31T19:05:07Z
+e W-07 implements D-10 t_created=2026-08-31T19:05:02Z
+e W-08 blocks W-10 t_created=2026-08-31T19:05:07Z
+e W-08 implements D-10 t_created=2026-08-31T19:05:03Z
+e W-09 blocks W-10 t_created=2026-08-31T19:05:07Z
+e W-09 implements D-10 t_created=2026-08-31T19:05:04Z
+e W-10 implements D-10 t_created=2026-08-31T19:05:06Z
+e W-10 implements D-11 t_created=2026-08-31T19:05:06Z
+e W-11 implements D-10 t_created=2026-09-01T09:30:11Z
+e W-11 implements D-11 t_created=2026-09-01T09:30:12Z
+e W-12 implements D-04 t_created=2026-09-01T09:30:33Z
+e W-13 implements D-10 t_created=2026-09-02T08:44:53Z
+e W-13 implements D-11 t_created=2026-09-02T08:44:53Z
+e W-13 produces Y-03 t_created=2026-09-02T09:50:35Z
 e Y-02 distills D-08 t_created=2026-08-27T14:40:25Z
+e Y-03 distills D-10 t_created=2026-09-02T09:50:35Z
+e Y-03 distills D-11 t_created=2026-09-02T09:50:35Z
