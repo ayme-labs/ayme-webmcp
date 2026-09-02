@@ -18,3 +18,12 @@ A meaningful operation provided by a Page Object.
 
 **Generated WebMCP Tool**:
 A WebMCP Tool generated from a Page Object Action selected for WebMCP exposure.
+
+**Structural Page State**:
+A model-facing observation of the current page that combines its observable structure with associations to Page Objects.
+
+**Structural Ref**:
+A capture-scoped identity for a node in Structural Page State. It is stable only within that capture.
+
+**Page Object Root**:
+The page element that anchors one Page Object instance in the observed structure.
