@@ -1,0 +1,70 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`get_page_state > coalesces two labels on the same omitted element into one synthetic ref 1`] = `
+"- e1:
+  - s_1:
+    - /pom: ["PageA.root","PageB.root"]
+    - e2 button "Child""
+`;
+
+exports[`get_page_state > decorates a retained real POM root and omits unrepresented leaf and foreign roots 1`] = `
+"- e1:
+  - e2 ListPage.captured "Captured omitted""
+`;
+
+exports[`get_page_state > deduplicates identical labels on one omitted element 1`] = `
+"- e1:
+  - s_1 Page.root:
+    - e2 button "Child""
+`;
+
+exports[`get_page_state > keeps sibling synthetic roots in full-tree order when registered first-first 1`] = `
+"- e1:
+  - s_1 First.root:
+    - e2 button "First"
+  - s_2 Second.root:
+    - e3 button "Second""
+`;
+
+exports[`get_page_state > keeps sibling synthetic roots in full-tree order when registered second-first 1`] = `
+"- e1:
+  - s_2 First.root:
+    - e2 button "First"
+  - s_1 Second.root:
+    - e3 button "Second""
+`;
+
+exports[`get_page_state > mints a synthetic ref for an anchored omitted root with a retained descendant 1`] = `
+"- e1:
+  - s_1 ListPage.synthetic:
+    - e3 button "Nested child""
+`;
+
+exports[`get_page_state > nests outer and inner ref-less roots even when registered inner-first with an unrelated root between them 1`] = `
+"- e1:
+  - s_2 Outer.root:
+    - s_3 Inner.root:
+      - e2 button "Leaf"
+  - s_1 Unrelated.root:
+    - e3 button "Other""
+`;
+
+exports[`get_page_state > reparents an omitted POM root without duplicating a distilled descendant 1`] = `
+"- e1:
+  - e2 ListPage.item:
+    - e3 button "Nested child""
+`;
+
+exports[`get_page_state > resolves root candidates before capture and correlates only those candidates 1`] = `
+"- e1:
+  - e2 ListPage.preCapture "Pre-capture"
+  - e3 button "Post-capture""
+`;
+
+exports[`get_page_state > restores an omitted POM root at its distilled descendant's position 1`] = `
+"- e1:
+  - e2 button "Preceding"
+  - e3 ListPage.item:
+    - e4 button "Nested child"
+  - e5 button "Following""
+`;

@@ -9,3 +9,4 @@ node_modules/
 .turbo/
 dist/
 test-results/
+apps/example-vue/tests/vue-webmcp.spec.ts-snapshots/
