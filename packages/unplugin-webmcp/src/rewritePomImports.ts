@@ -2,9 +2,7 @@ import path from "node:path";
 
 import ts from "typescript";
 
-type RewriteOptions = {
-  tsconfigPath?: string;
-};
+import { createPomProgram, type PomCompilerOptions } from "./pomProgram";
 
 type Replacement = {
   start: number;
@@ -25,7 +23,7 @@ type ResolvedImport = {
 export function rewritePomImports(
   code: string,
   fileName: string,
-  options: RewriteOptions = {}
+  options: PomCompilerOptions = {}
 ) {
   const sourceFile = ts.createSourceFile(
     fileName,
@@ -40,7 +38,9 @@ export function rewritePomImports(
   );
   if (candidates.length === 0) return code;
 
-  const program = programFor(path.resolve(fileName), options);
+  const program = createPomProgram(path.resolve(fileName), options, {
+    fallbackToUnconfigured: true,
+  });
   const checker = program.getTypeChecker();
   const replacements = candidates.flatMap((declaration) => {
     const replacement = replacementFor(
@@ -121,19 +121,18 @@ function replacementFor(
       ({ element, definingFile, importedName }) =>
         !element.isTypeOnly &&
         definingFile !== undefined &&
-        hasPlaywrightRuntimeEdgeForExport(
+        hasPlaywrightRuntimeEdge(
           moduleSourceFile,
-          importedName,
           program,
           checker,
-          new Set()
+          importedName
         )
     )
   ) {
     return undefined;
   }
 
-  if (!hasPlaywrightRuntimeEdge(moduleSourceFile, program, new Set())) {
+  if (!hasPlaywrightRuntimeEdge(moduleSourceFile, program, checker)) {
     return undefined;
   }
 
@@ -207,99 +206,6 @@ function aliasedSymbol(symbol: ts.Symbol, checker: ts.TypeChecker) {
     : symbol;
 }
 
-function hasPlaywrightRuntimeEdgeForExport(
-  sourceFile: ts.SourceFile,
-  exportName: string,
-  program: ts.Program,
-  checker: ts.TypeChecker,
-  visited: Set<string>
-): boolean {
-  const key = `${path.resolve(sourceFile.fileName)}:${exportName}`;
-  if (visited.has(key)) return false;
-  visited.add(key);
-
-  for (const statement of sourceFile.statements) {
-    if (ts.isImportDeclaration(statement)) {
-      if (
-        isPlaywrightSpecifier(statement.moduleSpecifier) &&
-        importDeclarationIsRuntime(statement)
-      ) {
-        if (!statement.importClause) return true;
-        if (
-          importDeclarationUsesExport(
-            sourceFile,
-            exportName,
-            statement,
-            checker
-          )
-        )
-          return true;
-      }
-      if (
-        isRelativeSpecifier(statement.moduleSpecifier) &&
-        importDeclarationIsRuntime(statement)
-      ) {
-        const importedFile = moduleSourceFile(
-          statement.moduleSpecifier.text,
-          sourceFile.fileName,
-          program
-        );
-        if (!statement.importClause && importedFile) {
-          if (hasPlaywrightRuntimeEdge(importedFile, program, new Set()))
-            return true;
-        } else if (
-          importedFile &&
-          importDeclarationUsesExport(
-            sourceFile,
-            exportName,
-            statement,
-            checker,
-            importedFile,
-            program
-          )
-        ) {
-          return true;
-        }
-      }
-    }
-
-    if (ts.isExportDeclaration(statement) && statement.moduleSpecifier) {
-      if (
-        isPlaywrightSpecifier(statement.moduleSpecifier) &&
-        exportDeclarationExportsName(statement, exportName)
-      ) {
-        return true;
-      }
-      if (
-        isRelativeSpecifier(statement.moduleSpecifier) &&
-        exportDeclarationIsRuntime(statement)
-      ) {
-        const targetName = exportDeclarationExportsName(statement, exportName);
-        const exportedFile = moduleSourceFile(
-          statement.moduleSpecifier.text,
-          sourceFile.fileName,
-          program
-        );
-        if (
-          targetName &&
-          exportedFile &&
-          hasPlaywrightRuntimeEdgeForExport(
-            exportedFile,
-            targetName,
-            program,
-            checker,
-            visited
-          )
-        ) {
-          return true;
-        }
-      }
-    }
-  }
-
-  return false;
-}
-
 function importDeclarationUsesExport(
   sourceFile: ts.SourceFile,
   exportName: string,
@@ -323,28 +229,24 @@ function importDeclarationUsesExport(
     const binding = clause?.name
       ? checker.getSymbolAtLocation(clause.name)
       : undefined;
-    const tainted =
-      !importedFile || !program
-        ? true
-        : hasPlaywrightRuntimeEdge(importedFile, program, new Set());
-    return binding && tainted
-      ? declarations.some((declaration) =>
-          declarationReferences(declaration, binding, checker)
-        )
-      : false;
+    return taintedImportReferencesExport(
+      declarations,
+      binding,
+      importedFile,
+      program,
+      checker
+    );
   }
 
   if (ts.isNamespaceImport(bindings)) {
     const binding = checker.getSymbolAtLocation(bindings.name);
-    const tainted =
-      !importedFile || !program
-        ? true
-        : hasPlaywrightRuntimeEdge(importedFile, program, new Set());
-    return binding && tainted
-      ? declarations.some((declaration) =>
-          declarationReferences(declaration, binding, checker)
-        )
-      : false;
+    return taintedImportReferencesExport(
+      declarations,
+      binding,
+      importedFile,
+      program,
+      checker
+    );
   }
 
   return bindings.elements.some((element) => {
@@ -352,21 +254,36 @@ function importDeclarationUsesExport(
     const binding = checker.getSymbolAtLocation(element.name);
     if (!binding) return false;
     const importedName = element.propertyName?.text ?? element.name.text;
-    const tainted =
-      !importedFile || !program
-        ? true
-        : hasPlaywrightRuntimeEdgeForExport(
-            importedFile,
-            importedName,
-            program,
-            checker,
-            new Set()
-          );
-    const references = declarations.some((declaration) =>
-      declarationReferences(declaration, binding, checker)
+    return taintedImportReferencesExport(
+      declarations,
+      binding,
+      importedFile,
+      program,
+      checker,
+      importedName
     );
-    return tainted && references;
   });
+}
+
+function taintedImportReferencesExport(
+  declarations: readonly ts.Declaration[],
+  binding: ts.Symbol | undefined,
+  importedFile: ts.SourceFile | undefined,
+  program: ts.Program | undefined,
+  checker: ts.TypeChecker,
+  importedName?: string
+) {
+  if (!binding) return false;
+  const tainted =
+    !importedFile || !program
+      ? true
+      : hasPlaywrightRuntimeEdge(importedFile, program, checker, importedName);
+  return (
+    tainted &&
+    declarations.some((declaration) =>
+      declarationReferences(declaration, binding, checker)
+    )
+  );
 }
 
 function declarationReferences(
@@ -438,11 +355,14 @@ function exportDeclarationExportsName(
 function hasPlaywrightRuntimeEdge(
   sourceFile: ts.SourceFile,
   program: ts.Program,
-  visited: Set<string>
+  checker: ts.TypeChecker,
+  exportName?: string,
+  visited = new Set<string>()
 ): boolean {
   const fileName = path.resolve(sourceFile.fileName);
-  if (visited.has(fileName)) return false;
-  visited.add(fileName);
+  const key = exportName === undefined ? fileName : `${fileName}:${exportName}`;
+  if (visited.has(key)) return false;
+  visited.add(key);
 
   for (const statement of sourceFile.statements) {
     if (ts.isImportDeclaration(statement)) {
@@ -450,7 +370,18 @@ function hasPlaywrightRuntimeEdge(
         isPlaywrightSpecifier(statement.moduleSpecifier) &&
         importDeclarationIsRuntime(statement)
       ) {
-        return true;
+        if (
+          exportName === undefined ||
+          !statement.importClause ||
+          importDeclarationUsesExport(
+            sourceFile,
+            exportName,
+            statement,
+            checker
+          )
+        ) {
+          return true;
+        }
       }
       if (
         isRelativeSpecifier(statement.moduleSpecifier) &&
@@ -461,11 +392,33 @@ function hasPlaywrightRuntimeEdge(
           fileName,
           program
         );
-        if (
-          importedFile &&
-          hasPlaywrightRuntimeEdge(importedFile, program, visited)
-        )
+        if (!importedFile) continue;
+        if (exportName === undefined) {
+          if (
+            hasPlaywrightRuntimeEdge(
+              importedFile,
+              program,
+              checker,
+              undefined,
+              visited
+            )
+          )
+            return true;
+        } else if (!statement.importClause) {
+          if (hasPlaywrightRuntimeEdge(importedFile, program, checker))
+            return true;
+        } else if (
+          importDeclarationUsesExport(
+            sourceFile,
+            exportName,
+            statement,
+            checker,
+            importedFile,
+            program
+          )
+        ) {
           return true;
+        }
       }
     }
 
@@ -473,7 +426,9 @@ function hasPlaywrightRuntimeEdge(
       if (
         statement.moduleSpecifier &&
         isPlaywrightSpecifier(statement.moduleSpecifier) &&
-        exportDeclarationIsRuntime(statement)
+        exportDeclarationIsRuntime(statement) &&
+        (exportName === undefined ||
+          exportDeclarationExportsName(statement, exportName) !== undefined)
       ) {
         return true;
       }
@@ -487,11 +442,35 @@ function hasPlaywrightRuntimeEdge(
           fileName,
           program
         );
-        if (
-          exportedFile &&
-          hasPlaywrightRuntimeEdge(exportedFile, program, visited)
-        )
-          return true;
+        if (!exportedFile) continue;
+        if (exportName === undefined) {
+          if (
+            hasPlaywrightRuntimeEdge(
+              exportedFile,
+              program,
+              checker,
+              undefined,
+              visited
+            )
+          )
+            return true;
+        } else {
+          const targetName = exportDeclarationExportsName(
+            statement,
+            exportName
+          );
+          if (
+            targetName &&
+            hasPlaywrightRuntimeEdge(
+              exportedFile,
+              program,
+              checker,
+              targetName,
+              visited
+            )
+          )
+            return true;
+        }
       }
     }
   }
@@ -544,29 +523,6 @@ function resolveModuleFileName(
     ts.sys
   ).resolvedModule;
   return resolved ? path.resolve(resolved.resolvedFileName) : undefined;
-}
-
-function programFor(fileName: string, options: RewriteOptions) {
-  const configPath = options.tsconfigPath
-    ? path.resolve(options.tsconfigPath)
-    : ts.findConfigFile(
-        path.dirname(fileName),
-        ts.sys.fileExists,
-        "tsconfig.json"
-      );
-  if (!configPath) return ts.createProgram([fileName], {});
-
-  const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
-  if (configFile.error) return ts.createProgram([fileName], {});
-  const config = ts.parseJsonConfigFileContent(
-    configFile.config,
-    ts.sys,
-    path.dirname(configPath)
-  );
-  return ts.createProgram({
-    rootNames: [...new Set([...config.fileNames, fileName])],
-    options: { ...config.options, noEmit: true },
-  });
 }
 
 function isRelativeSpecifier(node: ts.Expression): node is ts.StringLiteral {
