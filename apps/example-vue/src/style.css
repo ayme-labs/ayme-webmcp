@@ -161,6 +161,41 @@ button:disabled {
   color: #526071;
 }
 
+.panel-tabs {
+  border-bottom: 1px solid #d6dde8;
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.panel-tab {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0.45rem 0.45rem 0 0;
+  color: #667085;
+  font-weight: 750;
+  margin-bottom: -1px;
+  padding: 0.65rem 0.8rem;
+}
+
+.panel-tab:hover:not(:disabled) {
+  background: #f7f9fc;
+  border-color: transparent;
+  color: #234c99;
+}
+
+.panel-tab[aria-selected="true"] {
+  background: #f7f9fc;
+  border-bottom-color: #315fb7;
+  color: #234c99;
+}
+
+.tab-panel {
+  display: grid;
+  gap: 1rem;
+}
+
 .add-item-form {
   background: #f7f9fc;
   border: 1px solid #e1e7f0;
@@ -695,6 +730,23 @@ pre {
   padding: 0.75rem;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.page-state-output {
+  max-height: 34rem;
+  white-space: pre;
+  word-break: normal;
+}
+
+.page-state-output code {
+  color: inherit;
+  font-size: inherit;
+}
+
+.capture-meta {
+  color: #8792a2;
+  font-size: 0.7rem;
+  margin: 0.55rem 0 0;
 }
 
 @media (max-width: 52rem) {

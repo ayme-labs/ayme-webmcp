@@ -4,6 +4,7 @@ import type { RegisteredPom } from "@ayme-dev/webmcp/internal";
 import {
   createBrowserPage,
   configureAymeRuntime,
+  capturePageState,
   listRegisteredPoms,
   probeRegisteredPomMembers,
   subscribeToRegisteredPoms,
@@ -17,6 +18,10 @@ export function useAymeExperiment() {
   const traceRevision = ref(0);
   const webMcpStatus = ref("Waiting to register WebMCP tools…");
   const registeredPoms = ref<RegisteredPom[]>([]);
+  const pageState = ref<string>();
+  const pageStateCapturedAt = ref<string>();
+  const pageStateError = ref<string>();
+  const pageStateLoading = ref(false);
 
   const browserRuntime = createBrowserPage({
     onTrace() {
@@ -39,13 +44,41 @@ export function useAymeExperiment() {
 
   const refreshPomMembers = () => probeRegisteredPomMembers();
 
+  let pageStateRequestId = 0;
   let unsubscribeFromRegisteredPoms: (() => void) | undefined;
   let disposeWebMcpTools: (() => void) | undefined;
   let unmounted = false;
 
+  const refreshPageState = async () => {
+    const requestId = ++pageStateRequestId;
+    pageStateLoading.value = true;
+    pageStateError.value = undefined;
+
+    try {
+      const demoRoot = document.querySelector(
+        '[aria-label="Demo application"]'
+      );
+      const snapshot = await capturePageState(demoRoot ?? document.body);
+      if (unmounted || requestId !== pageStateRequestId) return;
+      pageState.value = snapshot;
+      pageStateCapturedAt.value = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+    } catch (error) {
+      if (unmounted || requestId !== pageStateRequestId) return;
+      pageStateError.value = errorMessage(error);
+    } finally {
+      if (!unmounted && requestId === pageStateRequestId)
+        pageStateLoading.value = false;
+    }
+  };
+
   onMounted(async () => {
     const updateRegisteredPoms = () => {
       registeredPoms.value = listRegisteredPoms();
+      void refreshPageState();
     };
     updateRegisteredPoms();
     unsubscribeFromRegisteredPoms =
@@ -82,6 +115,11 @@ export function useAymeExperiment() {
   });
 
   return {
+    pageState,
+    pageStateCapturedAt,
+    pageStateError,
+    pageStateLoading,
+    refreshPageState,
     registeredPoms,
     refreshPomMembers,
     resetTrace: browserRuntime.resetTrace,

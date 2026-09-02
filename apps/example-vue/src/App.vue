@@ -3,8 +3,18 @@ import { useAymeExperiment } from "./ayme/useAymeExperiment";
 import DebugPanel from "./debug/DebugPanel.vue";
 import ListDemo from "./demo/ListDemo.vue";
 
-const { refreshPomMembers, registeredPoms, resetTrace, trace, webMcpStatus } =
-  useAymeExperiment();
+const {
+  pageState,
+  pageStateCapturedAt,
+  pageStateError,
+  pageStateLoading,
+  refreshPageState,
+  refreshPomMembers,
+  registeredPoms,
+  resetTrace,
+  trace,
+  webMcpStatus,
+} = useAymeExperiment();
 </script>
 
 <template>
@@ -15,7 +25,8 @@ const { refreshPomMembers, registeredPoms, resetTrace, trace, webMcpStatus } =
         <h1>List app + WebMCP inspector</h1>
         <p class="page-intro">
           Operate the list directly on the left, or invoke the same generated
-          POM tools from the debug console on the right.
+          POM tools from the debug console on the right. Switch tabs to inspect
+          the app model or the captured page-state YAML.
         </p>
       </div>
       <span class="runtime-badge">DOM-backed browser runtime</span>
@@ -24,6 +35,11 @@ const { refreshPomMembers, registeredPoms, resetTrace, trace, webMcpStatus } =
     <main class="app-layout">
       <ListDemo />
       <DebugPanel
+        :page-state="pageState"
+        :page-state-captured-at="pageStateCapturedAt"
+        :page-state-error="pageStateError"
+        :page-state-loading="pageStateLoading"
+        :refresh-page-state="refreshPageState"
         :registered-poms="registeredPoms"
         :refresh-pom-members="refreshPomMembers"
         :reset-trace="resetTrace"
