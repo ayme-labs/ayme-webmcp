@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:5741ea39e534b2e0fd893972be1269b525634807b41cd493927aa0725fb6a1ab
+# checksum: sha256:1488e7a99236c8ff6b8de2099c0c4bbdaa507183978e7fab091af485f8db2240
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -32,9 +32,10 @@ g G-06 status=verified fitness_kind=count t_created=2026-08-31T15:47:50Z t_updat
   fitness_target: 1
   fitness_current: 1
 
-g G-07 status=unverified fitness_kind=count t_created=2026-09-02T07:13:35Z t_updated=2026-09-02T07:13:35Z "POM barrel imports remain browser-loadable"
+g G-07 status=verified fitness_kind=count t_created=2026-09-02T07:13:35Z t_updated=2026-09-02T07:59:00Z "POM barrel imports remain browser-loadable"
   area: A-02
   fitness_target: 1
+  fitness_current: 1
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -206,10 +207,10 @@ w W-06 type=feature status=done cynefin=complicated t_created=2026-08-31T15:48:1
   plan:
     | Implement one red-green slice at a time at the registry activation seam, active-tool listing seam, WebMCP publication seam, and Vue example user-flow seam.
 
-w W-07 type=feature status=progress cynefin=complicated session=host:a60c42f30a4d9366 session_at=2026-09-02T07:14:18Z t_created=2026-09-02T07:13:57Z t_updated=2026-09-02T07:14:18Z "Mitigate Playwright-tainted POM barrels"
+w W-07 type=feature status=done cynefin=complicated t_created=2026-09-02T07:13:57Z t_updated=2026-09-02T07:59:00Z "Mitigate Playwright-tainted POM barrels"
   goals: G-07
   fitness: G-07=+1
-  surface: packages/unplugin-webmcp/src/index.ts, packages/unplugin-webmcp/src/rewritePomImports.ts, packages/unplugin-webmcp/src/rewritePomImports.test.ts, apps/example-vue/src/ayme/barrelPom.ts, apps/example-vue/tests/vue-webmcp.spec.ts
+  surface: packages/unplugin-webmcp/src/index.ts, packages/unplugin-webmcp/src/rewritePomImports.ts, packages/unplugin-webmcp/src/rewritePomImports.test.ts, apps/example-vue/playwright/pom/ListPage.ts, apps/example-vue/playwright/pom/components.ts, apps/example-vue/tests/vue-webmcp.spec.ts
   ac:
     | A browser-loaded POM importing a selected symbol through a local barrel loads in Vite when an unused branch imports @playwright/test at runtime.
     | The same mitigation covers an unused runtime playwright branch and leaves type-only Playwright branches browser-safe without rewriting them.
@@ -220,6 +221,10 @@ w W-07 type=feature status=progress cynefin=complicated session=host:a60c42f30a4
   evidence_strategy:
     | Run focused rewrite behavior tests and the real Vite browser regression for the issue 15 barrel shape.
     | Run the unplugin package build, unit tests, lint, typecheck, repository aggregate checks, and grove check.
+  evidence:
+    | red: the example-vue Vite barrel reproduction failed before the rewrite; dependency optimization reached @playwright/test and failed to load the browser graph.
+    | green: rewritePomImports Vitest 13/13; unplugin package build, lint, typecheck, and tests pass; example-vue build, lint, typecheck, unit tests 2/2, and Playwright e2e 6/6 pass. commit 00557735.
+    | aggregate: pnpm run check passed, including format and turbo boundaries. commit 00557735.
   plan:
     | Implement one red-green slice at the Vite browser-loading seam, then cover source rewrite behavior with focused tests.
   why:

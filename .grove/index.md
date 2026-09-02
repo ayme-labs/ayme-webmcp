@@ -7,14 +7,14 @@
 | Measure | Count | Composition |
 | --- | --- | --- |
 | C (content) | 11 | validated B 1 · answered Q 0 · accepted D 8 · active Discovery 2 |
-| V (uncertainty) | 1 | open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 1 |
+| V (uncertainty) | 0 | open Q 0 · pending B 0 · W below DoR 0 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 8 | 1 | C: validated B 1 · answered Q 0 · accepted D 5 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 1 |
+| A-02 | Page Object interoperability | 8 | 0 | C: validated B 1 · answered Q 0 · accepted D 5 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
 
@@ -28,7 +28,7 @@
 | G-04 | Assistant can inspect the current page through ref-bearing state | count; current=1 target=1 | verified |
 | G-05 | Vue package supports Vue 3.2 consumers | boolean; current=true | verified |
 | G-06 | Generated WebMCP Tools track live Page Objects | count; current=1 target=1 | verified |
-| G-07 | POM barrel imports remain browser-loadable | count; current= target=1 | unverified |
+| G-07 | POM barrel imports remain browser-loadable | count; current=1 target=1 | verified |
 
 ## Work items
 
@@ -40,7 +40,7 @@
 | W-04 | feature | Expose raw Playwright ARIA state through get_page_state | G-04 | complicated | ⊤ | done |  |
 | W-05 | feature | Enforce the Vue 3.2 support floor | G-05 | clear | ⊤ | done |  |
 | W-06 | feature | Synchronize tools with live Page Objects | G-06 | complicated | ⊤ | done |  |
-| W-07 | feature | Mitigate Playwright-tainted POM barrels | G-07 | complicated | ⊤ | progress | ★ |
+| W-07 | feature | Mitigate Playwright-tainted POM barrels | G-07 | complicated | ⊤ | done |  |
 
 ## Decisions
 
@@ -92,7 +92,7 @@ graph TD
   W_04["W-04: Expose raw Playwright ARIA state through get_page_state"]:::done
   W_05["W-05: Enforce the Vue 3.2 support floor"]:::done
   W_06["W-06: Synchronize tools with live Page Objects"]:::done
-  W_07["W-07: Mitigate Playwright-tainted POM barrels"]:::progress,critical
+  W_07["W-07: Mitigate Playwright-tainted POM barrels"]:::done
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -123,7 +123,6 @@ graph TD
   W_03 -->|implements| D_08
   W_06 -->|implements| D_09
   Y_02 -->|distills| D_08
-  class W_07 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff
