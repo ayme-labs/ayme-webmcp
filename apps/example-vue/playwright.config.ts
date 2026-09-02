@@ -5,6 +5,7 @@ export default defineConfig({
   testMatch: "vue-webmcp.spec.ts",
   workers: 1,
   reporter: "list",
+  snapshotPathTemplate: "{testDir}/{testFilePath}-snapshots/{arg}{ext}",
   use: {
     baseURL: "http://127.0.0.1:4190",
   },

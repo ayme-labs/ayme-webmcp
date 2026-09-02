@@ -59,13 +59,10 @@ describe("get_page_state", () => {
       { label: "ListPage.foreign", element: foreign },
     ]);
 
-    await expect(getPageStateTool.execute()).resolves.toBe(
-      `
-- [ref=e1] generic:
-  - [ref=e2] button "Captured omitted":
-    - /pom: ListPage.captured
-`.trim()
-    );
+    await expect(getPageStateTool.execute()).resolves.toMatchInlineSnapshot(`
+      "- e1:
+        - e2 ListPage.captured "Captured omitted""
+    `);
   });
 
   it("reparents an omitted POM root without duplicating a distilled descendant", async () => {
@@ -98,14 +95,11 @@ describe("get_page_state", () => {
       { label: "ListPage.item", element: pomRoot },
     ]);
 
-    await expect(getPageStateTool.execute()).resolves.toBe(
-      `
-- [ref=e1] generic:
-  - [ref=e2] generic:
-    - /pom: ListPage.item
-    - [ref=e3] button "Nested child"
-`.trim()
-    );
+    await expect(getPageStateTool.execute()).resolves.toMatchInlineSnapshot(`
+      "- e1:
+        - e2 ListPage.item:
+          - e3 button "Nested child""
+    `);
   });
 
   it("restores an omitted POM root at its distilled descendant's position", async () => {
@@ -147,16 +141,13 @@ describe("get_page_state", () => {
       { label: "ListPage.item", element: pomRoot },
     ]);
 
-    await expect(getPageStateTool.execute()).resolves.toBe(
-      `
-- [ref=e1] generic:
-  - [ref=e2] button "Preceding"
-  - [ref=e3] generic:
-    - /pom: ListPage.item
-    - [ref=e4] button "Nested child"
-  - [ref=e5] button "Following"
-`.trim()
-    );
+    await expect(getPageStateTool.execute()).resolves.toMatchInlineSnapshot(`
+      "- e1:
+        - e2 button "Preceding"
+        - e3 ListPage.item:
+          - e4 button "Nested child"
+        - e5 button "Following""
+    `);
   });
 
   it("mints a synthetic ref for an anchored omitted root with a retained descendant", async () => {
@@ -189,14 +180,11 @@ describe("get_page_state", () => {
       { label: "ListPage.synthetic", element: pomRoot },
     ]);
 
-    await expect(getPageStateTool.execute()).resolves.toBe(
-      `
-- [ref=e1] generic:
-  - [ref=s_1]:
-    - /pom: ListPage.synthetic
-    - [ref=e3] button "Nested child"
-`.trim()
-    );
+    await expect(getPageStateTool.execute()).resolves.toMatchInlineSnapshot(`
+      "- e1:
+        - s_1 ListPage.synthetic:
+          - e3 button "Nested child""
+    `);
   });
 
   it("coalesces two labels on the same omitted element into one synthetic ref", async () => {
@@ -229,14 +217,12 @@ describe("get_page_state", () => {
       { label: "PageB.root", element: pomRoot },
     ]);
 
-    await expect(getPageStateTool.execute()).resolves.toBe(
-      `
-- [ref=e1] generic:
-  - [ref=s_1]:
-    - /pom: ["PageA.root","PageB.root"]
-    - [ref=e2] button "Child"
-`.trim()
-    );
+    await expect(getPageStateTool.execute()).resolves.toMatchInlineSnapshot(`
+      "- e1:
+        - s_1:
+          - /pom: ["PageA.root","PageB.root"]
+          - e2 button "Child""
+    `);
   });
 
   it.each([
@@ -285,10 +271,23 @@ describe("get_page_state", () => {
 
       const output = await getPageStateTool.execute();
 
-      const firstIndex = output.indexOf("/pom: First.root");
-      const secondIndex = output.indexOf("/pom: Second.root");
-      expect(firstIndex).toBeGreaterThanOrEqual(0);
-      expect(secondIndex).toBeGreaterThan(firstIndex);
+      if (_registrationOrder === "first-first") {
+        expect(output).toMatchInlineSnapshot(`
+          "- e1:
+            - s_1 First.root:
+              - e2 button "First"
+            - s_2 Second.root:
+              - e3 button "Second""
+        `);
+      } else {
+        expect(output).toMatchInlineSnapshot(`
+          "- e1:
+            - s_2 First.root:
+              - e2 button "First"
+            - s_1 Second.root:
+              - e3 button "Second""
+        `);
+      }
     }
   );
 
@@ -320,14 +319,11 @@ describe("get_page_state", () => {
       { label: "Page.root", element: pomRoot },
     ]);
 
-    await expect(getPageStateTool.execute()).resolves.toBe(
-      `
-- [ref=e1] generic:
-  - [ref=s_1]:
-    - /pom: Page.root
-    - [ref=e2] button "Child"
-`.trim()
-    );
+    await expect(getPageStateTool.execute()).resolves.toMatchInlineSnapshot(`
+      "- e1:
+        - s_1 Page.root:
+          - e2 button "Child""
+    `);
   });
 
   it("nests outer and inner ref-less roots even when registered inner-first with an unrelated root between them", async () => {
@@ -383,19 +379,14 @@ describe("get_page_state", () => {
 
     // Unrelated (POM depth 0, reg idx 1) is processed before outer
     // (POM depth 0, reg idx 2), while outer still precedes inner (POM depth 1).
-    await expect(getPageStateTool.execute()).resolves.toBe(
-      `
-- [ref=e1] generic:
-  - [ref=s_2]:
-    - /pom: Outer.root
-    - [ref=s_3]:
-      - /pom: Inner.root
-      - [ref=e2] button "Leaf"
-  - [ref=s_1]:
-    - /pom: Unrelated.root
-    - [ref=e3] button "Other"
-`.trim()
-    );
+    await expect(getPageStateTool.execute()).resolves.toMatchInlineSnapshot(`
+      "- e1:
+        - s_2 Outer.root:
+          - s_3 Inner.root:
+            - e2 button "Leaf"
+        - s_1 Unrelated.root:
+          - e3 button "Other""
+    `);
   });
 
   it("resolves root candidates before capture and correlates only those candidates", async () => {
@@ -436,13 +427,10 @@ describe("get_page_state", () => {
       };
     });
 
-    await expect(getPageStateTool.execute()).resolves.toBe(
-      `
-- [ref=e1] generic:
-  - [ref=e2] button "Pre-capture":
-    - /pom: ListPage.preCapture
-  - [ref=e3] button "Post-capture"
-`.trim()
-    );
+    await expect(getPageStateTool.execute()).resolves.toMatchInlineSnapshot(`
+      "- e1:
+        - e2 ListPage.preCapture "Pre-capture"
+        - e3 button "Post-capture""
+    `);
   });
 });

@@ -221,17 +221,11 @@ test("publishes the current page as ref-bearing ARIA state", async ({
   if (typeof snapshot !== "string") return;
 
   const archiveRefs = [
-    ...snapshot.matchAll(/\[ref=(e\d+)\] button "Archive item-[12]"/g),
+    ...snapshot.matchAll(/- (e\d+) button "Archive item-[12]"/g),
   ].map((match) => match[1]);
   expect(archiveRefs).toHaveLength(2);
   expect(new Set(archiveRefs).size).toBe(2);
-  expect(snapshot).toMatch(
-    /- \[ref=e\d+\] listitem:\n\s+- \/pom: "ListPage\.items\[0\]"/
-  );
-  expect(snapshot).toMatch(
-    /- \[ref=e\d+\] listitem:\n\s+- \/pom: "ListPage\.items\[1\]"/
-  );
-  expect(snapshot).not.toContain("/pom: ListPage.archiveDialog");
+  expect(snapshot).toMatchSnapshot("page-state.yml");
 });
 
 test("shows the app model and page state in separate inspector tabs", async ({
@@ -248,13 +242,14 @@ test("shows the app model and page state in separate inspector tabs", async ({
   const pageStatePanel = page.locator("#page-state-panel");
   const output = pageStatePanel.locator(".page-state-output");
   await expect(pageStatePanel).toBeVisible();
-  await expect(output).toContainText("[ref=");
-  await expect(output).toContainText('/pom: "ListPage.items[0]"');
+  expect((await output.textContent()) ?? "").toMatchSnapshot(
+    "page-state-output.txt"
+  );
   await expect(output).not.toContainText("POM inspector");
   await expect(pageStateTab).toHaveAttribute("aria-selected", "true");
 
   await pageStatePanel.getByRole("button", { name: "Refresh" }).click();
-  await expect(output).toContainText('/pom: "ListPage.items[1]"');
+  await expect(output).toContainText("ListPage.items[1]");
 });
 
 test("runs the same POM behavior through registered WebMCP tools", async ({
