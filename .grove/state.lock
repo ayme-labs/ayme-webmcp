@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:fd24936ae04d7db71c489c0f40e59b9a99cf12fc965d54a00b75f6ff6759017e
+# checksum: sha256:479218a5aa094d01b95a01a8e99ce9b35504e8e51fdcf4d2b010da1562eea724
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -42,10 +42,14 @@ g G-08 status=verified fitness_kind=count t_created=2026-09-01T09:29:11Z t_updat
   fitness_target: 2
   fitness_current: 3
 
-g G-09 status=verified fitness_kind=count t_created=2026-09-02T07:13:35Z t_updated=2026-09-02T07:59:00Z "POM barrel imports remain browser-loadable"
+g G-09 status=verified fitness_kind=count t_created=2026-09-02T07:13:35Z t_updated=2026-09-02T12:17:36Z "POM barrel imports remain browser-loadable"
   area: A-02
   fitness_target: 1
   fitness_current: 1
+
+g G-10 status=unverified fitness_kind=count t_created=2026-09-02T12:15:44Z t_updated=2026-09-02T12:17:36Z "Enforce browser-side Playwright compatibility"
+  area: A-02
+  fitness_target: 5
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -350,7 +354,7 @@ w W-13 type=feature status=done cynefin=complicated t_created=2026-09-02T08:44:5
   plan:
     | Use vertical tests at the public placement and tool execution seams, then apply the smallest shared projection fixes.
 
-w W-14 type=feature status=done cynefin=complicated t_created=2026-09-02T07:13:57Z t_updated=2026-09-02T07:59:00Z "Mitigate Playwright-tainted POM barrels"
+w W-14 type=feature status=done cynefin=complicated t_created=2026-09-02T07:13:57Z t_updated=2026-09-02T12:17:36Z "Mitigate Playwright-tainted POM barrels"
   goals: G-09
   fitness: G-09=+1
   surface: packages/unplugin-webmcp/src/index.ts, packages/unplugin-webmcp/src/rewritePomImports.ts, packages/unplugin-webmcp/src/rewritePomImports.test.ts, apps/example-vue/playwright/pom/ListPage.ts, apps/example-vue/playwright/pom/components.ts, apps/example-vue/tests/vue-webmcp.spec.ts
@@ -372,6 +376,57 @@ w W-14 type=feature status=done cynefin=complicated t_created=2026-09-02T07:13:5
     | Implement one red-green slice at the Vite browser-loading seam, then cover source rewrite behavior with focused tests.
   why:
     | Issue #15 requires a narrow internal mitigation for Playwright-tainted local barrels without a public option or runtime shim.
+
+w W-15 type=feature status=ready cynefin=complicated t_created=2026-09-02T12:17:52Z t_updated=2026-09-02T12:18:39Z "Build the Playwright-typed runtime seam"
+  goals: G-10
+  theme: T-01
+  fitness: G-10=+1
+  surface: packages/playwright-browser/src, packages/webmcp/src, apps/example-vue/src
+  ac:
+    | The private package exports one Page factory typed with Playwright Test's Page interface, and Locator values are constructed only through Page and Locator methods.
+    | The runtime uses ordinary partial objects without Ayme-owned Page or Locator interfaces, compatibility aliases, or custom unsupported-operation machinery.
+    | The existing Just-in-Time InjectedScript bridge and structural ARIA capture continue to work.
+    | WebMCP and the example consume the new package directly, and the old browserPage module and exports are removed.
+  hypothesis:
+    | Moving the existing in-browser behavior behind Playwright's public types will simplify the seam without changing the surrounding runtime responsibilities.
+  evidence_strategy:
+    | Run focused package, WebMCP, and example tests plus typechecks, and record the changed export and caller trace.
+  plan:
+    | Implement the minimal runtime seam in the private package, then cut internal consumers directly with no compatibility bridge.
+
+w W-16 type=feature status=ready cynefin=complicated t_created=2026-09-02T12:18:15Z t_updated=2026-09-02T12:18:39Z "Install the unchanged upstream contract"
+  goals: G-10
+  theme: T-02
+  fitness: G-10=+1
+  surface: packages/playwright-browser/tests, packages/playwright-browser/scripts, packages/playwright-browser/package.json, packages/playwright-browser/playwright.config.ts
+  ac:
+    | A package-local manifest records the pinned Playwright source and all 22 selected specification paths.
+    | The synchronization command copies selected specifications byte-for-byte and the check command detects upstream or local drift.
+    | The selected specification bodies remain unchanged, with required assets and infrastructure supplied outside those files.
+    | The replacement pageTest fixture routes compatibility operations through the Ayme adapter and only explicit test infrastructure through the real Playwright driver.
+  hypothesis:
+    | Replacing the sibling fixture and required infrastructure will let unchanged Playwright specifications exercise the in-browser adapter as an executable contract.
+  evidence_strategy:
+    | Verify copied file hashes, run the synchronization check, and execute representative upstream specifications far enough to observe adapter behavior.
+  plan:
+    | Install the source manifest and synchronization workflow before building the package-local fixture and its explicit driver allowlist.
+
+w W-17 type=feature status=ready cynefin=complicated t_created=2026-09-02T12:18:38Z t_updated=2026-09-02T12:18:39Z "Record the compatibility baseline"
+  goals: G-10
+  theme: T-02
+  fitness: G-10=+1
+  surface: packages/playwright-browser/tests/upstream, packages/playwright-browser/scripts, packages/playwright-browser/playwright.config.ts
+  ac:
+    | Every test in all selected upstream specification files executes, including tests for intentionally unsupported browser capabilities.
+    | Harness and fixture defects no longer prevent the compatibility operations under observation from running.
+    | A generated baseline records currently passing upstream test identifiers, and a raw Playwright report preserves the complete result set.
+    | The baseline report presents passing tests, failure clusters, and harness limitations for user alignment before compatibility implementation begins.
+  hypothesis:
+    | A complete unfiltered run will provide a maintainable compatibility boundary without a manually classified API ledger.
+  evidence_strategy:
+    | Run the complete selected corpus, save the machine-readable results and passing baseline, and verify that a simulated passing-test regression is detected.
+  plan:
+    | Stabilize only the harness, record the first trustworthy result set, and stop for Q-04 alignment without implementing compatibility behavior.
 
 d D-01 status=superseded t_created=2026-08-27T08:43:08Z t_updated=2026-08-27T11:48:35Z "Use the five-workspace monorepo layout"
   context:
@@ -470,6 +525,10 @@ d D-11 status=accepted t_created=2026-08-31T18:37:10Z t_updated=2026-09-02T09:50
   decision:
     | See ADR-0011: docs/adr/0011-capture-only-the-top-level-document.md.
 
+d D-12 status=accepted t_created=2026-09-02T12:15:44Z t_updated=2026-09-02T12:18:39Z "Use upstream tests as compatibility contract"
+  decision:
+    | See ADR-0012: docs/adr/0012-use-upstream-playwright-tests-as-the-browser-compatibility-contract.md.
+
 q Q-01 status=deferred cynefin=complicated t_created=2026-08-27T12:43:03Z t_updated=2026-08-27T14:13:29Z "Choose the public activation interface"
   why:
     | The spike useAymePage function combines Vue lifecycle management with framework-neutral runtime behavior. W-02 separates those responsibilities but intentionally does not choose the final public interface.
@@ -496,6 +555,10 @@ q Q-03 status=answered cynefin=complicated t_created=2026-08-31T19:05:06Z t_upda
   outcome:
     | Resolve collection members to their existing indexed component paths. For every indexed or singular root: zero matches are absent, exactly one observable match is decorated, and multiple matches are ambiguous and absent. A uniquely resolved eligible ARIA-omitted root may receive a synthetic ref.
 
+q Q-04 status=open cynefin=complex t_created=2026-09-02T12:15:46Z t_updated=2026-09-02T12:18:39Z "Choose the first compatibility improvement scope"
+  why:
+    | The trustworthy upstream baseline must reveal the actual failure clusters before implementation scope is selected.
+
 b B-01 status=validated cynefin=complicated t_created=2026-08-31T13:49:50Z t_updated=2026-08-31T13:49:50Z "Vue 3.2.0 supports lifecycle integration"
   vm:
     | Run the Vue package typecheck and lifecycle tests against exact Vue 3.2.0, 3.3.0, 3.4.0, 3.5.29, and 3.5.42.
@@ -503,6 +566,26 @@ b B-01 status=validated cynefin=complicated t_created=2026-08-31T13:49:50Z t_upd
     | Every exact version passes typechecking and all three lifecycle tests.
   result:
     | Every exact version passed typechecking and all three lifecycle tests in an isolated checkout at commit 4f510a0.
+
+b B-02 status=validated cynefin=complicated t_created=2026-09-02T12:15:45Z t_updated=2026-09-02T12:17:53Z "The existing InjectedScript bridge is sufficient"
+  vm:
+    | Load the pinned generated InjectedScript artifact through the existing virtual module and run the package browser test.
+  threshold:
+    | The reviewed artifact loads without regeneration and the existing ARIA capture test passes.
+  result:
+    | The existing virtual module loaded the pinned artifact and the package test passed on 2026-09-02.
+
+b B-03 status=validated cynefin=complicated t_created=2026-09-02T12:15:45Z t_updated=2026-09-02T12:18:16Z "Unchanged upstream specifications can use a replacement fixture"
+  vm:
+    | Inspect the selected Playwright files, their pageTest imports, fixtures, and required assets.
+  threshold:
+    | The selected files can remain byte-for-byte unchanged when package-local pageTest infrastructure supplies the driver and adapter.
+  result:
+    | The completed upstream inventory identified 22 complete specification files whose sibling pageTest dependency can be replaced package-locally.
+
+t T-01 status=open t_created=2026-09-02T12:15:44Z t_updated=2026-09-02T12:15:44Z "Browser runtime compatibility"
+
+t T-02 status=open t_created=2026-09-02T12:15:45Z t_updated=2026-09-02T12:15:45Z "Upstream compatibility contract"
 
 y Y-01 status=active t_created=2026-08-27T13:24:26Z t_updated=2026-08-27T13:25:03Z "Shared Page Object behavior"
   tags: Page Object Model (POM), Generated WebMCP Tool
@@ -528,6 +611,8 @@ a A-01 status=present t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:42:
 a A-02 status=present t_created=2026-08-27T12:43:02Z t_updated=2026-08-27T12:43:02Z "Page Object interoperability"
 
 e B-01 targets W-05 t_created=2026-08-31T13:49:50Z
+e B-02 targets W-15 t_created=2026-09-02T12:17:53Z
+e B-03 targets W-16 t_created=2026-09-02T12:18:16Z
 e D-05 supersedes D-01 t_created=2026-08-27T11:48:25Z
 e Q-01 asks D-06 t_created=2026-08-27T12:43:04Z
 e Q-01 asks W-03 t_created=2026-08-27T14:13:29Z
@@ -557,6 +642,12 @@ e W-12 implements D-04 t_created=2026-09-01T09:30:33Z
 e W-13 implements D-10 t_created=2026-09-02T08:44:53Z
 e W-13 implements D-11 t_created=2026-09-02T08:44:53Z
 e W-13 produces Y-03 t_created=2026-09-02T09:50:35Z
+e W-15 blocks W-17 t_created=2026-09-02T12:18:39Z
+e W-15 implements D-12 t_created=2026-09-02T12:17:53Z
+e W-16 blocks W-17 t_created=2026-09-02T12:18:39Z
+e W-16 implements D-12 t_created=2026-09-02T12:18:16Z
+e W-17 implements D-12 t_created=2026-09-02T12:18:39Z
+e W-17 produces Q-04 t_created=2026-09-02T12:18:39Z
 e Y-02 distills D-08 t_created=2026-08-27T14:40:25Z
 e Y-03 distills D-10 t_created=2026-09-02T09:50:35Z
 e Y-03 distills D-11 t_created=2026-09-02T09:50:35Z

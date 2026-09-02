@@ -6,15 +6,15 @@
 
 | Measure | Count | Composition |
 | --- | --- | --- |
-| C (content) | 16 | validated B 1 · answered Q 2 · accepted D 10 · active Discovery 3 |
-| V (uncertainty) | 0 | open Q 0 · pending B 0 · W below DoR 0 |
+| C (content) | 19 | validated B 3 · answered Q 2 · accepted D 11 · active Discovery 3 |
+| V (uncertainty) | 4 | open Q 1 · pending B 0 · W below DoR 0 · uncovered surface 3 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 14 | 0 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 |
+| A-02 | Page Object interoperability | 17 | 4 | C: validated B 3 · answered Q 2 · accepted D 9 · active Discovery 3; V: open Q 1 · pending B 0 · W below DoR 0 · uncovered surface 3 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
 
@@ -31,6 +31,7 @@
 | G-07 | Assistant receives POM-aware structural page state | count; current=4 target=4 | verified |
 | G-08 | Structural page state is review-ready | count; current=3 target=2 | verified |
 | G-09 | POM barrel imports remain browser-loadable | count; current=1 target=1 | verified |
+| G-10 | Enforce browser-side Playwright compatibility | count; current= target=5 | unverified |
 
 ## Work items
 
@@ -50,6 +51,9 @@
 | W-12 | bug | Contain internal packages in packed WebMCP | G-08 | clear | ⊤ | done |  |
 | W-13 | feature | Correct structural page-state projection | G-08 | complicated | ⊤ | done |  |
 | W-14 | feature | Mitigate Playwright-tainted POM barrels | G-09 | complicated | ⊤ | done |  |
+| W-15 | feature | Build the Playwright-typed runtime seam | G-10 | complicated | ⊤ | ready | ★ |
+| W-16 | feature | Install the unchanged upstream contract | G-10 | complicated | ⊤ | ready |  |
+| W-17 | feature | Record the compatibility baseline | G-10 | complicated | ⊤ | ready | ★ |
 
 ## Decisions
 
@@ -66,6 +70,7 @@
 | D-09 | Let Ayme own live Page Object observation | accepted |  |
 | D-10 | Use capture-scoped Structural Refs | accepted |  |
 | D-11 | Capture only the top-level document | accepted |  |
+| D-12 | Use upstream tests as compatibility contract | accepted |  |
 
 ## Open questions
 
@@ -74,12 +79,22 @@
 | Q-01 | Choose the public activation interface | complicated | D-06, W-03 | deferred |
 | Q-02 | Choose the compact structural output contract | complicated | W-10 | answered |
 | Q-03 | Choose multiple POM root match behavior | complicated | W-10 | answered |
+| Q-04 | Choose the first compatibility improvement scope | complex |  | open |
 
 ## Assumptions
 
 | ID | Assumption | Tests | Targets | Status |
 | --- | --- | --- | --- | --- |
 | B-01 | Vue 3.2.0 supports lifecycle integration |  | W-05 | validated |
+| B-02 | The existing InjectedScript bridge is sufficient |  | W-15 | validated |
+| B-03 | Unchanged upstream specifications can use a replacement fixture |  | W-16 | validated |
+
+## Themes
+
+| ID | Title | Status | Causes work | Themed work |
+| --- | --- | --- | --- | --- |
+| T-01 | Browser runtime compatibility | open | – | W-15 |
+| T-02 | Upstream compatibility contract | open | – | W-16, W-17 |
 
 ## Discoveries
 
@@ -102,6 +117,7 @@ graph TD
   G_07["G-07: Assistant receives POM-aware structural page state"]:::goal
   G_08["G-08: Structural page state is review-ready"]:::goal
   G_09["G-09: POM barrel imports remain browser-loadable"]:::goal
+  G_10["G-10: Enforce browser-side Playwright compatibility"]:::goal
   W_01["W-01: Establish the monorepo walking skeleton"]:::done
   W_02["W-02: Preserve spike behavior through package extraction"]:::done
   W_03["W-03: Extract Vue Page Object activation composable"]:::done
@@ -116,6 +132,9 @@ graph TD
   W_12["W-12: Contain internal packages in packed WebMCP"]:::done
   W_13["W-13: Correct structural page-state projection"]:::done
   W_14["W-14: Mitigate Playwright-tainted POM barrels"]:::done
+  W_15["W-15: Build the Playwright-typed runtime seam"]:::ready,critical
+  W_16["W-16: Install the unchanged upstream contract"]:::ready
+  W_17["W-17: Record the compatibility baseline"]:::ready,critical
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -127,16 +146,24 @@ graph TD
   D_09["D-09: Let Ayme own live Page Object observation"]:::decision
   D_10["D-10: Use capture-scoped Structural Refs"]:::decision
   D_11["D-11: Capture only the top-level document"]:::decision
+  D_12["D-12: Use upstream tests as compatibility contract"]:::decision
   Q_01["Q-01: Choose the public activation interface"]:::question
   Q_02["Q-02: Choose the compact structural output contract"]:::question
   Q_03["Q-03: Choose multiple POM root match behavior"]:::question
+  Q_04["Q-04: Choose the first compatibility improvement scope"]:::question
   B_01["B-01: Vue 3.2.0 supports lifecycle integration"]:::assumption
+  B_02["B-02: The existing InjectedScript bridge is sufficient"]:::assumption
+  B_03["B-03: Unchanged upstream specifications can use a replacement fixture"]:::assumption
+  T_01["T-01: Browser runtime compatibility"]:::theme
+  T_02["T-02: Upstream compatibility contract"]:::theme
   Y_01["Y-01: Shared Page Object behavior"]:::discovery
   Y_02["Y-02: Framework lifecycle owns Page Object disposal"]:::discovery
   Y_03["Y-03: Synthetic roots are observation-only"]:::discovery
   A_01["A-01: Repository foundation"]:::area
   A_02["A-02: Page Object interoperability"]:::area
   B_01 -.->|targets| W_05
+  B_02 -.->|targets| W_15
+  B_03 -.->|targets| W_16
   D_05 -->|supersedes| D_01
   Q_01 -->|asks| D_06
   Q_01 -->|asks| W_03
@@ -166,9 +193,16 @@ graph TD
   W_13 -->|implements| D_10
   W_13 -->|implements| D_11
   W_13 -->|produces| Y_03
+  W_15 ==>|blocks| W_17
+  W_15 -->|implements| D_12
+  W_16 ==>|blocks| W_17
+  W_16 -->|implements| D_12
+  W_17 -->|implements| D_12
+  W_17 -->|produces| Q_04
   Y_02 -->|distills| D_08
   Y_03 -->|distills| D_10
   Y_03 -->|distills| D_11
+  class W_15,W_17 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff
