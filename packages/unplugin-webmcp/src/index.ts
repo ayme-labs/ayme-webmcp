@@ -6,6 +6,8 @@ import {
 } from "./derivePomManifests";
 import { rewritePomImports } from "./rewritePomImports";
 
+const PLAYWRIGHT_TEST_PACKAGE = "@playwright/test";
+
 export type AymeWebMcpOptions = PomCompilerOptions;
 
 export const unpluginFactory: UnpluginFactory<AymeWebMcpOptions | undefined> = (
@@ -16,6 +18,18 @@ export const unpluginFactory: UnpluginFactory<AymeWebMcpOptions | undefined> = (
   return {
     name: "ayme-webmcp",
     enforce: "pre",
+    vite: {
+      config(config) {
+        const exclude = config.optimizeDeps?.exclude ?? [];
+
+        return {
+          optimizeDeps: {
+            ...config.optimizeDeps,
+            exclude: [...new Set([...exclude, PLAYWRIGHT_TEST_PACKAGE])],
+          },
+        };
+      },
+    },
     transform: {
       filter: {
         id: /\.ts$/,

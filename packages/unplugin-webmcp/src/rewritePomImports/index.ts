@@ -2,7 +2,7 @@ import path from "node:path";
 
 import ts from "typescript";
 
-import { createPomProgram, type PomCompilerOptions } from "./pomProgram";
+import { createPomProgram, type PomCompilerOptions } from "../pomProgram";
 
 type Replacement = {
   start: number;

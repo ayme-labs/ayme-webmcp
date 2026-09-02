@@ -175,9 +175,15 @@ importers:
       "@ayme-dev/typescript-config":
         specifier: workspace:*
         version: link:../typescript-config
+      "@playwright/test":
+        specifier: ^1.62.1
+        version: 1.62.1
       eslint:
         specifier: ^10.9.1
         version: 10.9.1(jiti@2.6.1)
+      playwright:
+        specifier: ^1.62.1
+        version: 1.62.1
       tsdown:
         specifier: ^0.22.14
         version: 0.22.14(@volar/typescript@2.4.28(typescript@6.0.3))(typescript@6.0.3)(vue-tsc@3.3.11(typescript@6.0.3))

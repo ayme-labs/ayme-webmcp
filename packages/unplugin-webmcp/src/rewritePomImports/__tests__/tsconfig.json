@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noResolve": true,
+    "skipLibCheck": true,
+    "target": "ES2022"
+  },
+  "include": ["fixtures/**/*.ts"]
+}
