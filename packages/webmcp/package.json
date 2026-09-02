@@ -31,7 +31,9 @@
   "devDependencies": {
     "@ayme-dev/eslint-config": "workspace:*",
     "@ayme-dev/playwright-browser": "workspace:*",
+    "@ayme-dev/structural-observation": "workspace:*",
     "@ayme-dev/typescript-config": "workspace:*",
+    "@types/node": "^24.0.0",
     "eslint": "^10.9.1",
     "tsdown": "^0.22.14",
     "typescript": "^6.0.3",

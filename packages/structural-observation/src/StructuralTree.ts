@@ -50,7 +50,7 @@ type ParsedNodeLine = {
 };
 
 type MutableNodeFrame = {
-  ref: AriaRef;
+  ref?: AriaRef;
   role: StructuralRole;
   name: string;
   state: StructuralNodeState;
@@ -90,6 +90,27 @@ type TreeNavigation = {
   parentByRef: Map<AriaRef, StructuralNode | null>;
   depthByRef: Map<AriaRef, number>;
   roots: StructuralNode[];
+};
+
+export type ReferencedCapturedRoot = {
+  kind: "referenced";
+  ref: AriaRef;
+};
+
+export type OmittedCapturedRoot = {
+  kind: "omitted";
+  ancestorRef: AriaRef | undefined;
+  descendantRefs: readonly AriaRef[];
+  role: StructuralRole;
+  name: string;
+};
+
+export type CapturedStructuralRoot =
+  ReferencedCapturedRoot | OmittedCapturedRoot;
+
+export type CapturedStructuralRootPlacement = {
+  tree: StructuralTree;
+  refs: readonly (AriaRef | null)[];
 };
 
 export class StructuralTree {
@@ -463,7 +484,27 @@ export class StructuralTree {
     yaml: string,
     refFactory: SyntheticAriaRefAllocator
   ): StructuralTree {
-    const roots = StructuralTree._parseRoots(yaml, refFactory);
+    return StructuralTree._fromRoots(
+      StructuralTree._parseRoots(yaml, refFactory, true),
+      refFactory
+    );
+  }
+
+  /** Builds a capture tree from Playwright-owned refs, promoting ref-less wrappers. */
+  static fromPlaywrightAriaSnapshotYaml(
+    yaml: string,
+    refFactory: SyntheticAriaRefAllocator
+  ): StructuralTree {
+    return StructuralTree._fromRoots(
+      StructuralTree._parseRoots(yaml, refFactory, false),
+      refFactory
+    );
+  }
+
+  private static _fromRoots(
+    roots: StructuralChild[],
+    refFactory: SyntheticAriaRefAllocator
+  ): StructuralTree {
     const onlyRoot = roots[0];
     if (
       roots.length === 1 &&
@@ -480,6 +521,201 @@ export class StructuralTree {
       children: roots,
     });
     return new StructuralTree(root, refFactory);
+  }
+
+  /** Places captured roots using full-tree ancestry and retained-tree order. */
+  placeCapturedRoots(
+    fullTree: StructuralTree,
+    roots: readonly CapturedStructuralRoot[]
+  ): CapturedStructuralRootPlacement {
+    let tree = new StructuralTree(
+      this.root,
+      this._refFactory,
+      this._beforeByRef
+    );
+    const placedRefs: Array<AriaRef | null> = [];
+    const fullOrder = new Map(
+      fullTree.getAllRefs().map((ref, index) => [ref, index] as const)
+    );
+
+    for (const root of roots) {
+      if (root.kind === "referenced") {
+        if (tree.hasNode(root.ref)) {
+          placedRefs.push(root.ref);
+          continue;
+        }
+
+        const fullNode = fullTree.getNode(root.ref);
+        const ancestor = fullTree
+          .getAncestorsOf(root.ref)
+          .find((candidate) => tree.hasNode(candidate.ref));
+        if (!fullNode || !ancestor) {
+          placedRefs.push(null);
+          continue;
+        }
+
+        const boundary = StructuralTree._capturedBoundary(fullNode, tree);
+        tree = StructuralTree._insertBoundary(
+          tree,
+          ancestor.ref,
+          boundary,
+          StructuralTree._descendantRefs(boundary),
+          fullOrder.get(root.ref) ?? Number.MAX_SAFE_INTEGER,
+          fullOrder
+        );
+        placedRefs.push(tree.hasNode(root.ref) ? root.ref : null);
+        continue;
+      }
+
+      const descendantRefs = [
+        ...new Set(
+          root.descendantRefs.filter(
+            (ref) => tree.hasNode(ref) && fullTree.hasNode(ref)
+          )
+        ),
+      ];
+      if (
+        root.ancestorRef === undefined ||
+        !tree.hasNode(root.ancestorRef) ||
+        descendantRefs.length === 0
+      ) {
+        placedRefs.push(null);
+        continue;
+      }
+
+      const descendantSet = new Set(descendantRefs);
+      const topLevelDescendants = descendantRefs.filter(
+        (ref) =>
+          !tree
+            .getAncestorsOf(ref)
+            .some((ancestor) => descendantSet.has(ancestor.ref))
+      );
+      const children = topLevelDescendants.flatMap((ref) => {
+        const node = tree.getNode(ref);
+        return node ? [node] : [];
+      });
+      if (children.length === 0) {
+        placedRefs.push(null);
+        continue;
+      }
+
+      const syntheticRef = tree._refFactory.create();
+      const boundary = new StructuralNode({
+        ref: syntheticRef,
+        role: root.role,
+        name: root.name,
+        cursorPointer: false,
+        children,
+      });
+      const boundaryOrder = Math.min(
+        ...topLevelDescendants.map(
+          (ref) => fullOrder.get(ref) ?? Number.MAX_SAFE_INTEGER
+        )
+      );
+      tree = StructuralTree._insertBoundary(
+        tree,
+        root.ancestorRef,
+        boundary,
+        new Set(topLevelDescendants),
+        boundaryOrder,
+        fullOrder
+      );
+      placedRefs.push(tree.hasNode(syntheticRef) ? syntheticRef : null);
+    }
+
+    return { tree, refs: placedRefs };
+  }
+
+  private static _capturedBoundary(
+    node: StructuralNode,
+    tree: StructuralTree
+  ): StructuralNode {
+    return StructuralTree._rebuildWithChildren(
+      node,
+      node.children.flatMap((child) =>
+        typeof child === "string"
+          ? []
+          : StructuralTree._existingDescendants(child, tree)
+      )
+    );
+  }
+
+  private static _existingDescendants(
+    node: StructuralNode,
+    tree: StructuralTree
+  ): StructuralNode[] {
+    const existing = tree.getNode(node.ref);
+    if (existing) return [existing];
+    return node.children.flatMap((child) =>
+      typeof child === "string"
+        ? []
+        : StructuralTree._existingDescendants(child, tree)
+    );
+  }
+
+  private static _descendantRefs(node: StructuralNode): Set<AriaRef> {
+    const refs = new Set<AriaRef>();
+    node.walk((descendant) => {
+      if (descendant !== node) refs.add(descendant.ref);
+    });
+    return refs;
+  }
+
+  private static _insertBoundary(
+    tree: StructuralTree,
+    parentRef: AriaRef,
+    boundary: StructuralNode,
+    movedRefs: ReadonlySet<AriaRef>,
+    boundaryOrder: number,
+    fullOrder: ReadonlyMap<AriaRef, number>
+  ): StructuralTree {
+    let inserted = false;
+    const rebuild = (node: StructuralNode): StructuralNode => {
+      const children: StructuralChild[] = [];
+      for (const child of node.children) {
+        if (typeof child !== "string" && movedRefs.has(child.ref)) continue;
+        children.push(typeof child === "string" ? child : rebuild(child));
+      }
+
+      if (node.ref === parentRef) {
+        const insertionIndex = children.findIndex(
+          (child) =>
+            typeof child !== "string" &&
+            StructuralTree._fullTreeOrder(child, fullOrder) > boundaryOrder
+        );
+        children.splice(
+          insertionIndex === -1 ? children.length : insertionIndex,
+          0,
+          boundary
+        );
+        inserted = true;
+      }
+      return StructuralTree._rebuildWithChildren(node, children);
+    };
+
+    const root = rebuild(tree.root);
+    return inserted
+      ? new StructuralTree(root, tree._refFactory, tree._beforeByRef)
+      : tree;
+  }
+
+  private static _fullTreeOrder(
+    node: StructuralNode,
+    fullOrder: ReadonlyMap<AriaRef, number>
+  ): number {
+    if (!StructuralTree._isSyntheticRef(node.ref)) {
+      const order = fullOrder.get(node.ref);
+      if (order !== undefined) return order;
+    }
+
+    const descendantOrders = node.children.flatMap((child) =>
+      typeof child === "string"
+        ? []
+        : [StructuralTree._fullTreeOrder(child, fullOrder)]
+    );
+    return descendantOrders.length > 0
+      ? Math.min(...descendantOrders)
+      : Number.MAX_SAFE_INTEGER;
   }
 
   static reconcile(
@@ -556,7 +792,8 @@ export class StructuralTree {
 
   private static _parseRoots(
     yaml: string,
-    refFactory: SyntheticAriaRefAllocator
+    refFactory: SyntheticAriaRefAllocator,
+    synthesizeRefLess: boolean
   ): StructuralChild[] {
     const rootFrames: Array<MutableNodeFrame | string> = [];
     const stack: Array<{ indent: number; frame: MutableNodeFrame }> = [];
@@ -588,7 +825,11 @@ export class StructuralTree {
       }
 
       const parsedNode = StructuralTree._parseNodeLine(trimmedLine);
-      const frame = StructuralTree._createNodeFrame(parsedNode, refFactory);
+      const frame = StructuralTree._createNodeFrame(
+        parsedNode,
+        refFactory,
+        synthesizeRefLess
+      );
       if (parsedNode.inlineText !== undefined) {
         frame.children.push(parsedNode.inlineText);
       }
@@ -602,9 +843,9 @@ export class StructuralTree {
       stack.push({ indent, frame });
     }
 
-    return rootFrames.map((child) =>
+    return rootFrames.flatMap((child) =>
       typeof child === "string"
-        ? child
+        ? [child]
         : StructuralTree._materializeFrame(child)
     );
   }
@@ -1109,33 +1350,39 @@ export class StructuralTree {
     });
   }
 
-  private static _materializeFrame(frame: MutableNodeFrame): StructuralNode {
-    return new StructuralNode({
-      ref: frame.ref,
-      role: frame.role,
-      name: frame.name,
-      state: frame.state,
-      cursorPointer: frame.cursorPointer,
-      props: frame.props,
-      children: frame.children.map((child) =>
-        typeof child === "string"
-          ? child
-          : StructuralTree._materializeFrame(child)
-      ),
-    });
+  private static _materializeFrame(frame: MutableNodeFrame): StructuralChild[] {
+    const children = frame.children.flatMap((child) =>
+      typeof child === "string"
+        ? [child]
+        : StructuralTree._materializeFrame(child)
+    );
+    if (frame.ref === undefined) return children;
+
+    return [
+      new StructuralNode({
+        ref: frame.ref,
+        role: frame.role,
+        name: frame.name,
+        state: frame.state,
+        cursorPointer: frame.cursorPointer,
+        props: frame.props,
+        children,
+      }),
+    ];
   }
 
   private static _createNodeFrame(
     parsedNode: ParsedNodeLine,
-    refFactory: SyntheticAriaRefAllocator
+    refFactory: SyntheticAriaRefAllocator,
+    synthesizeRefLess: boolean
   ): MutableNodeFrame {
-    const ref =
-      parsedNode.attributes.ref === undefined
-        ? refFactory.create()
-        : AriaRefSchema.parse(parsedNode.attributes.ref);
-
     return {
-      ref,
+      ref:
+        parsedNode.attributes.ref === undefined
+          ? synthesizeRefLess
+            ? refFactory.create()
+            : undefined
+          : AriaRefSchema.parse(parsedNode.attributes.ref),
       role: parsedNode.role,
       name: parsedNode.name,
       state: {

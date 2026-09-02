@@ -1274,6 +1274,117 @@ describe("spike StructuralTree.enrich", () => {
   });
 });
 
+describe("Playwright page-state construction", () => {
+  it("adopts real refs while promoting ref-less wrappers and omitting ref-less leaves", () => {
+    const factory = new SyntheticAriaRefFactory();
+    const tree = StructuralTree.fromPlaywrightAriaSnapshotYaml(
+      `
+- generic [ref=e1]:
+  - generic:
+    - button "Retained" [ref=e2]
+  - generic "Unsupported"
+`.trim(),
+      factory
+    );
+
+    expect(tree.getAllRefs()).toEqual(["e1", "e2"]);
+    expect(factory.create()).toBe("s_1");
+  });
+
+  it("restores an omitted real root in captured sibling order", () => {
+    const factory = new SyntheticAriaRefFactory();
+    const retained = StructuralTree.fromPlaywrightAriaSnapshotYaml(
+      `
+- generic [ref=e1]:
+  - button "Before" [ref=e2]
+  - button "After" [ref=e4]
+`.trim(),
+      factory
+    );
+    const full = StructuralTree.fromPlaywrightAriaSnapshotYaml(
+      `
+- generic [ref=e1]:
+  - button "Before" [ref=e2]
+  - generic "POM root" [ref=e3]
+  - button "After" [ref=e4]
+`.trim(),
+      factory
+    );
+
+    const placed = retained.placeCapturedRoots(full, [
+      { kind: "referenced", ref: ref("e3") },
+    ]);
+
+    expect(placed.refs).toEqual(["e3"]);
+    expect(
+      placed.tree.root.children
+        .filter((child): child is StructuralNode => typeof child !== "string")
+        .map((child) => child.ref)
+    ).toEqual(["e2", "e3", "e4"]);
+  });
+
+  it("mints one synthetic ref for an anchored omitted root with a retained descendant", () => {
+    const factory = new SyntheticAriaRefFactory();
+    const retained = StructuralTree.fromPlaywrightAriaSnapshotYaml(
+      `
+- generic [ref=e1]:
+  - button "Before" [ref=e2]
+  - button "Nested" [ref=e3]
+  - button "After" [ref=e4]
+`.trim(),
+      factory
+    );
+    const full = StructuralTree.fromPlaywrightAriaSnapshotYaml(
+      `
+- generic [ref=e1]:
+  - button "Before" [ref=e2]
+  - generic "POM root":
+    - button "Nested" [ref=e3]
+  - button "After" [ref=e4]
+`.trim(),
+      factory
+    );
+
+    const placed = retained.placeCapturedRoots(full, [
+      {
+        kind: "omitted",
+        ancestorRef: ref("e1"),
+        descendantRefs: [ref("e3")],
+        role: "generic",
+        name: "POM root",
+      },
+    ]);
+
+    expect(placed.refs).toEqual(["s_1"]);
+    expect(placed.tree.getNode(ref("s_1"))?.children).toEqual([
+      retained.getNode(ref("e3")),
+    ]);
+    expect(placed.tree.getAllRefs()).toEqual(["e1", "e2", "s_1", "e3", "e4"]);
+  });
+
+  it("does not mint a ref for an unsupported omitted leaf root", () => {
+    const factory = new SyntheticAriaRefFactory();
+    const tree = StructuralTree.fromPlaywrightAriaSnapshotYaml(
+      "- generic [ref=e1]",
+      factory
+    );
+
+    const placed = tree.placeCapturedRoots(tree, [
+      {
+        kind: "omitted",
+        ancestorRef: ref("e1"),
+        descendantRefs: [],
+        role: "generic",
+        name: "Leaf",
+      },
+    ]);
+
+    expect(placed.refs).toEqual([null]);
+    expect(placed.tree.getAllRefs()).toEqual(["e1"]);
+    expect(factory.create()).toBe("s_1");
+  });
+});
+
 describe("spike enrichment does not affect equality", () => {
   it("same node data with different enrichment is shallow-equal", () => {
     const a = expectNode(parse('- button "Create" [ref=e1]').root).enrich(
