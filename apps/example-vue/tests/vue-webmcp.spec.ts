@@ -221,10 +221,40 @@ test("publishes the current page as ref-bearing ARIA state", async ({
   if (typeof snapshot !== "string") return;
 
   const archiveRefs = [
-    ...snapshot.matchAll(/button "Archive item-[12]"[^\n]*\[ref=(e\d+)\]/g),
+    ...snapshot.matchAll(/\[ref=(e\d+)\] button "Archive item-[12]"/g),
   ].map((match) => match[1]);
   expect(archiveRefs).toHaveLength(2);
   expect(new Set(archiveRefs).size).toBe(2);
+  expect(snapshot).toMatch(
+    /- \[ref=e\d+\] listitem:\n\s+- \/pom: "ListPage\.items\[0\]"/
+  );
+  expect(snapshot).toMatch(
+    /- \[ref=e\d+\] listitem:\n\s+- \/pom: "ListPage\.items\[1\]"/
+  );
+  expect(snapshot).not.toContain("/pom: ListPage.archiveDialog");
+});
+
+test("shows the app model and page state in separate inspector tabs", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const appModelTab = page.getByRole("tab", { name: "App Model" });
+  const pageStateTab = page.getByRole("tab", { name: "Page State" });
+  await expect(appModelTab).toHaveAttribute("aria-selected", "true");
+
+  await pageStateTab.click();
+
+  const pageStatePanel = page.locator("#page-state-panel");
+  const output = pageStatePanel.locator(".page-state-output");
+  await expect(pageStatePanel).toBeVisible();
+  await expect(output).toContainText("[ref=");
+  await expect(output).toContainText('/pom: "ListPage.items[0]"');
+  await expect(output).not.toContainText("POM inspector");
+  await expect(pageStateTab).toHaveAttribute("aria-selected", "true");
+
+  await pageStatePanel.getByRole("button", { name: "Refresh" }).click();
+  await expect(output).toContainText('/pom: "ListPage.items[1]"');
 });
 
 test("runs the same POM behavior through registered WebMCP tools", async ({
@@ -336,7 +366,7 @@ test("demonstrates the list app and invokes the generated POM tools from the deb
     {
       name: "get_page_state",
       description:
-        "Return the current page as Playwright's AI ARIA snapshot with structural refs.",
+        "Return the top-level structural page state, decorated with root POM labels. Real nodes use Playwright refs; synthetic POM roots use observation-only synthetic refs. Capture is limited to the top-level document.",
       inputSchema: {
         type: "object",
         properties: {},

@@ -11,6 +11,7 @@ This is a throwaway browser-side experiment for the Ayme WebMCP design. The page
 - POM metadata also describes components constructed from a locator root, including repeated components exposed as paths such as `items[0].archiveButton`.
 - The Vue-only `useAymeExperiment()` composable registers the imported POM instance. No `.ayme/index.ts` participates in browser registration.
 - The runtime publishes the same registered tool objects to `document.modelContext` and the in-page debug console.
+- The in-page inspector separates the App Model view (POM metadata, actions, executions, and traces) from the Page State view, which renders a YAML snapshot of the demo application with capture-scoped refs and POM decorations.
 - The POM inspector probes registered members against the current DOM and refreshes when the demo changes. It does not use framework bindings or element identity.
 - The browser runtime is DOM-backed. It supports the locator operations used by the POM, including role/name lookup, filling, clicking, and visible/hidden waits, without requiring Playwright at runtime.
 

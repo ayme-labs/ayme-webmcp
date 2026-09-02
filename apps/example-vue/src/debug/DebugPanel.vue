@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, shallowRef } from "vue";
+import { computed, reactive, ref, shallowRef } from "vue";
 
 import type {
   JsonValue,
@@ -41,6 +41,11 @@ type PomClassCard = {
 };
 
 const props = defineProps<{
+  pageState: string | undefined;
+  pageStateCapturedAt: string | undefined;
+  pageStateError: string | undefined;
+  pageStateLoading: boolean;
+  refreshPageState: () => Promise<void>;
   registeredPoms: readonly RegisteredPom[];
   refreshPomMembers: () => Promise<void>;
   resetTrace: () => void;
@@ -48,6 +53,7 @@ const props = defineProps<{
   webMcpStatus: string;
 }>();
 
+const activeTab = ref<"app-model" | "page-state">("app-model");
 const executionHistory = shallowRef<ToolExecution[]>([]);
 const toolInputValues = reactive<Record<string, ToolArguments>>({});
 let nextExecutionId = 1;
@@ -417,6 +423,7 @@ async function invokeTool(tool: RegisteredPomTool) {
     execution.durationMs = Date.now() - startedAt;
     execution.trace = [...props.trace];
     executionHistory.value = [...executionHistory.value];
+    void props.refreshPageState();
   }
 }
 
@@ -440,291 +447,371 @@ function errorMessage(error: unknown) {
       <span class="item-count">{{ registeredPoms.length }} POMs</span>
     </div>
 
-    <section class="debug-section" aria-labelledby="runtime-heading">
-      <div class="section-heading">
-        <h3 id="runtime-heading">Runtime</h3>
-        <span class="status-dot">Ready</span>
-      </div>
-      <dl class="runtime-details">
-        <div>
-          <dt>Recognized POMs</dt>
-          <dd>{{ registeredPoms.length }}</dd>
-        </div>
-        <div>
-          <dt>Browser runtime</dt>
-          <dd>DOM-backed</dd>
-        </div>
-      </dl>
-      <p class="status-message">{{ webMcpStatus }}</p>
-    </section>
-
-    <section class="debug-section" aria-labelledby="poms-heading">
-      <div class="section-heading">
-        <div>
-          <h3 id="poms-heading">Recognized POM classes</h3>
-          <p class="section-note">
-            Members and actions describe each class; runtime instances are
-            available below each card.
-          </p>
-        </div>
-        <button type="button" @click="refreshPomMembers">Refresh probes</button>
-      </div>
-
-      <div v-if="!pomClassCards.length" class="empty-state">
-        No POM classes are recognized.
-      </div>
-      <article
-        v-for="pom in pomClassCards"
-        :key="pom.className"
-        class="pom-card"
-        :data-pom-id="pom.className"
-        :data-pom-class="pom.className"
+    <div class="panel-tabs" role="tablist" aria-label="Inspector views">
+      <button
+        id="app-model-tab"
+        class="panel-tab"
+        role="tab"
+        type="button"
+        :aria-selected="activeTab === 'app-model'"
+        aria-controls="app-model-panel"
+        @click="activeTab = 'app-model'"
       >
-        <div class="pom-heading">
+        App Model
+      </button>
+      <button
+        id="page-state-tab"
+        class="panel-tab"
+        role="tab"
+        type="button"
+        :aria-selected="activeTab === 'page-state'"
+        aria-controls="page-state-panel"
+        @click="activeTab = 'page-state'"
+      >
+        Page State
+      </button>
+    </div>
+
+    <div
+      v-if="activeTab === 'app-model'"
+      id="app-model-panel"
+      class="tab-panel"
+      role="tabpanel"
+      aria-labelledby="app-model-tab"
+    >
+      <section class="debug-section" aria-labelledby="runtime-heading">
+        <div class="section-heading">
+          <h3 id="runtime-heading">Runtime</h3>
+          <span class="status-dot">Ready</span>
+        </div>
+        <dl class="runtime-details">
           <div>
-            <code>{{ pom.className }}</code>
-            <p class="pom-status">
-              {{ pom.kind === "page" ? "Page POM" : "Component POM" }}
+            <dt>Recognized POMs</dt>
+            <dd>{{ registeredPoms.length }}</dd>
+          </div>
+          <div>
+            <dt>Browser runtime</dt>
+            <dd>DOM-backed</dd>
+          </div>
+        </dl>
+        <p class="status-message">{{ webMcpStatus }}</p>
+      </section>
+
+      <section class="debug-section" aria-labelledby="poms-heading">
+        <div class="section-heading">
+          <div>
+            <h3 id="poms-heading">Recognized POM classes</h3>
+            <p class="section-note">
+              Members and actions describe each class; runtime instances are
+              available below each card.
             </p>
           </div>
-          <span class="item-count"
-            >{{ pom.members.length }} members ·
-            {{ pom.tools.length }} actions</span
-          >
+          <button type="button" @click="refreshPomMembers">
+            Refresh probes
+          </button>
         </div>
 
-        <div class="subsection-heading">
-          <h4>Members</h4>
-          <span>{{ pom.members.length }}</span>
+        <div v-if="!pomClassCards.length" class="empty-state">
+          No POM classes are recognized.
         </div>
-        <div v-if="pom.members.length" class="member-list">
-          <div
-            v-for="member in pom.members"
-            :key="member.memberName"
-            class="member-card"
-            :data-member-name="member.memberName"
-          >
-            <div class="member-heading">
-              <div>
-                <code>{{ member.memberName }}</code>
-                <p class="member-meta">{{ memberKindLabel(member) }}</p>
-              </div>
-              <span
-                :class="[
-                  'member-state',
-                  `member-state-${classMemberState(pom, member)}`,
-                ]"
-              >
-                {{ classMemberState(pom, member) }}
-              </span>
+        <article
+          v-for="pom in pomClassCards"
+          :key="pom.className"
+          class="pom-card"
+          :data-pom-id="pom.className"
+          :data-pom-class="pom.className"
+        >
+          <div class="pom-heading">
+            <div>
+              <code>{{ pom.className }}</code>
+              <p class="pom-status">
+                {{ pom.kind === "page" ? "Page POM" : "Component POM" }}
+              </p>
             </div>
-            <p>{{ classMemberSummary(pom, member) }}</p>
-          </div>
-        </div>
-        <p v-else class="empty-state">This POM has no inspectable members.</p>
-
-        <div class="subsection-heading action-section-heading">
-          <h4>Actions</h4>
-          <span>{{ pom.tools.length }}</span>
-        </div>
-        <div v-if="pom.tools.length" class="action-list">
-          <div
-            v-for="tool in pom.tools"
-            :key="tool.name"
-            class="tool-card"
-            :data-tool-name="tool.name"
-          >
-            <div class="tool-heading">
-              <code>{{ tool.name }}</code>
-              <span>WebMCP registered</span>
-            </div>
-            <p>{{ tool.description }}</p>
-
-            <form class="tool-form" @submit.prevent="invokeTool(tool)">
-              <div v-if="tool.parameters.length" class="tool-parameters">
-                <div
-                  v-for="parameter in tool.parameters"
-                  :key="parameter.name"
-                  class="parameter-field"
-                >
-                  <label :for="`tool-${tool.name}-${parameter.name}`">
-                    {{ parameter.name
-                    }}<span v-if="parameter.optional"> (optional)</span>
-                  </label>
-                  <select
-                    v-if="parameter.schema.enum"
-                    :id="`tool-${tool.name}-${parameter.name}`"
-                    v-model="toolInput(tool)[parameter.name]"
-                  >
-                    <option
-                      v-for="option in parameter.schema.enum"
-                      :key="String(option)"
-                      :value="option"
-                    >
-                      {{ option }}
-                    </option>
-                  </select>
-                  <textarea
-                    v-else-if="parameter.schema.type === 'object'"
-                    :id="`tool-${tool.name}-${parameter.name}`"
-                    :value="jsonInputValue(tool, parameter.name)"
-                    rows="3"
-                    @change="updateJsonInput(tool, parameter.name, $event)"
-                  />
-                  <input
-                    v-else
-                    :id="`tool-${tool.name}-${parameter.name}`"
-                    v-model="toolInput(tool)[parameter.name]"
-                    :type="inputType(tool, parameter.name)"
-                  />
-                </div>
-              </div>
-              <p v-else class="no-parameters">No arguments required.</p>
-              <button class="primary-button invoke-button" type="submit">
-                Invoke tool
-              </button>
-            </form>
-          </div>
-        </div>
-        <p v-else class="empty-state">This POM has no registered actions.</p>
-
-        <details class="instances-panel" :data-instance-list="pom.className">
-          <summary class="instances-heading">
-            <span>Instances</span>
-            <span class="item-count">{{ instanceCountSummary(pom) }}</span>
-          </summary>
-          <p v-if="!pom.instances.length" class="empty-state">
-            {{
-              hasPendingProbe(pom)
-                ? "Waiting for the first page probe."
-                : "No instances found."
-            }}
-          </p>
-          <div v-else class="instance-list">
-            <details
-              v-for="instance in pom.instances"
-              :key="instance.displayPath"
-              class="instance-card"
-              :data-instance-path="instance.displayPath"
+            <span class="item-count"
+              >{{ pom.members.length }} members ·
+              {{ pom.tools.length }} actions</span
             >
-              <summary class="instance-heading">
-                <code>{{ instance.displayPath }}</code>
-                <span v-if="pom.kind === 'page'" class="instance-label"
-                  >registered</span
-                >
+          </div>
+
+          <div class="subsection-heading">
+            <h4>Members</h4>
+            <span>{{ pom.members.length }}</span>
+          </div>
+          <div v-if="pom.members.length" class="member-list">
+            <div
+              v-for="member in pom.members"
+              :key="member.memberName"
+              class="member-card"
+              :data-member-name="member.memberName"
+            >
+              <div class="member-heading">
+                <div>
+                  <code>{{ member.memberName }}</code>
+                  <p class="member-meta">{{ memberKindLabel(member) }}</p>
+                </div>
                 <span
-                  v-else
                   :class="[
                     'member-state',
-                    `member-state-${instanceState(pom, instance)}`,
+                    `member-state-${classMemberState(pom, member)}`,
                   ]"
                 >
-                  {{ instanceState(pom, instance) }}
+                  {{ classMemberState(pom, member) }}
                 </span>
-              </summary>
-              <p class="instance-summary">
-                {{ instanceSummary(pom, instance) }}
-              </p>
-              <div class="member-list">
-                <div
-                  v-for="member in pom.members"
-                  :key="member.memberName"
-                  class="member-card instance-member-card"
-                  :data-instance-member-name="
-                    instanceMemberPath(instance, member)
-                  "
-                >
-                  <div class="member-heading">
-                    <div>
-                      <code>{{ member.memberName }}</code>
-                      <p class="member-meta">{{ memberKindLabel(member) }}</p>
-                    </div>
-                    <span
-                      :class="[
-                        'member-state',
-                        `member-state-${memberState(
-                          observationAt(
-                            instance.registration,
-                            memberProbePath(instance.probePath, member)
-                          )
-                        )}`,
-                      ]"
-                    >
-                      {{
-                        memberState(
-                          observationAt(
-                            instance.registration,
-                            memberProbePath(instance.probePath, member)
-                          )
-                        )
-                      }}
-                    </span>
-                  </div>
-                  <p>{{ instanceMemberSummary(instance, member) }}</p>
-                </div>
               </div>
-            </details>
+              <p>{{ classMemberSummary(pom, member) }}</p>
+            </div>
           </div>
-        </details>
-      </article>
-    </section>
+          <p v-else class="empty-state">This POM has no inspectable members.</p>
 
-    <section class="debug-section" aria-labelledby="history-heading">
-      <div class="section-heading">
-        <h3 id="history-heading">Recent executions</h3>
-        <button
-          type="button"
-          :disabled="!executionHistory.length"
-          @click="clearExecutionHistory"
-        >
-          Clear
-        </button>
-      </div>
-      <p v-if="!executionHistory.length" class="empty-state">
-        Invoke a tool to see its execution here.
-      </p>
-      <ol v-else class="execution-list">
-        <li
-          v-for="execution in executionHistory"
-          :key="execution.id"
-          class="execution-card"
-        >
-          <div class="execution-heading">
-            <code>{{ execution.toolName }}</code>
-            <span
-              :class="[
-                'execution-status',
-                `execution-status-${execution.status}`,
-              ]"
-            >
-              {{ execution.status }}
-            </span>
-            <span v-if="execution.durationMs !== undefined"
-              >{{ execution.durationMs }} ms</span
-            >
+          <div class="subsection-heading action-section-heading">
+            <h4>Actions</h4>
+            <span>{{ pom.tools.length }}</span>
           </div>
-          <pre>{{
-            JSON.stringify(
-              {
-                arguments: execution.arguments,
-                result: execution.result,
-                error: execution.error,
-                trace: execution.trace,
-              },
-              null,
-              2
-            )
-          }}</pre>
-        </li>
-      </ol>
-    </section>
+          <div v-if="pom.tools.length" class="action-list">
+            <div
+              v-for="tool in pom.tools"
+              :key="tool.name"
+              class="tool-card"
+              :data-tool-name="tool.name"
+            >
+              <div class="tool-heading">
+                <code>{{ tool.name }}</code>
+                <span>WebMCP registered</span>
+              </div>
+              <p>{{ tool.description }}</p>
 
-    <section class="debug-section" aria-labelledby="trace-heading">
-      <div class="section-heading">
-        <h3 id="trace-heading">Latest browser trace</h3>
-      </div>
-      <pre v-if="trace.length">{{ JSON.stringify(trace, null, 2) }}</pre>
-      <p v-else class="empty-state">No browser POM operations yet.</p>
-    </section>
+              <form class="tool-form" @submit.prevent="invokeTool(tool)">
+                <div v-if="tool.parameters.length" class="tool-parameters">
+                  <div
+                    v-for="parameter in tool.parameters"
+                    :key="parameter.name"
+                    class="parameter-field"
+                  >
+                    <label :for="`tool-${tool.name}-${parameter.name}`">
+                      {{ parameter.name
+                      }}<span v-if="parameter.optional"> (optional)</span>
+                    </label>
+                    <select
+                      v-if="parameter.schema.enum"
+                      :id="`tool-${tool.name}-${parameter.name}`"
+                      v-model="toolInput(tool)[parameter.name]"
+                    >
+                      <option
+                        v-for="option in parameter.schema.enum"
+                        :key="String(option)"
+                        :value="option"
+                      >
+                        {{ option }}
+                      </option>
+                    </select>
+                    <textarea
+                      v-else-if="parameter.schema.type === 'object'"
+                      :id="`tool-${tool.name}-${parameter.name}`"
+                      :value="jsonInputValue(tool, parameter.name)"
+                      rows="3"
+                      @change="updateJsonInput(tool, parameter.name, $event)"
+                    />
+                    <input
+                      v-else
+                      :id="`tool-${tool.name}-${parameter.name}`"
+                      v-model="toolInput(tool)[parameter.name]"
+                      :type="inputType(tool, parameter.name)"
+                    />
+                  </div>
+                </div>
+                <p v-else class="no-parameters">No arguments required.</p>
+                <button class="primary-button invoke-button" type="submit">
+                  Invoke tool
+                </button>
+              </form>
+            </div>
+          </div>
+          <p v-else class="empty-state">This POM has no registered actions.</p>
+
+          <details class="instances-panel" :data-instance-list="pom.className">
+            <summary class="instances-heading">
+              <span>Instances</span>
+              <span class="item-count">{{ instanceCountSummary(pom) }}</span>
+            </summary>
+            <p v-if="!pom.instances.length" class="empty-state">
+              {{
+                hasPendingProbe(pom)
+                  ? "Waiting for the first page probe."
+                  : "No instances found."
+              }}
+            </p>
+            <div v-else class="instance-list">
+              <details
+                v-for="instance in pom.instances"
+                :key="instance.displayPath"
+                class="instance-card"
+                :data-instance-path="instance.displayPath"
+              >
+                <summary class="instance-heading">
+                  <code>{{ instance.displayPath }}</code>
+                  <span v-if="pom.kind === 'page'" class="instance-label"
+                    >registered</span
+                  >
+                  <span
+                    v-else
+                    :class="[
+                      'member-state',
+                      `member-state-${instanceState(pom, instance)}`,
+                    ]"
+                  >
+                    {{ instanceState(pom, instance) }}
+                  </span>
+                </summary>
+                <p class="instance-summary">
+                  {{ instanceSummary(pom, instance) }}
+                </p>
+                <div class="member-list">
+                  <div
+                    v-for="member in pom.members"
+                    :key="member.memberName"
+                    class="member-card instance-member-card"
+                    :data-instance-member-name="
+                      instanceMemberPath(instance, member)
+                    "
+                  >
+                    <div class="member-heading">
+                      <div>
+                        <code>{{ member.memberName }}</code>
+                        <p class="member-meta">{{ memberKindLabel(member) }}</p>
+                      </div>
+                      <span
+                        :class="[
+                          'member-state',
+                          `member-state-${memberState(
+                            observationAt(
+                              instance.registration,
+                              memberProbePath(instance.probePath, member)
+                            )
+                          )}`,
+                        ]"
+                      >
+                        {{
+                          memberState(
+                            observationAt(
+                              instance.registration,
+                              memberProbePath(instance.probePath, member)
+                            )
+                          )
+                        }}
+                      </span>
+                    </div>
+                    <p>{{ instanceMemberSummary(instance, member) }}</p>
+                  </div>
+                </div>
+              </details>
+            </div>
+          </details>
+        </article>
+      </section>
+
+      <section class="debug-section" aria-labelledby="history-heading">
+        <div class="section-heading">
+          <h3 id="history-heading">Recent executions</h3>
+          <button
+            type="button"
+            :disabled="!executionHistory.length"
+            @click="clearExecutionHistory"
+          >
+            Clear
+          </button>
+        </div>
+        <p v-if="!executionHistory.length" class="empty-state">
+          Invoke a tool to see its execution here.
+        </p>
+        <ol v-else class="execution-list">
+          <li
+            v-for="execution in executionHistory"
+            :key="execution.id"
+            class="execution-card"
+          >
+            <div class="execution-heading">
+              <code>{{ execution.toolName }}</code>
+              <span
+                :class="[
+                  'execution-status',
+                  `execution-status-${execution.status}`,
+                ]"
+              >
+                {{ execution.status }}
+              </span>
+              <span v-if="execution.durationMs !== undefined"
+                >{{ execution.durationMs }} ms</span
+              >
+            </div>
+            <pre>{{
+              JSON.stringify(
+                {
+                  arguments: execution.arguments,
+                  result: execution.result,
+                  error: execution.error,
+                  trace: execution.trace,
+                },
+                null,
+                2
+              )
+            }}</pre>
+          </li>
+        </ol>
+      </section>
+
+      <section class="debug-section" aria-labelledby="trace-heading">
+        <div class="section-heading">
+          <h3 id="trace-heading">Latest browser trace</h3>
+        </div>
+        <pre v-if="trace.length">{{ JSON.stringify(trace, null, 2) }}</pre>
+        <p v-else class="empty-state">No browser POM operations yet.</p>
+      </section>
+    </div>
+
+    <div
+      v-else
+      id="page-state-panel"
+      class="tab-panel"
+      role="tabpanel"
+      aria-labelledby="page-state-tab"
+    >
+      <section
+        class="debug-section page-state-section"
+        aria-labelledby="page-state-heading"
+      >
+        <div class="section-heading">
+          <div>
+            <h3 id="page-state-heading">Structural page state</h3>
+            <p class="section-note">
+              YAML structural snapshot of the demo application. The published
+              <code>get_page_state</code> tool captures the top-level document;
+              refs are valid for this capture only.
+            </p>
+          </div>
+          <button
+            type="button"
+            :disabled="pageStateLoading"
+            @click="refreshPageState"
+          >
+            {{ pageStateLoading ? "Refreshing…" : "Refresh" }}
+          </button>
+        </div>
+        <p v-if="pageStateError" class="form-error">{{ pageStateError }}</p>
+        <p v-else-if="pageStateLoading && !pageState" class="empty-state">
+          Capturing page state…
+        </p>
+        <pre
+          v-else-if="pageState"
+          class="page-state-output"
+        ><code class="language-yaml">{{ pageState }}</code></pre>
+        <p v-else class="empty-state">
+          Waiting for the first page-state capture.
+        </p>
+        <p v-if="pageStateCapturedAt" class="capture-meta">
+          Captured {{ pageStateCapturedAt }}
+        </p>
+      </section>
+    </div>
   </aside>
 </template>
