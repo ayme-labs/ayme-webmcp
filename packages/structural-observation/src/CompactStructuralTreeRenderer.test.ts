@@ -36,7 +36,10 @@ describe("renderCompactStructuralNodeForest", () => {
         children: (node) => node.children,
         properties: (node) => node.properties,
       })
-    ).toMatchSnapshot();
+    ).toMatchInlineSnapshot(`
+      "- e1 ListPage.items[0]:
+        - e2 ListPage.items[0].archiveButton "Archive item-1""
+    `);
   });
 
   it("omits generic roles while retaining their structural refs", () => {
@@ -56,7 +59,11 @@ describe("renderCompactStructuralNodeForest", () => {
         children: (node) => node.children,
         properties: (node) => node.properties,
       })
-    ).toMatchSnapshot();
+    ).toMatchInlineSnapshot(`
+      "- e1:
+        - e2 "Wrapper":
+          - e3 button "Create""
+    `);
   });
 
   it("keeps multiple POM labels as an explicit property", () => {
@@ -83,7 +90,11 @@ describe("renderCompactStructuralNodeForest", () => {
         children: (node) => node.children,
         properties: (node) => node.properties,
       })
-    ).toMatchSnapshot();
+    ).toMatchInlineSnapshot(`
+      "- e1 listitem:
+        - /pom: ["PageA.item","PageB.item"]
+        - e2 button "Archive""
+    `);
   });
 
   it("renders synthetic refs with single POM labels inline", () => {
@@ -111,6 +122,10 @@ describe("renderCompactStructuralNodeForest", () => {
         children: (node) => node.children,
         properties: (node) => node.properties,
       })
-    ).toMatchSnapshot();
+    ).toMatchInlineSnapshot(`
+      "- e1:
+        - s_1 Page.synthetic:
+          - e2 button "Create""
+    `);
   });
 });
