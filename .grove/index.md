@@ -28,6 +28,7 @@
 | G-04 | Assistant can inspect the current page through ref-bearing state | count; current=1 target=1 | verified |
 | G-05 | Vue package supports Vue 3.2 consumers | boolean; current=true | verified |
 | G-06 | Generated WebMCP Tools track live Page Objects | count; current=1 target=1 | verified |
+| G-07 | POM barrel imports remain browser-loadable | count; current=1 target=1 | verified |
 
 ## Work items
 
@@ -39,6 +40,7 @@
 | W-04 | feature | Expose raw Playwright ARIA state through get_page_state | G-04 | complicated | ⊤ | done |  |
 | W-05 | feature | Enforce the Vue 3.2 support floor | G-05 | clear | ⊤ | done |  |
 | W-06 | feature | Synchronize tools with live Page Objects | G-06 | complicated | ⊤ | done |  |
+| W-07 | feature | Mitigate Playwright-tainted POM barrels | G-07 | complicated | ⊤ | done |  |
 
 ## Decisions
 
@@ -83,12 +85,14 @@ graph TD
   G_04["G-04: Assistant can inspect the current page through ref-bearing state"]:::goal
   G_05["G-05: Vue package supports Vue 3.2 consumers"]:::goal
   G_06["G-06: Generated WebMCP Tools track live Page Objects"]:::goal
+  G_07["G-07: POM barrel imports remain browser-loadable"]:::goal
   W_01["W-01: Establish the monorepo walking skeleton"]:::done
   W_02["W-02: Preserve spike behavior through package extraction"]:::done
   W_03["W-03: Extract Vue Page Object activation composable"]:::done
   W_04["W-04: Expose raw Playwright ARIA state through get_page_state"]:::done
   W_05["W-05: Enforce the Vue 3.2 support floor"]:::done
   W_06["W-06: Synchronize tools with live Page Objects"]:::done
+  W_07["W-07: Mitigate Playwright-tainted POM barrels"]:::done
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision

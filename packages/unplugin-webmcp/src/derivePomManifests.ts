@@ -12,10 +12,9 @@ import type {
   ToolManifest,
   ToolParameter,
 } from "@ayme-dev/webmcp";
+import { createPomProgram, type PomCompilerOptions } from "./pomProgram";
 
-export type PomCompilerOptions = {
-  tsconfigPath?: string;
-};
+export type { PomCompilerOptions } from "./pomProgram";
 
 export type PomCompiler = {
   derivePomManifests(fileName: string): PomManifest[];
@@ -38,14 +37,7 @@ export function derivePomManifests(
   options: PomCompilerOptions = {}
 ): PomManifest[] {
   const absoluteFileName = path.resolve(fileName);
-  const config = projectConfigFor(absoluteFileName, options);
-  const program = ts.createProgram({
-    rootNames: [...new Set([...config.fileNames, absoluteFileName])],
-    options: {
-      ...config.options,
-      noEmit: true,
-    },
-  });
+  const program = createPomProgram(absoluteFileName, options);
   const sourceFile = program.getSourceFile(absoluteFileName);
   if (!sourceFile)
     throw new Error(`Could not read POM source ${absoluteFileName}.`);
@@ -76,41 +68,6 @@ export function derivePomManifests(
   }
 
   return manifests;
-}
-
-function projectConfigFor(
-  fileName: string,
-  options: PomCompilerOptions
-): ts.ParsedCommandLine {
-  const configPath = options.tsconfigPath
-    ? path.resolve(options.tsconfigPath)
-    : ts.findConfigFile(
-        path.dirname(fileName),
-        ts.sys.fileExists,
-        "tsconfig.json"
-      );
-  if (!configPath)
-    throw new Error(
-      `Could not find a tsconfig.json for POM source ${fileName}.`
-    );
-
-  const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
-  if (configFile.error) throw configError(configPath, configFile.error);
-
-  const config = ts.parseJsonConfigFileContent(
-    configFile.config,
-    ts.sys,
-    path.dirname(configPath)
-  );
-  const error = config.errors[0];
-  if (error) throw configError(configPath, error);
-  return config;
-}
-
-function configError(configPath: string, diagnostic: ts.Diagnostic) {
-  return new Error(
-    `Could not read TypeScript project configuration ${configPath}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")}`
-  );
 }
 
 function pomMembers(

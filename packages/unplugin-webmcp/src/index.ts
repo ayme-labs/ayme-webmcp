@@ -4,6 +4,9 @@ import {
   createPomCompiler,
   type PomCompilerOptions,
 } from "./derivePomManifests";
+import { rewritePomImports } from "./rewritePomImports";
+
+const PLAYWRIGHT_TEST_PACKAGE = "@playwright/test";
 
 export type AymeWebMcpOptions = PomCompilerOptions;
 
@@ -15,6 +18,18 @@ export const unpluginFactory: UnpluginFactory<AymeWebMcpOptions | undefined> = (
   return {
     name: "ayme-webmcp",
     enforce: "pre",
+    vite: {
+      config(config) {
+        const exclude = config.optimizeDeps?.exclude ?? [];
+
+        return {
+          optimizeDeps: {
+            ...config.optimizeDeps,
+            exclude: [...new Set([...exclude, PLAYWRIGHT_TEST_PACKAGE])],
+          },
+        };
+      },
+    },
     transform: {
       filter: {
         id: /\.ts$/,
@@ -27,6 +42,8 @@ export const unpluginFactory: UnpluginFactory<AymeWebMcpOptions | undefined> = (
         const manifests = compiler.derivePomManifests(fileName);
         if (manifests.length === 0) return null;
 
+        const rewrittenCode = rewritePomImports(code, fileName, options);
+
         const registrations = manifests
           .map(
             (manifest) =>
@@ -35,7 +52,7 @@ export const unpluginFactory: UnpluginFactory<AymeWebMcpOptions | undefined> = (
           .join("\n");
 
         return {
-          code: `import { registerCompiledPom } from '@ayme-dev/webmcp/internal';\n${code}\n${registrations}\n`,
+          code: `import { registerCompiledPom } from '@ayme-dev/webmcp/internal';\n${rewrittenCode}\n${registrations}\n`,
           map: null,
         };
       },

@@ -1,7 +1,6 @@
 import { WebMCP } from "@ayme-dev/webmcp";
 import type { Locator, Page } from "playwright";
-import { ArchiveDialog } from "./ArchiveDialog";
-import { ListItem } from "./ListItem";
+import { ArchiveDialog, ListItem } from "./components";
 
 @WebMCP
 export class ListPage {
