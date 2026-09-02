@@ -10,7 +10,11 @@ import type {
   RegisteredPomTool,
   ToolManifest,
 } from "./contracts";
-import type { BrowserLocator, BrowserPage } from "./browserPage";
+import {
+  BrowserLocatorImpl,
+  type BrowserLocator,
+  type BrowserPage,
+} from "./browserPage";
 
 type CompiledPom = {
   manifest: PomManifest;
@@ -27,6 +31,11 @@ export type RegisteredPom = {
   manifest: PomManifest;
   memberObservations: readonly PomMemberObservation[];
   tools: readonly LiveRegisteredPomTool[];
+};
+
+export type RegisteredPomRoot = {
+  label: string;
+  element: Element;
 };
 
 let browserPage: BrowserPage | undefined;
@@ -157,6 +166,26 @@ function sameObservations(
 
 export function listRegisteredPoms() {
   return [...registeredPoms];
+}
+
+export async function listRegisteredPomRoots(): Promise<RegisteredPomRoot[]> {
+  const roots: RegisteredPomRoot[] = [];
+  for (const registration of registeredPoms) {
+    const components = new Map(
+      registration.manifest.components.map((component) => [
+        component.className,
+        component,
+      ])
+    );
+    await collectRegisteredPomRoots(
+      registration.instance,
+      registration.manifest.members,
+      registration.id,
+      components,
+      roots
+    );
+  }
+  return roots;
 }
 
 export function listRegisteredPomTools() {
@@ -434,6 +463,51 @@ async function probePomMembers(
   );
 }
 
+async function collectRegisteredPomRoots(
+  instance: object,
+  members: readonly PomMemberManifest[],
+  prefix: string,
+  components: ReadonlyMap<string, PomComponentManifest>,
+  roots: RegisteredPomRoot[],
+  componentClasses: ReadonlySet<string> = new Set()
+): Promise<void> {
+  for (const member of members) {
+    if (member.kind !== "component") continue;
+    const component = components.get(member.componentClassName);
+    if (!component) continue;
+
+    try {
+      const value = await readMember(instance, member);
+      const values = member.collection ? asComponents(value) : [value];
+      for (const [index, candidate] of values.entries()) {
+        if (!isPomComponent(candidate)) continue;
+        const path = member.collection
+          ? `${prefix}.${member.memberName}[${index}]`
+          : `${prefix}.${member.memberName}`;
+        const elements = browserLocatorElements(candidate.root);
+        if (elements.length === 1) {
+          const element = elements[0];
+          if (element) roots.push({ label: path, element });
+        }
+        if (componentClasses.has(component.className)) continue;
+        await collectRegisteredPomRoots(
+          candidate,
+          component.members.filter(
+            (child) =>
+              !(child.kind === "locator" && child.memberName === "root")
+          ),
+          path,
+          components,
+          roots,
+          new Set(componentClasses).add(component.className)
+        );
+      }
+    } catch {
+      continue;
+    }
+  }
+}
+
 async function probeMembers(
   instance: object,
   members: readonly PomMemberManifest[],
@@ -649,6 +723,10 @@ function isCallable(value: unknown): value is (...args: unknown[]) => unknown {
 
 function isBrowserLocator(value: unknown): value is BrowserLocator {
   return isRecord(value) && typeof value.count === "function";
+}
+
+function browserLocatorElements(locator: BrowserLocator): Element[] {
+  return locator instanceof BrowserLocatorImpl ? locator.resolveElements() : [];
 }
 
 function isPomComponent(value: unknown): value is { root: BrowserLocator } {
