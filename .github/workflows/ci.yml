@@ -42,7 +42,14 @@ jobs:
       - name: Lint commits
         if: github.event_name == 'pull_request'
         run: pnpm run commitlint --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.event.pull_request.head.sha }}"
-      - run: pnpm run check
+      - name: Run affected package checks
+        if: github.event_name == 'pull_request'
+        run: pnpm exec turbo run build lint typecheck test test:e2e --affected
+      - name: Run full package checks
+        if: github.event_name != 'pull_request'
+        run: pnpm exec turbo run build lint typecheck test test:e2e
+      - run: pnpm run format:check
+      - run: pnpm run boundaries
 
   vue-compatibility:
     name: Vue 3.2 compatibility
