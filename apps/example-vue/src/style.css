@@ -503,6 +503,23 @@ code {
   padding: 0.7rem;
 }
 
+.member-card-interactive {
+  cursor: crosshair;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.member-card-interactive:hover,
+.member-card-interactive:focus-visible,
+.member-card-selected {
+  background: #fffaf0;
+  border-color: #d9a441;
+  box-shadow: 0 0 0 3px rgb(217 164 65 / 14%);
+  outline: none;
+}
+
 .member-heading {
   align-items: flex-start;
   display: flex;
@@ -615,6 +632,10 @@ code {
   overflow-wrap: anywhere;
 }
 
+.instance-heading.member-card-selected {
+  background: #fffaf0;
+}
+
 .instance-summary {
   border-top: 1px solid #e9edf3;
   color: #667085;
@@ -718,6 +739,24 @@ code {
   color: #8a5a00;
 }
 
+[data-ayme-highlight] {
+  animation: ayme-highlight-pulse 1.6s ease-in-out infinite;
+  outline: 3px solid #d9a441;
+  outline-offset: 3px;
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes ayme-highlight-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(217 164 65 / 0%);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgb(217 164 65 / 18%);
+  }
+}
+
 pre {
   background: #172033;
   border-radius: 0.4rem;
@@ -776,5 +815,15 @@ pre {
   .item-row {
     align-items: flex-start;
     display: grid;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .member-card-interactive {
+    transition: none;
+  }
+
+  [data-ayme-highlight] {
+    animation: none;
   }
 }

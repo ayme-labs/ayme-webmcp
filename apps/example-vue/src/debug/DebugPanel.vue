@@ -45,12 +45,16 @@ const props = defineProps<{
   pageStateCapturedAt: string | undefined;
   pageStateError: string | undefined;
   pageStateLoading: boolean;
+  applicationModelSelectionPath: string | undefined;
   refreshPageState: () => Promise<void>;
   registeredPoms: readonly RegisteredPom[];
   refreshPomMembers: () => Promise<void>;
   resetTrace: () => void;
   trace: readonly TraceEntry[];
   webMcpStatus: string;
+  previewApplicationModelTarget: (path: string) => void;
+  clearApplicationModelPreview: () => void;
+  pinApplicationModelTarget: (path: string) => void;
 }>();
 
 const activeTab = ref<"app-model" | "page-state">("app-model");
@@ -384,6 +388,28 @@ function instanceMemberPath(instance: PomInstance, member: PomMemberManifest) {
   return `${instance.displayPath}.${member.memberName}`;
 }
 
+function isHighlightableMember(member: PomMemberManifest) {
+  return member.kind === "locator" || member.kind === "component";
+}
+
+function pageMemberTargetPath(pom: PomClassCard, member: PomMemberManifest) {
+  return `${pom.className}.${memberProbePath("", member)}`;
+}
+
+function instanceMemberTargetPath(
+  instance: PomInstance,
+  member: PomMemberManifest
+) {
+  return `${instance.registration.manifest.className}.${memberProbePath(
+    instance.probePath,
+    member
+  )}`;
+}
+
+function isHighlightedPath(path: string, selectionPath?: string) {
+  return selectionPath === path;
+}
+
 function instanceCountSummary(card: PomClassCard) {
   if (!card.instances.length)
     return hasPendingProbe(card) ? "Waiting" : "0 instances";
@@ -502,8 +528,8 @@ function errorMessage(error: unknown) {
           <div>
             <h3 id="poms-heading">Recognized POM classes</h3>
             <p class="section-note">
-              Members and actions describe each class; runtime instances are
-              available below each card.
+              Hover a member to preview its live element; click to select or
+              toggle it. Runtime instances are available below each card.
             </p>
           </div>
           <button type="button" @click="refreshPomMembers">
@@ -542,8 +568,50 @@ function errorMessage(error: unknown) {
             <div
               v-for="member in pom.members"
               :key="member.memberName"
-              class="member-card"
+              :class="[
+                'member-card',
+                {
+                  'member-card-interactive': isHighlightableMember(member),
+                  'member-card-selected': isHighlightedPath(
+                    pageMemberTargetPath(pom, member),
+                    applicationModelSelectionPath
+                  ),
+                },
+              ]"
               :data-member-name="member.memberName"
+              :data-highlight-path="pageMemberTargetPath(pom, member)"
+              :tabindex="isHighlightableMember(member) ? 0 : undefined"
+              :role="isHighlightableMember(member) ? 'button' : undefined"
+              :aria-pressed="
+                isHighlightableMember(member)
+                  ? isHighlightedPath(
+                      pageMemberTargetPath(pom, member),
+                      applicationModelSelectionPath
+                    )
+                  : undefined
+              "
+              @mouseenter="
+                isHighlightableMember(member) &&
+                previewApplicationModelTarget(pageMemberTargetPath(pom, member))
+              "
+              @mouseleave="clearApplicationModelPreview"
+              @focus="
+                isHighlightableMember(member) &&
+                previewApplicationModelTarget(pageMemberTargetPath(pom, member))
+              "
+              @blur="clearApplicationModelPreview"
+              @click="
+                isHighlightableMember(member) &&
+                pinApplicationModelTarget(pageMemberTargetPath(pom, member))
+              "
+              @keydown.enter.prevent="
+                isHighlightableMember(member) &&
+                pinApplicationModelTarget(pageMemberTargetPath(pom, member))
+              "
+              @keydown.space.prevent="
+                isHighlightableMember(member) &&
+                pinApplicationModelTarget(pageMemberTargetPath(pom, member))
+              "
             >
               <div class="member-heading">
                 <div>
@@ -670,9 +738,65 @@ function errorMessage(error: unknown) {
                   <div
                     v-for="member in pom.members"
                     :key="member.memberName"
-                    class="member-card instance-member-card"
+                    :class="[
+                      'member-card',
+                      'instance-member-card',
+                      {
+                        'member-card-interactive':
+                          isHighlightableMember(member),
+                        'member-card-selected': isHighlightedPath(
+                          instanceMemberTargetPath(instance, member),
+                          applicationModelSelectionPath
+                        ),
+                      },
+                    ]"
                     :data-instance-member-name="
                       instanceMemberPath(instance, member)
+                    "
+                    :data-highlight-path="
+                      instanceMemberTargetPath(instance, member)
+                    "
+                    :tabindex="isHighlightableMember(member) ? 0 : undefined"
+                    :role="isHighlightableMember(member) ? 'button' : undefined"
+                    :aria-pressed="
+                      isHighlightableMember(member)
+                        ? isHighlightedPath(
+                            instanceMemberTargetPath(instance, member),
+                            applicationModelSelectionPath
+                          )
+                        : undefined
+                    "
+                    @mouseenter="
+                      isHighlightableMember(member) &&
+                      previewApplicationModelTarget(
+                        instanceMemberTargetPath(instance, member)
+                      )
+                    "
+                    @mouseleave="clearApplicationModelPreview"
+                    @focus="
+                      isHighlightableMember(member) &&
+                      previewApplicationModelTarget(
+                        instanceMemberTargetPath(instance, member)
+                      )
+                    "
+                    @blur="clearApplicationModelPreview"
+                    @click="
+                      isHighlightableMember(member) &&
+                      pinApplicationModelTarget(
+                        instanceMemberTargetPath(instance, member)
+                      )
+                    "
+                    @keydown.enter.prevent="
+                      isHighlightableMember(member) &&
+                      pinApplicationModelTarget(
+                        instanceMemberTargetPath(instance, member)
+                      )
+                    "
+                    @keydown.space.prevent="
+                      isHighlightableMember(member) &&
+                      pinApplicationModelTarget(
+                        instanceMemberTargetPath(instance, member)
+                      )
                     "
                   >
                     <div class="member-heading">
@@ -784,9 +908,9 @@ function errorMessage(error: unknown) {
           <div>
             <h3 id="page-state-heading">Structural page state</h3>
             <p class="section-note">
-              YAML structural snapshot of the demo application. The published
-              <code>get_page_state</code> tool captures the top-level document;
-              refs are valid for this capture only.
+              Scoped diagnostic snapshot of the demo application. It is separate
+              from the document-wide Page State Session used by
+              <code>get_page_state</code> and consumer ref resolution.
             </p>
           </div>
           <button

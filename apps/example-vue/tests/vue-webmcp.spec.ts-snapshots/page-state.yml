@@ -3,7 +3,7 @@
     - e36:
       - e37 paragraph: Ayme browser experiment
       - e38 heading "List app + WebMCP inspector" [level=1]
-      - e39 paragraph: "Operate the list directly on the left, or invoke the same generated POM tools from the debug console on the right. Switch tabs to inspect the app model or the captured page-state YAML."
+      - e39 paragraph: "Operate the list directly on the left, or invoke the same generated POM tools from the debug console on the right. Hover an application model member to preview its live element, or click to select it."
     - e40: DOM-backed browser runtime
   - e41 main:
     - e1 region "Demo application":
@@ -64,7 +64,7 @@
           - e65:
             - e66:
               - e67 heading "Recognized POM classes" [level=3]
-              - e68 paragraph: Members and actions describe each class; runtime instances are available below each card.
+              - e68 paragraph: Hover a member to preview its live element; click to select or toggle it. Runtime instances are available below each card.
             - e69 button "Refresh probes" [cursor=pointer]
           - e70 article:
             - e71:
@@ -76,28 +76,28 @@
               - e77 heading "Members" [level=4]
               - e78: 4
             - e79:
-              - e80:
+              - e80 button "newItemInput field · locator present 1 match":
                 - e81:
                   - e82:
                     - e83 code: newItemInput
                     - e84 paragraph: field · locator
                   - e85: present
                 - e86 paragraph: 1 match
-              - e87:
+              - e87 button "addItemButton field · locator present 1 match":
                 - e88:
                   - e89:
                     - e90 code: addItemButton
                     - e91 paragraph: field · locator
                   - e92: present
                 - e93 paragraph: 1 match
-              - e94:
+              - e94 button "archiveDialog ArchiveDialog · field absent 0 matches":
                 - e95:
                   - e96:
                     - e97 code: archiveDialog
                     - e98 paragraph: ArchiveDialog · field
                   - e99: absent
                 - e100 paragraph: 0 matches
-              - e101:
+              - e101 button "items ListItem[] · method present 2 components":
                 - e102:
                   - e103:
                     - e104 code: items
@@ -131,14 +131,14 @@
               - e134 heading "Members" [level=4]
               - e135: 2
             - e136:
-              - e137:
+              - e137 button "root field · locator absent 0/1 instances have a match":
                 - e138:
                   - e139:
                     - e140 code: root
                     - e141 paragraph: field · locator
                   - e142: absent
                 - e143 paragraph: 0/1 instances have a match
-              - e144:
+              - e144 button "confirmArchiveButton field · locator absent 0/1 instances have a match":
                 - e145:
                   - e146:
                     - e147 code: confirmArchiveButton
@@ -163,28 +163,28 @@
               - e166 heading "Members" [level=4]
               - e167: 4
             - e168:
-              - e169:
+              - e169 button "root field · locator present 2/2 instances have a match":
                 - e170:
                   - e171:
                     - e172 code: root
                     - e173 paragraph: field · locator
                   - e174: present
                 - e175 paragraph: 2/2 instances have a match
-              - e176:
+              - e176 button "archiveButton field · locator present 2/2 instances have a match":
                 - e177:
                   - e178:
                     - e179 code: archiveButton
                     - e180 paragraph: field · locator
                   - e181: present
                 - e182 paragraph: 2/2 instances have a match
-              - e183:
+              - e183 button "nameButton field · locator present 2/2 instances have a match":
                 - e184:
                   - e185:
                     - e186 code: nameButton
                     - e187 paragraph: field · locator
                   - e188: present
                 - e189 paragraph: 2/2 instances have a match
-              - e190:
+              - e190 button "nameInput field · locator absent 0/2 instances have a match":
                 - e191:
                   - e192:
                     - e193 code: nameInput
