@@ -33,7 +33,7 @@
 | G-08 | Structural page state is review-ready | count; current=3 target=2 | verified |
 | G-09 | POM barrel imports remain browser-loadable | count; current=1 target=1 | verified |
 | G-10 | Consumers can use Structural Refs in browser capabilities | count; current=5 target=3 | verified |
-| G-11 | Discover annotated Page Object children | count; current= target=1 | unverified |
+| G-11 | Discover annotated Page Object children | count; current=1 target=1 | verified |
 
 ## Work items
 
@@ -60,7 +60,7 @@
 | W-19 | feature | Simplify application-model highlighting interactions | G-10 | clear | ⊤ | done |  |
 | W-20 | bug | Make continuous ref resolution merge-safe | G-10 | complicated | ⊤ | done |  |
 | W-21 | bug | Preserve ref identity through temporary removal | G-10 | clear | ⊤ | done |  |
-| W-22 | feature | Discover annotated Page Object children | G-11 | complicated | ⊤ | progress | ★ |
+| W-22 | feature | Discover annotated Page Object children | G-11 | complicated | ⊤ | done |  |
 
 ## Decisions
 
@@ -139,7 +139,7 @@ graph TD
   W_19["W-19: Simplify application-model highlighting interactions"]:::done
   W_20["W-20: Make continuous ref resolution merge-safe"]:::done
   W_21["W-21: Preserve ref identity through temporary removal"]:::done
-  W_22["W-22: Discover annotated Page Object children"]:::progress,critical
+  W_22["W-22: Discover annotated Page Object children"]:::done
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -206,7 +206,6 @@ graph TD
   Y_03 -->|distills| D_12
   Y_04 -->|distills| D_12
   Y_04 -->|supersedes| Y_03
-  class W_22 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff
