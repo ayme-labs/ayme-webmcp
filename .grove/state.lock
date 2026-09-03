@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:fd24936ae04d7db71c489c0f40e59b9a99cf12fc965d54a00b75f6ff6759017e
+# checksum: sha256:d5f4db28c580a2a533de1bf3433efbac3caade447d29d3fb3fbb062e41859d0f
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -46,6 +46,11 @@ g G-09 status=verified fitness_kind=count t_created=2026-09-02T07:13:35Z t_updat
   area: A-02
   fitness_target: 1
   fitness_current: 1
+
+g G-10 status=verified fitness_kind=count t_created=2026-09-02T13:53:17Z t_updated=2026-09-02T15:32:44Z "Consumers can use Structural Refs in browser capabilities"
+  area: A-03
+  fitness_target: 3
+  fitness_current: 5
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -373,6 +378,140 @@ w W-14 type=feature status=done cynefin=complicated t_created=2026-09-02T07:13:5
   why:
     | Issue #15 requires a narrow internal mitigation for Playwright-tainted local barrels without a public option or runtime shim.
 
+w W-15 type=feature status=done cynefin=complicated t_created=2026-09-02T13:53:40Z t_updated=2026-09-02T14:22:41Z "Expose public page-state resolution"
+  goals: G-10
+  fitness: G-10=+1
+  surface: packages/webmcp/src, packages/playwright-browser/src
+  ac:
+    | The public Ayme facade captures and renders Structural Page State asynchronously.
+    | PageState resolves current real refs to current refs and DOM elements with one ordered outcome per input.
+    | Synthetic refs resolve only when composition knows their originating DOM element.
+    | Existing POM decoration and top-level-document rendering remain unchanged.
+    | A real Chromium test verifies the public interface at the Page State Session seam.
+  hypothesis:
+    | Retaining the capture's ref-to-element association behind a PageState value provides consumer resolution without changing StructuralTree semantics.
+  evidence_strategy:
+    | Run focused application tests, real-browser tests, type checking, linting, and build verification.
+  evidence:
+    | Integrated c84be0b2. pnpm --filter @ayme-dev/webmcp exec vitest run src/ayme.test.ts src/pageState.test.ts: 15 passed. pnpm --filter @ayme-dev/webmcp exec vitest run --config vitest.browser.config.ts: Chromium 1 passed. pnpm --filter @ayme-dev/webmcp typecheck: passed. Implementer also reported workspace build, lint, test, format check, and packed-consumer verification passed.
+  plan:
+    | Implement local tracker ticket 01 and keep WebMCP publication unchanged.
+
+w W-16 type=feature status=done cynefin=complicated t_created=2026-09-02T13:54:52Z t_updated=2026-09-02T15:22:08Z "Retarget historical refs through reconciliation"
+  goals: G-10
+  fitness: G-10=+1
+  surface: packages/webmcp/src, packages/structural-observation/src, packages/playwright-browser/src
+  ac:
+    | Historical refs retarget to the current ref and DOM element across repeated reconciled captures.
+    | Every observed alias in one lineage resolves to the same current node.
+    | Added nodes become resolvable while removed and ambiguous nodes resolve as unresolved.
+    | A retained PageState resolves through the session's latest baseline within one Document.
+    | A real Chromium test verifies a multi-capture changed-ref lineage.
+  hypothesis:
+    | StructuralTree before-node links can retarget a private session identity without changing public Structural Ref semantics.
+  evidence_strategy:
+    | Run real-browser lineage tests, focused session tests, StructuralTree tests, type checking, linting, and build verification.
+  evidence:
+    | Integrated 1df394a1. WebMCP tests: 31 passed. Structural observation tests: 106 passed. Chromium page-state session tests: 2 passed. WebMCP and structural-observation typechecks passed. Implementer pnpm check passed build, lint, workspace tests, 7 Playwright E2E tests, formatting, and 102 boundary checks.
+  plan:
+    | Implement local tracker ticket 02 without redesigning StructuralTree matching heuristics.
+
+w W-17 type=feature status=done cynefin=clear t_created=2026-09-02T13:56:09Z t_updated=2026-09-02T15:32:44Z "Adapt WebMCP to the shared Page State Session"
+  goals: G-10
+  fitness: G-10=+1
+  surface: packages/webmcp/src, packages/webmcp/package.json
+  ac:
+    | get_page_state delegates capture and rendering to the shared default Page State Session.
+    | Refs returned through WebMCP resolve through the public Ayme facade in the same Document.
+    | WebMCP retains no separate reconciliation baseline, alias map, or resolver.
+    | Existing WebMCP rendering, tool synchronization, and POM decoration remain unchanged.
+    | Packed consumers can import the public Page State Session interface without private dependency leaks.
+  hypothesis:
+    | A thin WebMCP adapter can reuse the default Ayme facade without changing existing model-facing behavior.
+  evidence_strategy:
+    | Run WebMCP tests, packed-consumer verification, and the complete repository check.
+  evidence:
+    | Integrated 7c7bb52b. Final pnpm check passed build, lint, typecheck, workspace tests including 32 WebMCP tests, 7 Playwright E2E tests, formatting, and boundary checks. WebMCP-to-Ayme shared-session retargeting regression passed.
+  plan:
+    | Implement local tracker ticket 03 without changing Page State Session semantics.
+
+w W-18 type=feature status=done cynefin=clear t_created=2026-09-03T09:49:30Z t_updated=2026-09-03T10:04:25Z "Highlight application-model elements from the demo inspector"
+  goals: G-10
+  fitness: G-10=+1
+  surface: apps/example-vue/src/debug/DebugPanel.vue, apps/example-vue/src/style.css
+  ac:
+    | Hovering an application-model member highlights its corresponding live element.
+    | Clicking an application-model member pins the highlight until it is cleared or another member is selected.
+    | The inspector reports the selected member and current structural ref after resolution.
+    | A missing or non-actionable target is reported without breaking the inspector.
+  hypothesis:
+    | Linking application-model members to their live structural refs will make ref resolution observable through hover and click interactions.
+  evidence_strategy:
+    | Verify the interactions with component tests and Playwright, then run the repository check.
+  evidence:
+    | Application-model hover, pin, and clear interactions passed in the example-vue Playwright suite. Full pnpm check passed with 33 WebMCP tests, 106 structural-observation tests, 8 E2E tests, build, lint, typecheck, formatting, and boundaries.
+
+w W-19 type=feature status=done cynefin=clear t_created=2026-09-03T10:28:31Z t_updated=2026-09-03T10:46:03Z "Simplify application-model highlighting interactions"
+  goals: G-10
+  fitness: G-10=+1
+  surface: apps/example-vue/src/debug/DebugPanel.vue, apps/example-vue/src/ayme/useAymeExperiment.ts, apps/example-vue/src/style.css, packages/webmcp/src/pageState.ts, packages/webmcp/src/index.ts
+  ac:
+    | The application-model inspector has no separate element-focus section or Clear control.
+    | Clicking the selected application-model target clears it; clicking a different target switches selection.
+    | Hovering temporarily takes visual precedence over selection, and leaving restores the selected target.
+    | Collection and class-level application-model targets can highlight all matching live instances, while indexed targets highlight one instance.
+    | The public PageState API exposes ref-based resolution only; resolveElement and its public type are removed.
+    | Component-level selection behavior and real DOM highlighting are covered by tests.
+  hypothesis:
+    | A single target-driven inspector with explicit hover precedence will make application-model highlighting easier to understand, while grouped internal targets cover repeated component instances without expanding the public API.
+  evidence_strategy:
+    | Run focused component or state tests and Playwright demo tests for toggle, switching, hover precedence, repeated instances, and public typecheck; run grove check and repository validation.
+  evidence:
+    | Simplified application-model highlighting interactions; public PageState remains ref-based; collection and class-level targets resolve to all matching live instances; pnpm check passed, including 9 Playwright E2E tests.
+
+w W-20 type=bug status=done cynefin=complicated t_created=2026-09-03T10:57:18Z t_updated=2026-09-03T11:13:59Z "Make continuous ref resolution merge-safe"
+  goals: G-10
+  fitness: G-10=+0
+  surface: packages/webmcp/src/pageState.ts, packages/webmcp/src/ayme.test.ts, packages/webmcp/src/ayme.browser.test.ts, packages/webmcp/package.json, packages/structural-observation/src/StructuralTree.ts, packages/structural-observation/src/StructuralTree.test.ts
+  ac:
+    | Synthetic refs allocated by one Document session never collide across captures.
+    | A historical synthetic ref follows an unambiguous matched POM root, while removed and ambiguous roots never resolve to an unrelated element.
+    | An observed alias cannot be silently reassigned to a different session identity.
+    | The WebMCP Chromium session scenario is isolated and runs through the root pnpm check merge gate.
+    | Renderer-sensitive expectations use the compact syntax from current main.
+  repro:
+    | With a fresh synthetic allocator per capture, removing the first omitted POM root reuses its ref for the next root; exact-ref precedence then resolves the historical ref to the wrong DOM element. The Chromium session tests are also excluded from every task reached by pnpm check.
+  evidence_strategy:
+    | Add public-facade regressions for synthetic removal, continuity, reordering, and ambiguity; run WebMCP unit and Chromium suites, then the full pnpm check on the rebased branch.
+  evidence:
+    | pnpm check passed after rebasing onto origin/main: all builds, lint, typechecks, unit tests, 9 example Playwright tests, the WebMCP Chromium session test, formatting, and package boundaries are green.
+    | Public facade regression proves synthetic roots retain identity through reordering; removing Account leaves historical s_1/s_3 unresolved while historical Billing s_2/s_4 resolves to current s_5. StructuralTree also tests raw after-ref lineage directly.
+    | PageStateSession now owns one monotonic synthetic allocator, alias rebinding throws an invariant error, dead per-identity alias sets are removed, and ambiguity is queried without exposing a collection.
+  plan:
+    | Own synthetic allocation in PageStateSession, expose fresh-after-ref reconciliation lineage, fail closed on alias collisions, consolidate the Chromium session scenario, and register it as the WebMCP test:e2e task.
+  why:
+    | This repairs correctness and validation of the already-verified Page State Session outcome without expanding its public API.
+
+w W-21 type=bug status=done cynefin=clear t_created=2026-09-03T11:44:42Z t_updated=2026-09-03T12:10:38Z "Preserve ref identity through temporary removal"
+  goals: G-10
+  fitness: G-10=+0
+  surface: packages/webmcp/src/pageState.ts, packages/webmcp/src/ayme.browser.test.ts, apps/example-vue/src/ayme/useAymeExperiment.ts, apps/example-vue/src/debug/DebugPanel.vue
+  ac:
+    | A historical ref resolves to the same identity after the same element is hidden and shown or detached and reattached.
+    | Conflicting identity evidence and duplicate current identity claims fail closed.
+    | Application-model highlighting batches element ref lookup, tracks selector-relevant DOM mutations, and ignores its own marker mutations.
+    | The inspector labels its scoped snapshot honestly and contains no redundant highlightability wrapper.
+  repro:
+    | A real browser capture observes a visible element, omits it while hidden, then observes the same element again; resolving the original ref throws because its historical alias is bound to a removed identity.
+  evidence_strategy:
+    | Run focused WebMCP browser tests and example tests, regular type checks, the full workspace check, and Grove check.
+  evidence:
+    | Red browser regression committed as 84c745f1; the prior implementation failed with the expected Structural Ref alias collision.
+    | Green implementation committed as 28845e26; WebMCP Chromium 1/1, WebMCP unit 33/33, example Playwright 9/9, and pnpm check passed.
+    | Interface trace: the new batch capture is exported only from @ayme-dev/webmcp/internal and used by the Vue example; the public ayme PageState API is unchanged.
+  plan:
+    | Implement candidate-based identity selection, public-seam browser regressions, batched element ref capture, observer filtering, and the agreed demo cleanup.
+
 d D-01 status=superseded t_created=2026-08-27T08:43:08Z t_updated=2026-08-27T11:48:35Z "Use the five-workspace monorepo layout"
   context:
     | The open-source WebMCP library needs independently publishable core and Vite packages, a private example application, and shared tooling configuration.
@@ -462,13 +601,17 @@ d D-09 status=accepted t_created=2026-08-31T15:47:55Z t_updated=2026-08-31T15:48
   decision:
     | See ADR-0009: docs/adr/0009-let-ayme-own-live-page-object-observation.md.
 
-d D-10 status=accepted t_created=2026-08-31T18:36:54Z t_updated=2026-09-02T09:50:35Z "Use capture-scoped Structural Refs"
+d D-10 status=superseded t_created=2026-08-31T18:36:54Z t_updated=2026-09-02T13:33:00Z "Use capture-scoped Structural Refs"
   decision:
     | See ADR-0010: docs/adr/0010-use-capture-scoped-structural-refs.md.
 
 d D-11 status=accepted t_created=2026-08-31T18:37:10Z t_updated=2026-09-02T09:50:35Z "Capture only the top-level document"
   decision:
     | See ADR-0011: docs/adr/0011-capture-only-the-top-level-document.md.
+
+d D-12 status=accepted t_created=2026-09-02T13:33:00Z t_updated=2026-09-02T13:56:54Z "Preserve best-effort node continuity in Page State Sessions"
+  decision:
+    | See ADR-0012: docs/adr/0012-preserve-best-effort-node-continuity-in-page-state-sessions.md.
 
 q Q-01 status=deferred cynefin=complicated t_created=2026-08-27T12:43:03Z t_updated=2026-08-27T14:13:29Z "Choose the public activation interface"
   why:
@@ -504,6 +647,14 @@ b B-01 status=validated cynefin=complicated t_created=2026-08-31T13:49:50Z t_upd
   result:
     | Every exact version passed typechecking and all three lifecycle tests in an isolated checkout at commit 4f510a0.
 
+b B-02 status=validated cynefin=complicated t_created=2026-09-02T13:55:47Z t_updated=2026-09-02T13:55:48Z "Existing capture and reconciliation seams support session continuity"
+  vm:
+    | Inspect browser capture output, changed-ref reconciliation links, ambiguity behavior, and current-tree projection tests.
+  threshold:
+    | The existing interfaces expose current ref-to-element associations and one-to-one before-state links without changing matching heuristics.
+  result:
+    | Capture exposes refsByElement; reconciliation exposes getBeforeNode for changed refs and add-remove outcomes for ambiguous candidates.
+
 y Y-01 status=active t_created=2026-08-27T13:24:26Z t_updated=2026-08-27T13:25:03Z "Shared Page Object behavior"
   tags: Page Object Model (POM), Generated WebMCP Tool
   surface: packages/webmcp, packages/unplugin-webmcp, apps/example-vue
@@ -516,19 +667,32 @@ y Y-02 status=active t_created=2026-08-27T14:40:25Z t_updated=2026-08-27T14:40:2
   invariant:
     | A framework integration can own Page Object activation and disposal for its lifecycle while the core runtime remains framework-neutral.
 
-y Y-03 status=active t_created=2026-09-02T09:50:35Z t_updated=2026-09-02T09:50:35Z "Synthetic roots are observation-only"
+y Y-03 status=superseded t_created=2026-09-02T09:50:35Z t_updated=2026-09-02T13:37:32Z "Synthetic roots are observation-only"
   tags: Structural Page State, Structural Ref, Page Object Root
   surface: packages/structural-observation/src, packages/webmcp/src
   invariant:
     | Structural Page State keeps a captured top-level document's observable hierarchy separate from Page Object decoration. A synthetic Structural Ref identifies a Page Object Root omitted from the distilled tree, carries page-state identity and Page Object association only, and must not represent ARIA semantics or Playwright actionability.
+  revalidation:
+    | 2026-09-02T13:37:05Z from=D-12
+
+y Y-04 status=active t_created=2026-09-02T13:37:31Z t_updated=2026-09-02T13:37:32Z "Synthetic roots remain observation-only"
+  tags: Structural Page State, Structural Ref, Page State Session, Page Object Root
+  surface: packages/structural-observation/src, packages/webmcp/src
+  invariant:
+    | Structural Page State keeps a captured top-level document's observable hierarchy separate from Page Object decoration. A synthetic Structural Ref may resolve to its known Page Object Root DOM element within a Page State Session, but does not represent ARIA semantics or Playwright actionability.
 
 a A-01 status=present t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:42:21Z "Repository foundation"
   surface: apps, packages, package.json, pnpm-workspace.yaml, pnpm-lock.yaml, turbo.json, devbox.json, devbox.lock, .gitignore
 
 a A-02 status=present t_created=2026-08-27T12:43:02Z t_updated=2026-08-27T12:43:02Z "Page Object interoperability"
 
+a A-03 status=present t_created=2026-09-02T13:53:17Z t_updated=2026-09-02T13:53:17Z "Consumer browser capabilities"
+  surface: packages/webmcp/src, packages/playwright-browser/src, packages/structural-observation/src
+
 e B-01 targets W-05 t_created=2026-08-31T13:49:50Z
+e B-02 targets W-16 t_created=2026-09-02T13:55:47Z
 e D-05 supersedes D-01 t_created=2026-08-27T11:48:25Z
+e D-12 supersedes D-10 t_created=2026-09-02T13:33:00Z
 e Q-01 asks D-06 t_created=2026-08-27T12:43:04Z
 e Q-01 asks W-03 t_created=2026-08-27T14:13:29Z
 e Q-02 asks W-10 t_created=2026-08-31T19:05:06Z
@@ -557,6 +721,13 @@ e W-12 implements D-04 t_created=2026-09-01T09:30:33Z
 e W-13 implements D-10 t_created=2026-09-02T08:44:53Z
 e W-13 implements D-11 t_created=2026-09-02T08:44:53Z
 e W-13 produces Y-03 t_created=2026-09-02T09:50:35Z
+e W-15 blocks W-16 t_created=2026-09-02T13:56:55Z
+e W-16 blocks W-17 t_created=2026-09-02T13:56:55Z
+e W-16 implements D-12 t_created=2026-09-02T13:55:31Z
+e W-17 implements D-12 t_created=2026-09-02T13:56:54Z
 e Y-02 distills D-08 t_created=2026-08-27T14:40:25Z
 e Y-03 distills D-10 t_created=2026-09-02T09:50:35Z
 e Y-03 distills D-11 t_created=2026-09-02T09:50:35Z
+e Y-03 distills D-12 t_created=2026-09-02T13:37:05Z
+e Y-04 distills D-12 t_created=2026-09-02T13:37:31Z
+e Y-04 supersedes Y-03 t_created=2026-09-02T13:37:31Z
