@@ -26,6 +26,7 @@
     "build": "tsdown",
     "lint": "eslint src --max-warnings 0",
     "test": "vitest run --passWithNoTests",
+    "test:e2e": "vitest run --config vitest.browser.config.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
@@ -34,7 +35,9 @@
     "@ayme-dev/structural-observation": "workspace:*",
     "@ayme-dev/typescript-config": "workspace:*",
     "@types/node": "^24.0.0",
+    "@vitest/browser-playwright": "^4.1.11",
     "eslint": "^10.9.1",
+    "playwright": "^1.62.1",
     "tsdown": "^0.22.14",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11"

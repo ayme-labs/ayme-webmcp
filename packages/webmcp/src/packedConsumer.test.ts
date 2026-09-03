@@ -142,6 +142,8 @@ it(
         [
           'const main = await import("@ayme-dev/webmcp");',
           'const internal = await import("@ayme-dev/webmcp/internal");',
+          'if (typeof main.ayme?.getPageState !== "function") throw new Error("missing named Ayme facade");',
+          'if (main.default !== main.ayme) throw new Error("Ayme default differs from named export");',
           'if (typeof main.createBrowserPage !== "function") throw new Error("missing createBrowserPage");',
           'if (typeof internal.configureAymeRuntime !== "function") throw new Error("missing configureAymeRuntime");',
           'console.log("ok");',
