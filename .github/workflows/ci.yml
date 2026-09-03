@@ -29,6 +29,7 @@ jobs:
       PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
       TURBO_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+      TURBO_SCM_BASE: origin/main
     steps:
       - uses: actions/checkout@v7
         with:
