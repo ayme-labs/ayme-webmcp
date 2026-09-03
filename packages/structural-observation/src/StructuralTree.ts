@@ -61,6 +61,12 @@ type MutableNodeFrame = {
 
 type BeforeStateMap = Map<AriaRef, StructuralNode>;
 
+type ReconciliationMetadata = {
+  readonly beforeByRef: ReadonlyMap<AriaRef, StructuralNode>;
+  readonly beforeByAfterRef: ReadonlyMap<AriaRef, StructuralNode>;
+  readonly ambiguousBeforeRefs: ReadonlySet<AriaRef>;
+};
+
 type RefAllocator = { resolve(desiredRef: AriaRef): AriaRef };
 
 /**
@@ -78,8 +84,10 @@ type RefAllocator = { resolve(desiredRef: AriaRef): AriaRef };
  */
 type ReconcileContext = {
   beforeByRef: BeforeStateMap;
+  beforeByAfterRef: BeforeStateMap;
   beforeNodesByRef: ReadonlyMap<AriaRef, StructuralNode>;
   afterNodesByRef: ReadonlyMap<AriaRef, StructuralNode>;
+  ambiguousBeforeRefs: Set<AriaRef>;
   consumedBeforeRefs: Set<AriaRef>;
   refAllocator: RefAllocator;
 };
@@ -121,7 +129,7 @@ export class StructuralTree {
    * reconciliation metadata for potential internal use; it is intentionally not
    * surfaced in any serialized timeline output.
    */
-  private readonly _beforeByRef: ReadonlyMap<AriaRef, StructuralNode>;
+  private readonly _reconciliation: ReconciliationMetadata;
 
   private readonly _refFactory: SyntheticAriaRefAllocator;
 
@@ -130,11 +138,15 @@ export class StructuralTree {
   constructor(
     root: StructuralNode,
     refFactory: SyntheticAriaRefAllocator,
-    beforeByRef?: ReadonlyMap<AriaRef, StructuralNode>
+    reconciliation?: ReconciliationMetadata
   ) {
     this.root = root;
     this._refFactory = refFactory;
-    this._beforeByRef = beforeByRef ?? new Map();
+    this._reconciliation = reconciliation ?? {
+      beforeByRef: new Map(),
+      beforeByAfterRef: new Map(),
+      ambiguousBeforeRefs: new Set(),
+    };
   }
 
   /**
@@ -153,7 +165,17 @@ export class StructuralTree {
 
   /** Returns the prior snapshot state for an updated reconciled node. */
   getBeforeNode(ref: AriaRef): StructuralNode | null {
-    return this._beforeByRef.get(ref) ?? null;
+    return this._reconciliation.beforeByRef.get(ref) ?? null;
+  }
+
+  /** Returns the before-state node matched to a raw after-snapshot ref. */
+  getBeforeNodeForAfterRef(ref: AriaRef): StructuralNode | null {
+    return this._reconciliation.beforeByAfterRef.get(ref) ?? null;
+  }
+
+  /** Reports whether a before-state ref had multiple compatible candidates. */
+  wasBeforeRefAmbiguous(ref: AriaRef): boolean {
+    return this._reconciliation.ambiguousBeforeRefs.has(ref);
   }
 
   /** Reports whether a node with the given ref exists in the tree. */
@@ -221,7 +243,7 @@ export class StructuralTree {
     return new StructuralTree(
       StructuralTree._appendChild(this.root, parentRef, child),
       this._refFactory,
-      this._beforeByRef
+      this._reconciliation
     );
   }
 
@@ -242,7 +264,7 @@ export class StructuralTree {
         current.enrich(enrichment)
       ),
       this._refFactory,
-      this._beforeByRef
+      this._reconciliation
     );
   }
 
@@ -380,7 +402,7 @@ export class StructuralTree {
    */
   async enrich(enrichNode: EnrichNodeFn): Promise<StructuralTree> {
     const root = await StructuralTree._enrichNode(this.root, enrichNode);
-    return new StructuralTree(root, this._refFactory, this._beforeByRef);
+    return new StructuralTree(root, this._refFactory, this._reconciliation);
   }
 
   /**
@@ -390,7 +412,7 @@ export class StructuralTree {
    */
   collapseSvgSubtrees(): StructuralTree {
     const root = StructuralTree._collapseSvgSubtree(this.root);
-    return new StructuralTree(root, this._refFactory, this._beforeByRef);
+    return new StructuralTree(root, this._refFactory, this._reconciliation);
   }
 
   private static _collapseSvgSubtree(node: StructuralNode): StructuralNode {
@@ -531,7 +553,7 @@ export class StructuralTree {
     let tree = new StructuralTree(
       this.root,
       this._refFactory,
-      this._beforeByRef
+      this._reconciliation
     );
     const placedRefs: Array<AriaRef | null> = [];
     const fullOrder = new Map(
@@ -695,7 +717,7 @@ export class StructuralTree {
 
     const root = rebuild(tree.root);
     return inserted
-      ? new StructuralTree(root, tree._refFactory, tree._beforeByRef)
+      ? new StructuralTree(root, tree._refFactory, tree._reconciliation)
       : tree;
   }
 
@@ -723,6 +745,7 @@ export class StructuralTree {
     after: StructuralTree
   ): StructuralTree {
     const beforeByRef: BeforeStateMap = new Map();
+    const beforeByAfterRef: BeforeStateMap = new Map();
     const refAllocator = StructuralTree._createAddedRefAllocator(
       before.root,
       before._refFactory
@@ -733,8 +756,10 @@ export class StructuralTree {
     after.root.walk((node) => afterNodesByRef.set(node.ref, node));
     const context: ReconcileContext = {
       beforeByRef,
+      beforeByAfterRef,
       beforeNodesByRef,
       afterNodesByRef,
+      ambiguousBeforeRefs: new Set(),
       consumedBeforeRefs: new Set(),
       refAllocator,
     };
@@ -750,7 +775,22 @@ export class StructuralTree {
       afterRoot,
       context
     );
-    return new StructuralTree(reconciledRoot, before._refFactory, beforeByRef);
+    const removedRefs = new Set<AriaRef>();
+    reconciledRoot.walk((node) => {
+      if (node.status?.kind === "removed") removedRefs.add(node.ref);
+    });
+    const ambiguousBeforeRefs = new Set<AriaRef>();
+    for (const ref of context.ambiguousBeforeRefs) {
+      const beforeNode = beforeNodesByRef.get(ref);
+      beforeNode?.walk((node) => {
+        if (removedRefs.has(node.ref)) ambiguousBeforeRefs.add(node.ref);
+      });
+    }
+    return new StructuralTree(reconciledRoot, before._refFactory, {
+      beforeByRef,
+      beforeByAfterRef,
+      ambiguousBeforeRefs,
+    });
   }
 
   private static _wrapInFragment(node: StructuralNode): StructuralNode {
@@ -855,6 +895,11 @@ export class StructuralTree {
     afterNode: StructuralNode,
     context: ReconcileContext
   ): StructuralNode {
+    StructuralTree._recordMatchedSubtreeLineage(
+      beforeNode,
+      afterNode,
+      context.beforeByAfterRef
+    );
     if (StructuralTree._isReconciliationEqual(beforeNode, afterNode))
       return StructuralTree._preserveUnchangedSubtree(beforeNode, afterNode);
 
@@ -937,10 +982,22 @@ export class StructuralTree {
       }
 
       for (const [afterIndex, candidates] of candidatesByAfterIndex) {
-        if (candidates.length !== 1) continue;
+        if (candidates.length !== 1) {
+          for (const beforeIndex of candidates) {
+            const beforeChild = beforeChildren[beforeIndex];
+            if (beforeChild !== undefined && typeof beforeChild !== "string")
+              context.ambiguousBeforeRefs.add(beforeChild.ref);
+          }
+          continue;
+        }
         const beforeIndex = candidates[0];
         if (beforeIndex === undefined) continue;
-        if (afterCandidateCountsByBeforeIndex.get(beforeIndex) !== 1) continue;
+        if (afterCandidateCountsByBeforeIndex.get(beforeIndex) !== 1) {
+          const beforeChild = beforeChildren[beforeIndex];
+          if (beforeChild !== undefined && typeof beforeChild !== "string")
+            context.ambiguousBeforeRefs.add(beforeChild.ref);
+          continue;
+        }
         beforeMatches.add(beforeIndex);
         afterMatches.add(afterIndex);
         matches.set(afterIndex, beforeIndex);
@@ -995,6 +1052,11 @@ export class StructuralTree {
             child: StructuralTree._buildAddedSubtree(afterChild, context),
           };
         }
+        StructuralTree._recordMatchedSubtreeLineage(
+          beforeChild,
+          afterChild,
+          context.beforeByAfterRef
+        );
         if (StructuralTree._isReconciliationEqual(beforeChild, afterChild)) {
           return {
             matchedBeforeIndex,
@@ -1210,6 +1272,32 @@ export class StructuralTree {
     });
   }
 
+  private static _recordMatchedSubtreeLineage(
+    beforeNode: StructuralNode,
+    afterNode: StructuralNode,
+    beforeByAfterRef: BeforeStateMap
+  ): void {
+    beforeByAfterRef.set(afterNode.ref, beforeNode);
+    if (!StructuralTree._isReconciliationEqual(beforeNode, afterNode)) return;
+
+    for (let index = 0; index < afterNode.children.length; index += 1) {
+      const beforeChild = beforeNode.children[index];
+      const afterChild = afterNode.children[index];
+      if (
+        beforeChild === undefined ||
+        afterChild === undefined ||
+        typeof beforeChild === "string" ||
+        typeof afterChild === "string"
+      )
+        continue;
+      StructuralTree._recordMatchedSubtreeLineage(
+        beforeChild,
+        afterChild,
+        beforeByAfterRef
+      );
+    }
+  }
+
   /** Ref-sensitive recursive equality used only to guard reconciliation shortcuts. */
   private static _isReconciliationEqual(
     beforeNode: StructuralNode,
@@ -1301,6 +1389,11 @@ export class StructuralTree {
     context: ReconcileContext
   ): StructuralNode {
     context.consumedBeforeRefs.add(afterNode.ref);
+    StructuralTree._recordMatchedSubtreeLineage(
+      beforeNode,
+      afterNode,
+      context.beforeByAfterRef
+    );
     if (StructuralTree._isReconciliationEqual(beforeNode, afterNode))
       return StructuralTree._preserveUnchangedSubtree(beforeNode, afterNode);
 
