@@ -82,19 +82,12 @@ test("adapter locator.count works through the bridge", async ({
 test("proxy page methods do not fall through to real Playwright driver", async ({
   adapterPage,
 }) => {
-  // Use arguments that would SUCCEED on the real Playwright page so a
-  // leaked driver call would pass silently. Through the adapter these
-  // must all throw.
+  // Methods that the adapter does NOT support must throw through the proxy.
+  // setContent, evaluate, and waitForFunction are now routed through the
+  // adapter bridge (W-27), so they should succeed — only truly unsupported
+  // driver methods throw here.
   await expect(
     (adapterPage as any).goto("about:blank"),
-  ).rejects.toThrow();
-
-  await expect(
-    (adapterPage as any).setContent("<div>ok</div>"),
-  ).rejects.toThrow();
-
-  await expect(
-    (adapterPage as any).evaluate(() => 1 + 1),
   ).rejects.toThrow();
 
   await expect(
@@ -105,6 +98,177 @@ test("proxy page methods do not fall through to real Playwright driver", async (
     (adapterPage as any).route("**/*", () => {}),
   ).rejects.toThrow();
 });
+
+// ── W-27: setContent through the adapter bridge ────────────────────
+
+test("adapter setContent replaces document content", async ({
+  page,
+  adapterPage,
+}) => {
+  await (adapterPage as any).setContent("<h1>Adapted</h1>");
+  const text = await page.evaluate(
+    () => document.querySelector("h1")?.textContent
+  );
+  expect(text).toBe("Adapted");
+});
+
+test("adapter setContent with domcontentloaded waitUntil", async ({
+  adapterPage,
+}) => {
+  await (adapterPage as any).setContent("<p>loaded</p>", {
+    waitUntil: "domcontentloaded",
+  });
+  const count = await adapterPage.locator("p").count();
+  expect(count).toBe(1);
+});
+
+test("adapter setContent with commit resolves immediately", async ({
+  adapterPage,
+}) => {
+  await (adapterPage as any).setContent("<p>committed</p>", {
+    waitUntil: "commit",
+  });
+  const count = await adapterPage.locator("p").count();
+  expect(count).toBe(1);
+});
+
+// ── W-27: evaluate through the adapter bridge ──────────────────────
+
+test("adapter evaluate runs a function and returns result", async ({
+  adapterPage,
+}) => {
+  const result = await (adapterPage as any).evaluate(() => 2 + 3);
+  expect(result).toBe(5);
+});
+
+test("adapter evaluate passes arg to function", async ({ adapterPage }) => {
+  const result = await (adapterPage as any).evaluate(
+    (n: number) => n * 4,
+    7
+  );
+  expect(result).toBe(28);
+});
+
+test("adapter evaluate handles string expressions", async ({
+  adapterPage,
+}) => {
+  const result = await (adapterPage as any).evaluate("1 + 1");
+  expect(result).toBe(2);
+});
+
+test("adapter evaluate propagates errors without retry", async ({
+  adapterPage,
+}) => {
+  await expect(
+    (adapterPage as any).evaluate(() => {
+      throw new Error("eval-boom");
+    })
+  ).rejects.toThrow(/eval-boom/);
+});
+
+test("adapter evaluate can mutate the DOM", async ({
+  page,
+  adapterPage,
+}) => {
+  await page.setContent('<div id="mut">before</div>');
+  await (adapterPage as any).evaluate(() => {
+    document.getElementById("mut")!.textContent = "after";
+  });
+  const text = await page.evaluate(
+    () => document.getElementById("mut")?.textContent
+  );
+  expect(text).toBe("after");
+});
+
+// ── W-27: waitForFunction through the adapter bridge ───────────────
+
+test("adapter waitForFunction resolves with handle.jsonValue()", async ({
+  adapterPage,
+}) => {
+  const handle = await (adapterPage as any).waitForFunction(() => 42);
+  expect(await handle.jsonValue()).toBe(42);
+});
+
+test("adapter waitForFunction false predicate times out", async ({
+  adapterPage,
+}) => {
+  await expect(
+    (adapterPage as any).waitForFunction(() => false, {}, {
+      polling: 10,
+      timeout: 100,
+    })
+  ).rejects.toThrow(/[Tt]imeout/);
+});
+
+test("adapter waitForFunction string expression works", async ({
+  page,
+  adapterPage,
+}) => {
+  // Set a window variable, then wait for it via string expression.
+  // The expression returns the variable itself (truthy when > 0).
+  await page.evaluate(() => {
+    (window as any).__testVar = 0;
+    setTimeout(() => {
+      (window as any).__testVar = 99;
+    }, 50);
+  });
+  const handle = await (adapterPage as any).waitForFunction(
+    "window.__testVar || 0",
+    {},
+    { polling: 10, timeout: 5000 }
+  );
+  expect(await handle.jsonValue()).toBe(99);
+});
+
+test("adapter waitForFunction callback side effects stop after resolve", async ({
+  page,
+  adapterPage,
+}) => {
+  // Set a counter that the predicate increments each poll.
+  await page.evaluate(() => {
+    (window as any).__sideEffectCounter = 0;
+  });
+  const handle = await (adapterPage as any).waitForFunction(
+    () => {
+      (window as any).__sideEffectCounter++;
+      return (window as any).__sideEffectCounter >= 3
+        ? (window as any).__sideEffectCounter
+        : 0;
+    },
+    {},
+    { polling: 10 }
+  );
+  const resolvedAt = await handle.jsonValue();
+  expect(resolvedAt).toBeGreaterThanOrEqual(3);
+
+  // Wait — counter should NOT keep incrementing.
+  await page.waitForTimeout(200);
+  const after = await page.evaluate(
+    () => (window as any).__sideEffectCounter
+  );
+  expect(after).toBe(resolvedAt);
+});
+
+test("adapter waitForFunction propagates thrown error", async ({
+  adapterPage,
+}) => {
+  await expect(
+    (adapterPage as any).waitForFunction(() => {
+      throw new Error("predicate-boom");
+    })
+  ).rejects.toThrow(/predicate-boom/);
+});
+
+test("adapter waitForFunction handle.dispose() returns a promise", async ({
+  adapterPage,
+}) => {
+  const handle = await (adapterPage as any).waitForFunction(() => 1);
+  const result = handle.dispose();
+  expect(result).toBeInstanceOf(Promise);
+  await result;
+});
+
+// ── Proxy isolation ─────────────────────────────────────────────────
 
 test("proxy does not expose real driver sub-objects", async ({
   page,

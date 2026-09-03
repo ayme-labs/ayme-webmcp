@@ -5,13 +5,61 @@ import { getByRoleSelector } from "./selectors";
 
 import type { BrowserInteractionPacing, TraceEntry } from "./types";
 
+/**
+ * Normalizes an expression the same way pinned b25d782
+ * server/javascript.ts normalizeEvaluationExpression does:
+ *   - isFunction=true: ensure the expression is a valid function expression
+ *     (wrap in parens, or prefix `function` for shorthand methods)
+ *   - Any expression matching /^(async)?\s*function(\s|\()/ gets parens
+ */
+function normalizeExpression(expression: string, isFunction: boolean): string {
+  let expr = expression.trim();
+  if (isFunction) {
+    try {
+      new Function("(" + expr + ")");
+    } catch {
+      if (expr.startsWith("async "))
+        expr = "async function " + expr.substring("async ".length);
+      else expr = "function " + expr;
+      try {
+        new Function("(" + expr + ")");
+      } catch {
+        throw new Error("Passed function is not well-serializable!");
+      }
+    }
+  }
+  if (/^(async)?\s*function(\s|\()/.test(expr)) expr = "(" + expr + ")";
+  return expr;
+}
+
+/**
+ * Minimal JSHandle mirroring pinned b25d782 client JSHandle interface.
+ * Returned by waitForFunction so callers can use `.jsonValue()` /
+ * `.dispose()` without a harness-only shim.
+ */
+export class AdapterJSHandle<T = unknown> {
+  private _value: T;
+
+  constructor(value: T) {
+    this._value = value;
+  }
+
+  async jsonValue(): Promise<T> {
+    return this._value;
+  }
+
+  async dispose(): Promise<void> {
+    // No remote object to release in a single-document adapter.
+  }
+}
+
 export class PageImpl {
   readonly document: Document;
-  readonly window: Window;
+  readonly window: Window & typeof globalThis;
   private _injected: ReturnType<typeof injectedScriptFor> | undefined;
 
   constructor(
-    browserWindow: Window,
+    browserWindow: Window & typeof globalThis,
     private readonly onTrace?: (entry: TraceEntry) => void,
     private readonly pacing: BrowserInteractionPacing = {}
   ) {
@@ -26,7 +74,7 @@ export class PageImpl {
   }
 
   static fromWindow(
-    browserWindow: Window = window,
+    browserWindow: Window & typeof globalThis = window,
     onTrace?: (entry: TraceEntry) => void,
     pacing?: BrowserInteractionPacing
   ) {
@@ -193,6 +241,312 @@ export class PageImpl {
 
   async waitBetweenTypedCharacters() {
     await this.wait(this.pacing.typingIntervalMs);
+  }
+
+  // ── Setup operations ─────────────────────────────────────────────
+
+  /**
+   * Replaces the controlled document's content.
+   *
+   * Mirrors pinned b25d782 server/frames.ts:962-987:
+   *   context.evaluate(({ html, tag }) => {
+   *     document.open(); console.debug(tag);
+   *     document.write(html); document.close();
+   *   }, { html, tag });
+   *
+   * Uses the real document.open/write/close sequence so that inline
+   * `<script>` tags execute and document-level attributes are preserved,
+   * matching browser-native Playwright behaviour.
+   *
+   * waitUntil defaults to 'load' per pinned client/frame.ts:277.
+   * 'networkidle' is rejected before mutation — the single-document
+   * adapter cannot monitor network activity.
+   * 'commit' resolves immediately after the write.
+   * 'domcontentloaded' waits for DOMContentLoaded.
+   * 'load' (default) waits for the load event.
+   * timeout races against the wait (pinned server/frames.ts:963-984).
+   */
+  async setContent(
+    html: string,
+    options?: { timeout?: number; waitUntil?: string }
+  ) {
+    const waitUntil = options?.waitUntil ?? "load";
+
+    // Reject unsupported states BEFORE mutation per user review.
+    if (waitUntil === "networkidle")
+      throw new Error(
+        "networkidle is not supported by the single-document adapter"
+      );
+    const validStates = ["load", "domcontentloaded", "commit"];
+    if (!validStates.includes(waitUntil))
+      throw new Error(`Unsupported waitUntil value: ${waitUntil}`);
+
+    this.document.open();
+    this.document.write(html);
+    this.document.close();
+    // Re-acquire InjectedScript since the document was replaced.
+    this._injected = undefined;
+
+    // 'commit' — resolve immediately after the write.
+    if (waitUntil === "commit") return;
+
+    // Wait for the requested lifecycle event with optional timeout.
+    const eventName =
+      waitUntil === "domcontentloaded" ? "DOMContentLoaded" : "load";
+    const timeout = options?.timeout;
+
+    await new Promise<void>((resolve, reject) => {
+      let settled = false;
+      let timeoutId: number | undefined;
+
+      const handler = () => settle();
+
+      const settle = (err?: Error) => {
+        if (settled) return;
+        settled = true;
+        if (timeoutId !== undefined) this.window.clearTimeout(timeoutId);
+        // Remove the lifecycle listener to prevent leaks after timeout.
+        this.window.removeEventListener(eventName, handler);
+        if (err) reject(err);
+        else resolve();
+      };
+
+      // Check if the event already fired (readyState).
+      if (eventName === "DOMContentLoaded") {
+        if (
+          this.document.readyState === "interactive" ||
+          this.document.readyState === "complete"
+        ) {
+          settle();
+          return;
+        }
+      } else if (eventName === "load") {
+        if (this.document.readyState === "complete") {
+          settle();
+          return;
+        }
+      }
+
+      this.window.addEventListener(eventName, handler, { once: true });
+
+      if (timeout !== undefined && timeout > 0)
+        timeoutId = this.window.setTimeout(
+          () =>
+            settle(
+              new Error(`page.setContent: Timeout ${timeout}ms exceeded.`)
+            ),
+          timeout
+        );
+    });
+  }
+
+  // ── Evaluate / callback operations ──────────────────────────────
+
+  /**
+   * Executes a function or expression in the controlled document.
+   *
+   * Mirrors pinned b25d782 client/frame.ts:217-223 + server/javascript.ts:
+   *   Client sends { expression: String(pageFunction),
+   *                   isFunction: typeof pageFunction === 'function',
+   *                   arg: serializeArgument(arg) }
+   *   Server normalizes the expression, evals it once, and:
+   *     isFunction=true  → calls the result with arg
+   *     isFunction=false → returns the result directly
+   *
+   * For direct in-browser callers the function is called immediately.
+   * For bridge-transported strings the isFunction flag is explicit.
+   * Never retries evaluation after a runtime exception.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async evaluate(
+    pageFunction: string | ((...a: any[]) => any),
+    arg?: unknown
+  ): Promise<any> {
+    const isFunction = typeof pageFunction === "function";
+    return this._evaluateExpression(
+      isFunction ? pageFunction : String(pageFunction),
+      isFunction,
+      arg
+    );
+  }
+
+  /**
+   * Internal expression evaluator mirroring server/javascript.ts
+   * normalizeEvaluationExpression + evaluate flow.
+   *
+   * @param expression  String(pageFunction) or the raw function reference
+   * @param isFunction  true → call the evaled result with arg;
+   *                    false → return the evaled result directly
+   * @param arg         serialized argument
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async _evaluateExpression(
+    expression: string | ((...a: any[]) => any),
+    isFunction: boolean,
+    arg?: unknown
+  ): Promise<any> {
+    if (typeof expression === "function") return await expression(arg);
+    // Normalize: wrap function expressions in parens per
+    // server/javascript.ts normalizeEvaluationExpression.
+    const normalized = normalizeExpression(expression, isFunction);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const evaled: any = this.window.eval(normalized);
+    if (isFunction) return await evaled(arg);
+    return evaled;
+  }
+
+  /**
+   * Polls a predicate in the controlled document until it returns a
+   * truthy value.
+   *
+   * Mirrors pinned b25d782 server/frames.ts:1626-1694:
+   *   - pollingInterval must be >0 (frames.ts:1628)
+   *   - expression is normalized (frames.ts:1629)
+   *   - isFunction=true  → eval once, call each poll (frames.ts:1640-1642)
+   *   - isFunction=false → re-eval each poll (frames.ts:1643-1644,
+   *     since evaledExpression is never cached)
+   *   - abort mechanism cleans up pending timers (frames.ts:1679-1681)
+   *   - timeout races independently (handles never-settling predicates)
+   *
+   * Returns a minimal handle with `jsonValue()` and `dispose()`,
+   * mirroring pinned client JSHandle interface.
+   */
+  /**
+   * Public API: derives isFunction from typeof pageFunction.
+   */
+  async waitForFunction(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    pageFunction: string | ((...a: any[]) => any),
+    arg?: unknown,
+    options?: { polling?: number | "raf"; timeout?: number }
+  ): Promise<AdapterJSHandle> {
+    return this._waitForFunctionExpression(
+      typeof pageFunction === "function" ? pageFunction : String(pageFunction),
+      typeof pageFunction === "function",
+      arg,
+      options
+    );
+  }
+
+  /**
+   * Internal: accepts explicit isFunction for bridge transport.
+   *
+   * Mirrors pinned b25d782 server/frames.ts:1626-1694:
+   *   - pollingInterval must be >0 (frames.ts:1628)
+   *   - expression is normalized (frames.ts:1629)
+   *   - isFunction=true  → eval once, call each poll (frames.ts:1640-1642)
+   *   - isFunction=false → re-eval each poll (frames.ts:1643-1644,
+   *     since evaledExpression is never cached)
+   *   - abort mechanism cleans up pending timers (frames.ts:1679-1681)
+   *   - timeout races independently (handles never-settling predicates)
+   */
+  async _waitForFunctionExpression(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    pageFunction: string | ((...a: any[]) => any),
+    isFunction: boolean,
+    arg?: unknown,
+    options?: { polling?: number | "raf"; timeout?: number }
+  ): Promise<AdapterJSHandle> {
+    const timeout = options?.timeout ?? 30_000;
+    const polling = options?.polling ?? "raf";
+
+    // Validate polling per frames.ts:1628
+    if (typeof polling === "string" && polling !== "raf")
+      throw new Error("Unknown polling option: " + polling);
+    if (typeof polling === "number" && polling <= 0)
+      throw new Error("Cannot poll with non-positive interval: " + polling);
+
+    // For function references, call directly; for strings, normalize.
+    const expression =
+      typeof pageFunction === "function"
+        ? pageFunction
+        : normalizeExpression(String(pageFunction), isFunction);
+
+    return new Promise<AdapterJSHandle>((resolve, reject) => {
+      let aborted = false;
+      let timeoutId: number | undefined;
+      let pollTimerId: number | undefined;
+      let rafId: number | undefined;
+
+      // Independent timeout timer — rejects even if predicate never settles.
+      if (timeout > 0) {
+        timeoutId = this.window.setTimeout(() => {
+          cleanup();
+          reject(new Error("Timeout exceeded while waiting for function"));
+        }, timeout);
+      }
+
+      const cleanup = () => {
+        aborted = true;
+        if (timeoutId !== undefined) this.window.clearTimeout(timeoutId);
+        if (pollTimerId !== undefined) this.window.clearTimeout(pollTimerId);
+        if (rafId !== undefined) this.window.cancelAnimationFrame(rafId);
+      };
+
+      // Cache the evaled function for isFunction=true (frames.ts:1641).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let evaledFunction: ((...a: any[]) => any) | undefined;
+
+      const predicate = () => {
+        if (typeof expression === "function") return expression(arg);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let result: any = evaledFunction ?? this.window.eval(expression);
+        if (isFunction) {
+          evaledFunction = result;
+          result = result(arg);
+        }
+        // isFunction=false: result is already the expression value,
+        // re-evaluated each poll because evaledFunction is never set.
+        return result;
+      };
+
+      const check = () => {
+        if (aborted) return;
+        try {
+          const result = predicate();
+          if (
+            result &&
+            typeof (result as Promise<unknown>)?.then === "function"
+          ) {
+            (result as Promise<unknown>).then(
+              (v) => {
+                if (aborted) return;
+                if (v) {
+                  cleanup();
+                  resolve(new AdapterJSHandle(v));
+                } else {
+                  scheduleNext();
+                }
+              },
+              (e) => {
+                if (aborted) return;
+                cleanup();
+                reject(e);
+              }
+            );
+            return;
+          }
+          if (result) {
+            cleanup();
+            resolve(new AdapterJSHandle(result));
+            return;
+          }
+        } catch (e) {
+          cleanup();
+          reject(e);
+          return;
+        }
+        scheduleNext();
+      };
+
+      const scheduleNext = () => {
+        if (aborted) return;
+        if (polling === "raf") rafId = this.window.requestAnimationFrame(check);
+        else pollTimerId = this.window.setTimeout(check, polling as number);
+      };
+
+      check();
+    });
   }
 
   // ── Locator creation ────────────────────────────────────────────

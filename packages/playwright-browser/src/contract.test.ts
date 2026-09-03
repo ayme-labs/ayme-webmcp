@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- intentional casts to test runtime validation */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, afterEach } from "vitest";
 
 import {
   createPage,
@@ -7,6 +7,7 @@ import {
   LOCATOR_BRAND,
   resolveLocatorElements,
 } from "./index";
+import { AdapterJSHandle, PageImpl } from "./page";
 
 describe("Single-document adapter contract", () => {
   // ── AC1: createPage targets only the current Window ────────────
@@ -352,6 +353,313 @@ describe("Single-document adapter contract", () => {
       document.body.innerHTML = "<ul><li>A</li><li>B</li><li>C</li></ul>";
       const page = createPage();
       expect(await page.locator("li").last().count()).toBe(1);
+    });
+  });
+
+  // ── W-27: setContent ──────────────────────────────────────────
+  // Tests use a dedicated iframe document so document.open/write/close
+  // doesn't reload the Vitest host.
+
+  describe("setContent", () => {
+    let iframe: HTMLIFrameElement;
+    let dedicatedPage: PageImpl;
+
+    function setupDedicatedPage() {
+      iframe = document.createElement("iframe");
+      document.body.appendChild(iframe);
+      const win = iframe.contentWindow! as Window & typeof globalThis;
+      dedicatedPage = new PageImpl(win);
+    }
+
+    afterEach(() => {
+      iframe?.remove();
+    });
+
+    it("replaces the document with document.open/write/close", async () => {
+      setupDedicatedPage();
+      await dedicatedPage.setContent("<h1>Hello</h1><p>World</p>");
+      expect(dedicatedPage.document.querySelector("h1")?.textContent).toBe(
+        "Hello"
+      );
+      expect(dedicatedPage.document.querySelector("p")?.textContent).toBe(
+        "World"
+      );
+    });
+
+    it("clears previous content", async () => {
+      setupDedicatedPage();
+      dedicatedPage.document.body.innerHTML = "<div id='old'>old</div>";
+      await dedicatedPage.setContent("<span id='new'>new</span>");
+      expect(dedicatedPage.document.getElementById("old")).toBeNull();
+      expect(dedicatedPage.document.getElementById("new")?.textContent).toBe(
+        "new"
+      );
+    });
+
+    it("accepts waitUntil option without error", async () => {
+      setupDedicatedPage();
+      await dedicatedPage.setContent("<p>ok</p>", {
+        waitUntil: "domcontentloaded",
+      });
+      expect(dedicatedPage.document.querySelector("p")?.textContent).toBe("ok");
+    });
+
+    it("rejects networkidle before mutation", async () => {
+      setupDedicatedPage();
+      const bodyBefore = dedicatedPage.document.body.innerHTML;
+      await expect(
+        dedicatedPage.setContent("<p>should not appear</p>", {
+          waitUntil: "networkidle",
+        })
+      ).rejects.toThrow(/networkidle.*not supported/);
+      // Body unchanged — rejection happened before mutation.
+      expect(dedicatedPage.document.body.innerHTML).toBe(bodyBefore);
+    });
+
+    it("rejects invalid waitUntil value", async () => {
+      setupDedicatedPage();
+      await expect(
+        dedicatedPage.setContent("<p>ok</p>", {
+          waitUntil: "invalid" as any,
+        })
+      ).rejects.toThrow(/Unsupported waitUntil/);
+    });
+
+    it("commit resolves immediately", async () => {
+      setupDedicatedPage();
+      await dedicatedPage.setContent("<p>commit</p>", {
+        waitUntil: "commit",
+      });
+      expect(dedicatedPage.document.querySelector("p")?.textContent).toBe(
+        "commit"
+      );
+    });
+
+    it("locators work after setContent replaces the document", async () => {
+      setupDedicatedPage();
+      await dedicatedPage.setContent('<button role="button">Click me</button>');
+      const btn = dedicatedPage.getByRole("button", { name: "Click me" });
+      expect(await btn.count()).toBe(1);
+    });
+
+    it("setContent with load waits for readyState complete", async () => {
+      setupDedicatedPage();
+      // Default waitUntil is 'load'; for a simple HTML document the load
+      // event fires synchronously after document.close() — setContent
+      // should resolve successfully.
+      await dedicatedPage.setContent("<div>load-test</div>");
+      expect(dedicatedPage.document.querySelector("div")?.textContent).toBe(
+        "load-test"
+      );
+    });
+
+    it("setContent resolves before timeout for simple HTML", async () => {
+      setupDedicatedPage();
+      // document.close triggers load synchronously for simple HTML,
+      // so even with a short timeout the promise should resolve.
+      await dedicatedPage.setContent("<p>fast</p>", {
+        waitUntil: "load",
+        timeout: 5000,
+      });
+      expect(dedicatedPage.document.querySelector("p")?.textContent).toBe(
+        "fast"
+      );
+    });
+
+    it("re-acquires InjectedScript after replacing the document", async () => {
+      setupDedicatedPage();
+      // First setContent populates _injected.
+      await dedicatedPage.setContent("<div>first</div>");
+      expect(dedicatedPage.resolveAll("div").length).toBe(1);
+      // Second setContent replaces the DOM — old InjectedScript is stale.
+      await dedicatedPage.setContent("<span>second</span>");
+      expect(dedicatedPage.resolveAll("span").length).toBe(1);
+      expect(dedicatedPage.resolveAll("div").length).toBe(0);
+    });
+  });
+
+  // ── W-27: evaluate ───────────────────────────────────────────
+
+  describe("evaluate", () => {
+    it("evaluates a function and returns its result", async () => {
+      const page = createPage();
+      const result = await page.evaluate(() => 1 + 2);
+      expect(result).toBe(3);
+    });
+
+    it("passes arg to the function", async () => {
+      const page = createPage();
+      const result = await page.evaluate((n: number) => n * 3, 7);
+      expect(result).toBe(21);
+    });
+
+    it("evaluates a string expression (isFunction=false)", async () => {
+      const page = createPage();
+      const result = await page.evaluate("1 + 1");
+      expect(result).toBe(2);
+    });
+
+    it("evaluates a stringified function with arg (isFunction=true via bridge)", async () => {
+      const page = createPage();
+      const fn = (x: number) => x + 10;
+      // Simulate bridge transport: String(fn) + explicit isFunction.
+      const result = await (page as any)._evaluateExpression(
+        String(fn),
+        true,
+        5
+      );
+      expect(result).toBe(15);
+    });
+
+    it("string + isFunction=false returns expression value, not function", async () => {
+      const page = createPage();
+      // '(() => 42)' as a non-function expression evaluates to the
+      // function object, but isFunction=false means we return it raw.
+      const result = await (page as any)._evaluateExpression("1 + 2", false);
+      expect(result).toBe(3);
+    });
+
+    it("never retries after runtime exception", async () => {
+      const page = createPage();
+      await expect(page.evaluate("throw new Error('boom')")).rejects.toThrow(
+        "boom"
+      );
+    });
+
+    it("can read the DOM", async () => {
+      document.body.innerHTML = "<div id='target'>hi</div>";
+      const page = createPage();
+      const text = await page.evaluate(
+        () => document.getElementById("target")?.textContent
+      );
+      expect(text).toBe("hi");
+    });
+
+    it("can mutate the DOM", async () => {
+      document.body.innerHTML = "<div id='mut'>before</div>";
+      const page = createPage();
+      await page.evaluate(() => {
+        document.getElementById("mut")!.textContent = "after";
+      });
+      const el = document.getElementById("mut");
+      expect(el?.textContent).toBe("after");
+    });
+  });
+
+  // ── W-27: waitForFunction ─────────────────────────────────────
+
+  describe("waitForFunction", () => {
+    it("resolves immediately with AdapterJSHandle", async () => {
+      const page = createPage();
+      const handle = await (page as any).waitForFunction(() => 42);
+      expect(handle).toBeInstanceOf(AdapterJSHandle);
+      expect(await handle.jsonValue()).toBe(42);
+    });
+
+    it("polls until the predicate becomes truthy", async () => {
+      const page = createPage();
+      let counter = 0;
+      const handle = await (page as any).waitForFunction(
+        () => {
+          counter++;
+          return counter >= 3 ? counter : 0;
+        },
+        undefined,
+        { polling: 10 }
+      );
+      expect(await handle.jsonValue()).toBeGreaterThanOrEqual(3);
+    });
+
+    it("rejects on timeout (including never-settling predicates)", async () => {
+      const page = createPage();
+      await expect(
+        (page as any).waitForFunction(() => false, undefined, {
+          polling: 10,
+          timeout: 50,
+        })
+      ).rejects.toThrow(/[Tt]imeout/);
+    });
+
+    it("function reference: evals once, calls each poll", async () => {
+      const page = createPage();
+      let counter = 0;
+      const fn = () => {
+        counter++;
+        return counter >= 2 ? "done" : "";
+      };
+      const handle = await (page as any).waitForFunction(fn, undefined, {
+        polling: 10,
+      });
+      expect(await handle.jsonValue()).toBe("done");
+    });
+
+    it("string expression (isFunction=false) re-evaluates each poll", async () => {
+      // A non-function string expression is evaled fresh each poll.
+      // We can verify by using a counter on the window.
+      (window as any).__wffCounter = 0;
+      const page = createPage();
+      const handle = await (page as any).waitForFunction(
+        "++window.__wffCounter >= 3 ? window.__wffCounter : 0",
+        undefined,
+        { polling: 10 }
+      );
+      expect(await handle.jsonValue()).toBeGreaterThanOrEqual(3);
+      delete (window as any).__wffCounter;
+    });
+
+    it("passes arg to the predicate", async () => {
+      const page = createPage();
+      const handle = await (page as any).waitForFunction(
+        (x: number) => (x > 0 ? x : 0),
+        5
+      );
+      expect(await handle.jsonValue()).toBe(5);
+    });
+
+    it("validates polling option: rejects non-positive number", async () => {
+      const page = createPage();
+      await expect(
+        (page as any).waitForFunction(() => true, undefined, { polling: 0 })
+      ).rejects.toThrow(/non-positive/);
+      await expect(
+        (page as any).waitForFunction(() => true, undefined, {
+          polling: -1,
+        })
+      ).rejects.toThrow(/non-positive/);
+    });
+
+    it("validates polling option: rejects unknown string", async () => {
+      const page = createPage();
+      await expect(
+        (page as any).waitForFunction(() => true, undefined, {
+          polling: "mutation" as any,
+        })
+      ).rejects.toThrow(/Unknown polling/);
+    });
+
+    it("handle.dispose() returns a Promise", async () => {
+      const page = createPage();
+      const handle = await (page as any).waitForFunction(() => 1);
+      const result = handle.dispose();
+      expect(result).toBeInstanceOf(Promise);
+      await expect(result).resolves.toBeUndefined();
+    });
+
+    it("cleans up timers after resolve", async () => {
+      const page = createPage();
+      let counter = 0;
+      const handle = await (page as any).waitForFunction(
+        () => {
+          counter++;
+          return counter >= 2 ? counter : 0;
+        },
+        undefined,
+        { polling: 10 }
+      );
+      const val = await handle.jsonValue();
+      // Wait a bit — counter should NOT keep incrementing after resolve.
+      await new Promise((r) => setTimeout(r, 50));
+      expect(counter).toBe(val);
     });
   });
 });

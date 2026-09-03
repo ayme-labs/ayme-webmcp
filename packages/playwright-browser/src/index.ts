@@ -3,6 +3,8 @@ import type { Page } from "@playwright/test";
 import { injectedScriptFor } from "./injected";
 import { PageImpl } from "./page";
 
+export { AdapterJSHandle } from "./page";
+
 export type {
   BrowserInteractionPacing,
   CaptureAriaSnapshotResult,

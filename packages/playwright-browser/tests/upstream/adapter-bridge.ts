@@ -98,6 +98,73 @@ function createPageProxy(realPage: Page): Page {
           createLocatorProxy(realPage, [[prop, args]]);
       }
 
+      // ── Callback transport ─────────────────────────────────────────
+      // Functions cannot be serialized as arguments to realPage.evaluate.
+      // We mirror pinned b25d782 client/frame.ts:217-223 semantics:
+      //   { expression: String(pageFunction),
+      //     isFunction: typeof pageFunction === 'function',
+      //     arg }
+      // The adapter's _evaluateExpression uses the explicit isFunction
+      // flag — never guesses from the string content.
+
+      if (prop === "evaluate") {
+        return async (pageFunction: unknown, arg?: unknown) =>
+          realPage.evaluate(
+            ({ expression, isFunction, arg: a }) => {
+              const p = (window as any).__aymeAdapterPage;
+              return p._evaluateExpression(expression, isFunction, a);
+            },
+            {
+              expression: String(pageFunction),
+              isFunction: typeof pageFunction === "function",
+              arg,
+            }
+          );
+      }
+
+      if (prop === "waitForFunction") {
+        return async (
+          pageFunction: unknown,
+          arg?: unknown,
+          options?: unknown
+        ) => {
+          // Use _waitForFunctionExpression with explicit isFunction
+          // flag so function-source strings are correctly called.
+          // Resolve the handle's value in-browser, wrap result in a
+          // minimal handle on the Node side.
+          const result = await realPage.evaluate(
+            ({ expression, isFunction, arg: a, options: opts }) => {
+              const p = (window as any).__aymeAdapterPage;
+              return p
+                ._waitForFunctionExpression(expression, isFunction, a, opts)
+                .then((h: any) => h.jsonValue());
+            },
+            {
+              expression: String(pageFunction),
+              isFunction: typeof pageFunction === "function",
+              arg,
+              options: options as Record<string, unknown>,
+            }
+          );
+          return {
+            jsonValue: async () => result,
+            dispose: async () => {},
+          };
+        };
+      }
+
+      // ── setContent: string-only, no callback needed ───────────────
+      if (prop === "setContent") {
+        return async (html: string, options?: unknown) =>
+          realPage.evaluate(
+            ({ html: h, options: o }: { html: string; options: unknown }) => {
+              const p = (window as any).__aymeAdapterPage;
+              return p.setContent(h, o);
+            },
+            { html, options }
+          );
+      }
+
       // Everything else: route through the adapter page in the browser.
       // Both method calls and property accesses go through the adapter
       // so that unsupported members (keyboard, mouse, touchscreen, etc.)

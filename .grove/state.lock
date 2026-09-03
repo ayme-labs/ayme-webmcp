@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:d731acefc331f0d1f186a0fb3caa700f54cea090d5b2c914b0156088ad6e525b
+# checksum: sha256:dd45a907888afa2e15459c95f857aa78437ef0c49cc1cb6e5c68e535723a2574
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -60,7 +60,7 @@ g G-11 status=verified fitness_kind=count t_created=2026-09-03T14:15:39Z t_updat
 g G-12 status=partial fitness_kind=count t_created=2026-09-03T15:52:54Z t_updated=2026-09-03T18:36:27Z "Make the single-document Playwright adapter truthfully verifiable"
   area: A-02
   fitness_target: 4
-  fitness_current: 1
+  fitness_current: 2
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -607,7 +607,7 @@ w W-26 type=bug status=done cynefin=complicated t_created=2026-09-03T15:52:54Z t
   plan:
     | Refine Page and Locator around ADR-0015 without adding iframe, cross-window, or driver-fallback behavior.
 
-w W-27 type=feature status=progress cynefin=complicated session=host:75cd936167237b83 session_at=2026-09-03T18:36:27Z t_created=2026-09-03T15:52:56Z t_updated=2026-09-03T18:36:27Z "Implement browser-native setup and callback operations"
+w W-27 type=feature status=done cynefin=complicated t_created=2026-09-03T15:52:56Z t_updated=2026-09-03T19:55:43Z "Implement browser-native setup and callback operations"
   goals: G-12
   fitness: G-12=+1
   ac:
@@ -619,10 +619,12 @@ w W-27 type=feature status=progress cynefin=complicated session=host:75cd9361672
     | Implementing browser-feasible setup and callback methods directly will let unchanged upstream specs reach their intended locator and page operations without harness exceptions.
   evidence_strategy:
     | Run focused Page tests and representative unchanged upstream specs that currently fail during setup or callback transport.
+  evidence:
+    | Independent verification: 67 browser tests, 14 baseline parser tests, and 21 adapter-bridge tests pass; adapter typecheck/lint/build and webmcp typecheck/34 tests pass. Browser-native setContent/evaluate/waitForFunction run without driver fallback. Cursor reports 17 newly passing upstream tests; no baseline promotion. Handle surface remains minimal; delayed-resource lifecycle coverage remains limited.
   plan:
     | Follow the pinned Playwright Page orchestration where it applies, while keeping browser-process navigation and other out-of-scope capabilities absent.
 
-w W-28 type=bug status=proposed cynefin=complicated t_created=2026-09-03T15:53:18Z t_updated=2026-09-03T15:53:35Z "Make upstream compatibility evidence truthful"
+w W-28 type=bug status=progress cynefin=complicated session=host:75cd936167237b83 session_at=2026-09-03T19:55:43Z t_created=2026-09-03T15:53:18Z t_updated=2026-09-03T19:55:43Z "Make upstream compatibility evidence truthful"
   goals: G-12
   fitness: G-12=+1
   ac:
