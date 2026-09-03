@@ -1,0 +1,83 @@
+import { describe, expect, it } from "vitest";
+
+import ayme from "./index";
+import { AriaRefSchema } from "@ayme-dev/structural-observation";
+
+describe("the public Ayme page state facade in Chromium", () => {
+  it("resolves live elements and retargets historical refs through replacements", async () => {
+    document.body.innerHTML = '<button id="save">Save changes</button>';
+    const originalState = await ayme.getPageState();
+    const originalRef = structuralRefFor(originalState.text, "Save changes");
+    const observedRefs = [originalRef];
+    let previousElement = document.querySelector("#save");
+    if (!previousElement) throw new Error("Expected the original button.");
+
+    for (let replacement = 0; replacement < 3; replacement += 1) {
+      const nextElement = document.createElement("button");
+      nextElement.id = "save";
+      nextElement.textContent = "Save changes";
+      previousElement.replaceWith(nextElement);
+
+      const currentState = await ayme.getPageState();
+      const currentRef = structuralRefFor(currentState.text, "Save changes");
+      expect(currentRef).not.toBe(observedRefs.at(-1));
+      observedRefs.push(currentRef);
+      previousElement = nextElement;
+    }
+
+    const latestRef = observedRefs.at(-1)!;
+    const resolutions = await originalState.resolve(...observedRefs);
+    expect(resolutions).toEqual(
+      observedRefs.map((requestedRef) => ({
+        status: "resolved",
+        requestedRef,
+        node: { ref: latestRef, element: previousElement },
+      }))
+    );
+
+    previousElement.toggleAttribute("hidden", true);
+    await expect(originalState.resolve(originalRef)).resolves.toEqual([
+      {
+        status: "unresolved",
+        requestedRef: originalRef,
+        reason: "removed",
+      },
+    ]);
+
+    previousElement.toggleAttribute("hidden", false);
+    await expect(originalState.resolve(originalRef)).resolves.toEqual([
+      {
+        status: "resolved",
+        requestedRef: originalRef,
+        node: { ref: latestRef, element: previousElement },
+      },
+    ]);
+
+    previousElement.remove();
+    await expect(originalState.resolve(originalRef)).resolves.toEqual([
+      {
+        status: "unresolved",
+        requestedRef: originalRef,
+        reason: "removed",
+      },
+    ]);
+
+    document.body.append(previousElement);
+    await expect(originalState.resolve(originalRef)).resolves.toEqual([
+      {
+        status: "resolved",
+        requestedRef: originalRef,
+        node: { ref: latestRef, element: previousElement },
+      },
+    ]);
+  });
+});
+
+function structuralRefFor(text: string, accessibleName: string) {
+  const escapedName = accessibleName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const ref = text.match(
+    new RegExp(`(?:^|\\s)(e\\d+) button "${escapedName}"`)
+  )?.[1];
+  if (!ref) throw new Error(`Expected a Structural Ref for ${accessibleName}.`);
+  return AriaRefSchema.parse(ref);
+}

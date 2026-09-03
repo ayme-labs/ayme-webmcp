@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { captureAriaSnapshot, listRegisteredPomRoots } = vi.hoisted(() => ({
   captureAriaSnapshot: vi.fn(),
@@ -11,15 +11,24 @@ vi.mock("@ayme-dev/playwright-browser", () => ({ captureAriaSnapshot }));
 vi.mock("./registry", () => ({ listRegisteredPomRoots }));
 
 import { getPageStateTool } from "./pageState";
+import ayme from "./index";
 
 describe("get_page_state", () => {
   beforeEach(() => {
+    vi.stubGlobal(
+      "document",
+      document.implementation.createHTMLDocument("Page state test")
+    );
     document.body.innerHTML = `
       <button id="captured">Captured omitted</button>
       <div id="synthetic" aria-label="Synthetic root"></div>
       <button id="hidden" hidden>Hidden root</button>
     `;
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("describes structural refs and root POM decoration", () => {
@@ -432,5 +441,47 @@ describe("get_page_state", () => {
         - e2 ListPage.preCapture "Pre-capture"
         - e3 button "Post-capture""
     `);
+  });
+
+  it("shares its session with Ayme when a structural ref is retargeted", async () => {
+    const original = document.querySelector("#captured");
+    if (!original) throw new Error("Missing original root.");
+
+    captureAriaSnapshot.mockReturnValueOnce({
+      distilledText:
+        '- generic [ref=e1]:\n  - button "Captured omitted" [ref=e2]',
+      fullText: '- generic [ref=e1]:\n  - button "Captured omitted" [ref=e2]',
+      refsByElement: new Map([
+        [document.body, "e1"],
+        [original, "e2"],
+      ]),
+    });
+    listRegisteredPomRoots.mockResolvedValue([]);
+
+    const firstText = await getPageStateTool.execute();
+    expect(firstText).toContain('e2 button "Captured omitted"');
+
+    original.outerHTML = '<button id="captured">Captured omitted</button>';
+    const replacement = document.querySelector("#captured");
+    if (!replacement) throw new Error("Missing replacement root.");
+
+    captureAriaSnapshot.mockReturnValue({
+      distilledText:
+        '- generic [ref=e3]:\n  - button "Captured omitted" [ref=e4]',
+      fullText: '- generic [ref=e3]:\n  - button "Captured omitted" [ref=e4]',
+      refsByElement: new Map([
+        [document.body, "e3"],
+        [replacement, "e4"],
+      ]),
+    });
+
+    const state = await ayme.getPageState();
+    await expect(state.resolve("e2")).resolves.toEqual([
+      {
+        status: "resolved",
+        requestedRef: "e2",
+        node: { ref: "e4", element: replacement },
+      },
+    ]);
   });
 });

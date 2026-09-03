@@ -5,7 +5,7 @@ import {
   StructuralProjection,
   StructuralTree,
   SyntheticAriaRefFactory,
-  type AriaRef,
+  type AriaRef as StructuralAriaRef,
   type OmittedCapturedRoot,
   type ReferencedCapturedRoot,
   type StructuralNodeProperty,
@@ -25,17 +25,310 @@ export const getPageStateTool = {
   description:
     "Return the top-level structural page state, decorated with root POM labels. Real nodes use Playwright refs; synthetic POM roots use observation-only synthetic refs. Capture is limited to the top-level document.",
   inputSchema,
-  execute: async () => capturePageState(),
+  execute: async () => (await getPageStateForDocument(document)).text,
 } satisfies ModelContextTool<Record<string, never>, string>;
 
-export async function capturePageState(root: Element = document.body) {
+/** A capture-scoped Structural Ref exposed to Ayme consumers. */
+export type AriaRef = string;
+
+export type AymeNode = {
+  ref: AriaRef;
+  element: Element;
+};
+
+export type RefResolution =
+  | {
+      status: "resolved";
+      requestedRef: AriaRef;
+      node: AymeNode;
+    }
+  | {
+      status: "unresolved";
+      requestedRef: AriaRef;
+      reason: "unknown-ref" | "removed" | "ambiguous" | "no-element";
+    };
+
+export type PageState = {
+  readonly text: string;
+  resolve(...refs: AriaRef[]): Promise<RefResolution[]>;
+};
+
+type CapturedPageState = {
+  text: string;
+  tree: StructuralTree;
+  elementsByRef: ReadonlyMap<AriaRef, Element>;
+};
+
+type SessionIdentity = {
+  currentRef: AriaRef | null;
+  currentElement: Element | undefined;
+  unresolvedReason: "removed" | "ambiguous" | null;
+};
+
+const pageStateSessions = new WeakMap<Document, PageStateSession>();
+
+export async function getPageStateForDocument(
+  currentDocument: Document
+): Promise<PageState> {
+  return getPageStateSession(currentDocument).getPageState();
+}
+
+export async function resolvePageStateRef(
+  element: Element
+): Promise<AriaRef | undefined> {
+  return getPageStateSession(element.ownerDocument).resolveElementRef(element);
+}
+
+export async function getPageStateForElements(
+  elements: readonly Element[]
+): Promise<{ state: PageState; refs: (AriaRef | undefined)[] }> {
+  const currentDocument = elements[0]?.ownerDocument ?? document;
+  if (elements.some((element) => element.ownerDocument !== currentDocument))
+    throw new Error("Page State elements must belong to one Document.");
+  return getPageStateSession(currentDocument).getPageStateForElements(elements);
+}
+
+function getPageStateSession(currentDocument: Document) {
+  let session = pageStateSessions.get(currentDocument);
+  if (!session) {
+    session = new PageStateSession(() => currentDocument.body);
+    pageStateSessions.set(currentDocument, session);
+  }
+  return session;
+}
+
+class PageStateSession {
+  private readonly refFactory = new SyntheticAriaRefFactory();
+  private baseline: StructuralTree | null = null;
+  private currentIdentitiesByRef = new Map<AriaRef, SessionIdentity>();
+  private readonly identitiesByAlias = new Map<AriaRef, SessionIdentity>();
+
+  constructor(private readonly currentRoot: () => Element) {}
+
+  async getPageState(): Promise<PageState> {
+    return (await this.getPageStateForElements([])).state;
+  }
+
+  async getPageStateForElements(
+    elements: readonly Element[]
+  ): Promise<{ state: PageState; refs: (AriaRef | undefined)[] }> {
+    const capture = await captureCurrentPageState(
+      this.currentRoot(),
+      this.refFactory
+    );
+    this.advance(capture);
+
+    return {
+      state: Object.freeze({
+        text: capture.text,
+        resolve: async (...refs: AriaRef[]) => this.resolve(refs),
+      }),
+      refs: this.elementRefs(capture, elements),
+    };
+  }
+
+  private async resolve(refs: readonly AriaRef[]): Promise<RefResolution[]> {
+    this.advance(
+      await captureCurrentPageState(this.currentRoot(), this.refFactory)
+    );
+    return refs.map((requestedRef) => this.resolveOne(requestedRef));
+  }
+
+  private resolveOne(requestedRef: AriaRef): RefResolution {
+    const identity = this.identitiesByAlias.get(requestedRef);
+    if (!identity)
+      return { status: "unresolved", requestedRef, reason: "unknown-ref" };
+    if (identity.currentRef === null)
+      return {
+        status: "unresolved",
+        requestedRef,
+        reason: identity.unresolvedReason ?? "removed",
+      };
+    if (identity.currentElement === undefined)
+      return { status: "unresolved", requestedRef, reason: "no-element" };
+    return {
+      status: "resolved",
+      requestedRef,
+      node: { ref: identity.currentRef, element: identity.currentElement },
+    };
+  }
+
+  async resolveElementRef(element: Element): Promise<AriaRef | undefined> {
+    return (await this.resolveElementRefs([element]))[0];
+  }
+
+  async resolveElementRefs(
+    elements: readonly Element[]
+  ): Promise<(AriaRef | undefined)[]> {
+    return (await this.getPageStateForElements(elements)).refs;
+  }
+
+  private elementRefs(
+    capture: CapturedPageState,
+    elements: readonly Element[]
+  ): (AriaRef | undefined)[] {
+    const refsByElement = new Map<Element, AriaRef[]>();
+    for (const [ref, element] of capture.elementsByRef) {
+      const refs = refsByElement.get(element) ?? [];
+      refs.push(ref);
+      refsByElement.set(element, refs);
+    }
+
+    return elements.map((element) => {
+      if (!element.isConnected) return undefined;
+      const refs = refsByElement.get(element) ?? [];
+      return refs.length === 1 ? refs[0] : undefined;
+    });
+  }
+
+  private advance(capture: CapturedPageState): void {
+    if (this.baseline === null) {
+      this.currentIdentitiesByRef = this.addInitialIdentities(capture);
+      this.baseline = capture.tree;
+      return;
+    }
+
+    const previousIdentitiesByRef = this.currentIdentitiesByRef;
+    const reconciled = StructuralTree.reconcile(this.baseline, capture.tree);
+    const assignments = capture.tree.getAllNodes().map((node) => {
+      const beforeRef = reconciled.getBeforeNodeForAfterRef(node.ref)?.ref;
+      const candidates = new Set<SessionIdentity>();
+      const currentIdentity = previousIdentitiesByRef.get(node.ref);
+      const historicalIdentity = this.identitiesByAlias.get(node.ref);
+      const lineageIdentity =
+        beforeRef === undefined
+          ? undefined
+          : previousIdentitiesByRef.get(beforeRef);
+
+      if (currentIdentity) candidates.add(currentIdentity);
+      if (historicalIdentity) candidates.add(historicalIdentity);
+      if (lineageIdentity) candidates.add(lineageIdentity);
+
+      return {
+        node,
+        candidates,
+        hasAmbiguousCandidate: [...candidates].some(
+          (identity) => identity.unresolvedReason === "ambiguous"
+        ),
+      };
+    });
+    const claimsByIdentity = new Map<SessionIdentity, number[]>();
+    for (const [index, { candidates }] of assignments.entries()) {
+      if (candidates.size !== 1) continue;
+      const identity = [...candidates][0]!;
+      const claims = claimsByIdentity.get(identity) ?? [];
+      claims.push(index);
+      claimsByIdentity.set(identity, claims);
+    }
+
+    const nextIdentitiesByRef = new Map<AriaRef, SessionIdentity>();
+    const retainedIdentities = new Set<SessionIdentity>();
+    const ambiguousIdentities = new Set<SessionIdentity>();
+
+    for (const { candidates, hasAmbiguousCandidate } of assignments) {
+      if (candidates.size > 1 || hasAmbiguousCandidate)
+        for (const identity of candidates) ambiguousIdentities.add(identity);
+    }
+    for (const [identity, claims] of claimsByIdentity) {
+      if (claims.length > 1) ambiguousIdentities.add(identity);
+    }
+
+    for (const { node, candidates, hasAmbiguousCandidate } of assignments) {
+      const identity = candidates.size === 1 ? [...candidates][0] : undefined;
+      const claims =
+        identity === undefined ? undefined : claimsByIdentity.get(identity);
+      if (
+        candidates.size > 1 ||
+        hasAmbiguousCandidate ||
+        (claims !== undefined && claims.length > 1)
+      ) {
+        if (!this.identitiesByAlias.has(node.ref))
+          this.identitiesByAlias.set(node.ref, this.createAmbiguousIdentity());
+        continue;
+      }
+
+      const selectedIdentity = identity ?? this.createIdentity();
+      selectedIdentity.currentRef = node.ref;
+      selectedIdentity.currentElement = capture.elementsByRef.get(node.ref);
+      selectedIdentity.unresolvedReason = null;
+      this.bindAlias(node.ref, selectedIdentity);
+      nextIdentitiesByRef.set(node.ref, selectedIdentity);
+      retainedIdentities.add(selectedIdentity);
+    }
+
+    for (const [beforeRef, identity] of previousIdentitiesByRef) {
+      if (retainedIdentities.has(identity)) continue;
+      identity.currentRef = null;
+      identity.currentElement = undefined;
+      identity.unresolvedReason =
+        ambiguousIdentities.has(identity) ||
+        reconciled.wasBeforeRefAmbiguous(AriaRefSchema.parse(beforeRef))
+          ? "ambiguous"
+          : "removed";
+    }
+
+    this.currentIdentitiesByRef = nextIdentitiesByRef;
+    this.baseline = capture.tree;
+  }
+
+  private addInitialIdentities(
+    capture: CapturedPageState
+  ): Map<AriaRef, SessionIdentity> {
+    const identities = new Map<AriaRef, SessionIdentity>();
+    for (const node of capture.tree.getAllNodes()) {
+      const identity = this.createIdentity();
+      identity.currentRef = node.ref;
+      identity.currentElement = capture.elementsByRef.get(node.ref);
+      this.bindAlias(node.ref, identity);
+      identities.set(node.ref, identity);
+    }
+    return identities;
+  }
+
+  private createIdentity(): SessionIdentity {
+    return {
+      currentRef: null,
+      currentElement: undefined,
+      unresolvedReason: null,
+    };
+  }
+
+  private createAmbiguousIdentity(): SessionIdentity {
+    return {
+      currentRef: null,
+      currentElement: undefined,
+      unresolvedReason: "ambiguous",
+    };
+  }
+
+  private bindAlias(ref: AriaRef, identity: SessionIdentity): void {
+    const existing = this.identitiesByAlias.get(ref);
+    if (existing !== undefined && existing !== identity) {
+      throw new Error(
+        `Structural Ref alias ${ref} is already bound to another Page State identity.`
+      );
+    }
+    this.identitiesByAlias.set(ref, identity);
+  }
+}
+
+export async function capturePageState(
+  root: Element = document.body
+): Promise<string> {
+  return (await captureCurrentPageState(root, new SyntheticAriaRefFactory()))
+    .text;
+}
+
+async function captureCurrentPageState(
+  root: Element,
+  refFactory: SyntheticAriaRefFactory
+): Promise<CapturedPageState> {
   const registrations = (await listRegisteredPomRoots()).filter(
     (registration) =>
       registration.element.ownerDocument === root.ownerDocument &&
       root.contains(registration.element)
   );
   const capture = captureAriaSnapshot(root);
-  const refFactory = new SyntheticAriaRefFactory();
   const retainedTree = StructuralTree.fromPlaywrightAriaSnapshotYaml(
     capture.distilledText,
     refFactory
@@ -74,7 +367,8 @@ export async function capturePageState(root: Element = document.body) {
     referenced.map((r) => r.candidate)
   );
   let currentTree = refPlacement.tree;
-  const labelsByRef = new Map<AriaRef, string[]>();
+  const labelsByRef = new Map<StructuralAriaRef, string[]>();
+  const elementsBySyntheticRef = new Map<StructuralAriaRef, Element>();
 
   for (const [index, ref] of refPlacement.refs.entries()) {
     if (ref === null) continue;
@@ -93,10 +387,11 @@ export async function capturePageState(root: Element = document.body) {
     const ref = placement.refs[0] ?? null;
     if (ref !== null) {
       labelsByRef.set(ref, entry.labels);
+      elementsBySyntheticRef.set(ref, entry.element);
     }
   }
 
-  const properties = new Map<AriaRef, StructuralNodeProperty[]>();
+  const properties = new Map<StructuralAriaRef, StructuralNodeProperty[]>();
   for (const [ref, labels] of labelsByRef) {
     const sorted = [...labels].sort();
     const value: string | readonly string[] =
@@ -105,12 +400,20 @@ export async function capturePageState(root: Element = document.body) {
   }
 
   const projected = new StructuralProjection().project(currentTree, properties);
-  return renderCompactStructuralNodeForest({
+  const text = renderCompactStructuralNodeForest({
     roots: projected,
     structuralNode: (node) => node.node,
     children: (node) => node.children,
     properties: (node) => node.properties,
   });
+  const currentRefs = new Set<AriaRef>(currentTree.getAllRefs());
+  const elementsByRef = new Map<AriaRef, Element>(elementsBySyntheticRef);
+  for (const [element, rawRef] of capture.refsByElement) {
+    const ref = AriaRefSchema.parse(rawRef);
+    if (currentRefs.has(ref)) elementsByRef.set(ref, element);
+  }
+
+  return { text, tree: currentTree, elementsByRef };
 }
 
 function coalesceByElement(
