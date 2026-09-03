@@ -8,6 +8,12 @@ function manifestFor(fixture: string) {
   return derivePomManifests(path.resolve(`src/fixtures/${fixture}.ts`))[0];
 }
 
+function manifestForClass(fixture: string, className: string) {
+  return derivePomManifests(path.resolve(`src/fixtures/${fixture}.ts`)).find(
+    (manifest) => manifest.className === className
+  );
+}
+
 describe("derivePomManifests", () => {
   it("includes inherited public locator members", () => {
     const manifest = manifestFor("inheritedPom");
@@ -123,5 +129,71 @@ describe("derivePomManifests", () => {
         expect.objectContaining({ methodName: "baseProtectedTool" }),
       ])
     );
+  });
+
+  it("discovers directly annotated component values and explicit collections", () => {
+    const manifest = manifestForClass(
+      "annotatedChildrenPom",
+      "AnnotatedChildrenPom"
+    );
+    if (!manifest) throw new Error("The POM manifest was not derived.");
+
+    expect(manifest.members).toEqual([
+      {
+        memberName: "directField",
+        kind: "component",
+        access: "field",
+        componentClassName: "AnnotatedComponent",
+        collection: false,
+      },
+      {
+        memberName: "directGetter",
+        kind: "component",
+        access: "getter",
+        componentClassName: "AnnotatedComponent",
+        collection: false,
+      },
+      {
+        memberName: "directIntersection",
+        kind: "component",
+        access: "field",
+        componentClassName: "AnnotatedComponent",
+        collection: false,
+      },
+      {
+        memberName: "fynkChild",
+        kind: "component",
+        access: "field",
+        componentClassName: "AnnotatedComponent",
+        collection: false,
+      },
+      {
+        memberName: "browserLocator",
+        kind: "locator",
+        access: "field",
+      },
+      {
+        memberName: "locatorGetter",
+        kind: "locator",
+        access: "getter",
+      },
+      {
+        memberName: "componentCollection",
+        kind: "component",
+        access: "method",
+        componentClassName: "AnnotatedComponent",
+        collection: true,
+      },
+    ]);
+    expect(manifest.components).toEqual([
+      {
+        className: "AnnotatedComponent",
+        members: [
+          { memberName: "root", kind: "locator", access: "field" },
+          { memberName: "child", kind: "locator", access: "field" },
+        ],
+        tools: [],
+      },
+    ]);
   });
 });

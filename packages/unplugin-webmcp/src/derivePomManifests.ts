@@ -78,7 +78,7 @@ function pomMembers(
   return classMembers(checker, declaration).flatMap(
     (member): PomMemberManifest[] => {
       if (
-        !isPublicInstanceMember(member) ||
+        !isEligiblePomMember(member) ||
         !member.name ||
         !ts.isIdentifier(member.name)
       )
@@ -86,11 +86,25 @@ function pomMembers(
 
       const memberInfo = memberValueInfo(checker, member);
       if (!memberInfo) return [];
-      if (
-        ts.isMethodDeclaration(member) &&
-        (toolDescription(member) !== undefined || member.parameters.length > 0)
-      ) {
-        return [];
+
+      if (memberInfo.access === "method") {
+        const component = componentCollectionType(checker, memberInfo.type);
+        if (!component) return [];
+        const componentClassName = ensureComponentManifest(
+          checker,
+          component.declaration,
+          components
+        );
+        if (!componentClassName) return [];
+        return [
+          {
+            memberName: member.name.text,
+            kind: "component",
+            access: memberInfo.access,
+            componentClassName,
+            collection: true,
+          },
+        ];
       }
 
       if (isLocatorType(memberInfo.type)) {
@@ -103,7 +117,7 @@ function pomMembers(
         ];
       }
 
-      const component = componentType(checker, memberInfo.type);
+      const component = componentType(memberInfo.type);
       if (!component) return [];
       const componentClassName = ensureComponentManifest(
         checker,
@@ -117,7 +131,7 @@ function pomMembers(
           kind: "component",
           access: memberInfo.access,
           componentClassName,
-          collection: component.collection,
+          collection: false,
         },
       ];
     }
@@ -216,43 +230,51 @@ function toolsForClass(
   });
 }
 
-function componentType(checker: ts.TypeChecker, type: ts.Type) {
-  const direct = componentTypeFromValue(checker, type, false);
-  if (direct) return direct;
+function componentType(type: ts.Type) {
+  const declaration = componentDeclaration(type);
+  return declaration ? { declaration } : undefined;
+}
+
+function componentCollectionType(checker: ts.TypeChecker, type: ts.Type) {
   if (!isNamedType(checker, type, "Promise")) return undefined;
 
   const promiseType = type as ts.TypeReference;
   const promiseValue = checker.getTypeArguments(promiseType)[0];
-  return promiseValue
-    ? componentTypeFromValue(checker, promiseValue, true)
+  if (!promiseValue || !checker.isArrayType(promiseValue)) return undefined;
+
+  const arrayElement = checker.getIndexTypeOfType(
+    promiseValue,
+    ts.IndexKind.Number
+  );
+  const declaration = arrayElement
+    ? componentDeclaration(arrayElement)
     : undefined;
+  return declaration ? { declaration } : undefined;
 }
 
-function componentTypeFromValue(
-  checker: ts.TypeChecker,
-  type: ts.Type,
-  async: boolean
-) {
-  const arrayElement = checker.getIndexTypeOfType(type, ts.IndexKind.Number);
-  if (arrayElement) {
-    const declaration = componentDeclaration(checker, arrayElement);
-    if (declaration) return { declaration, collection: true, async };
+function componentDeclaration(type: ts.Type): ts.ClassDeclaration | undefined {
+  const symbols = [type.getSymbol(), type.aliasSymbol].filter(
+    (symbol): symbol is ts.Symbol => symbol !== undefined
+  );
+  for (const symbol of symbols) {
+    const declaration = symbol.declarations?.find(ts.isClassDeclaration);
+    if (declaration && hasWebMcpClassDecorator(declaration)) return declaration;
   }
 
-  const declaration = componentDeclaration(checker, type);
-  return declaration ? { declaration, collection: false, async } : undefined;
+  if (!type.isIntersection()) return undefined;
+  for (const constituent of type.types) {
+    const declaration = componentDeclaration(constituent);
+    if (declaration) return declaration;
+  }
+  return undefined;
 }
 
-function componentDeclaration(checker: ts.TypeChecker, type: ts.Type) {
-  const symbol = type.aliasSymbol ?? type.getSymbol();
-  const declaration = symbol?.declarations?.find(ts.isClassDeclaration);
-  if (!declaration) return undefined;
-
-  const constructor = declaration.members.find(ts.isConstructorDeclaration);
-  const parameter = constructor?.parameters[0];
-  return parameter && isLocatorType(checker.getTypeAtLocation(parameter))
-    ? declaration
-    : undefined;
+function isEligiblePomMember(member: ts.ClassElement) {
+  if (!isPublicInstanceMember(member)) return false;
+  if (!ts.isMethodDeclaration(member)) return true;
+  return (
+    member.parameters.length === 0 && toolDescription(member) === undefined
+  );
 }
 
 function isNamedType(checker: ts.TypeChecker, type: ts.Type, name: string) {

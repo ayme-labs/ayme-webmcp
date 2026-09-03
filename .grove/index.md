@@ -33,6 +33,7 @@
 | G-08 | Structural page state is review-ready | count; current=3 target=2 | verified |
 | G-09 | POM barrel imports remain browser-loadable | count; current=1 target=1 | verified |
 | G-10 | Consumers can use Structural Refs in browser capabilities | count; current=5 target=3 | verified |
+| G-11 | Discover annotated Page Object children | count; current= target=1 | unverified |
 
 ## Work items
 
@@ -59,6 +60,7 @@
 | W-19 | feature | Simplify application-model highlighting interactions | G-10 | clear | ⊤ | done |  |
 | W-20 | bug | Make continuous ref resolution merge-safe | G-10 | complicated | ⊤ | done |  |
 | W-21 | bug | Preserve ref identity through temporary removal | G-10 | clear | ⊤ | done |  |
+| W-22 | feature | Discover annotated Page Object children | G-11 | complicated | ⊤ | progress | ★ |
 
 ## Decisions
 
@@ -115,6 +117,7 @@ graph TD
   G_08["G-08: Structural page state is review-ready"]:::goal
   G_09["G-09: POM barrel imports remain browser-loadable"]:::goal
   G_10["G-10: Consumers can use Structural Refs in browser capabilities"]:::goal
+  G_11["G-11: Discover annotated Page Object children"]:::goal
   W_01["W-01: Establish the monorepo walking skeleton"]:::done
   W_02["W-02: Preserve spike behavior through package extraction"]:::done
   W_03["W-03: Extract Vue Page Object activation composable"]:::done
@@ -136,6 +139,7 @@ graph TD
   W_19["W-19: Simplify application-model highlighting interactions"]:::done
   W_20["W-20: Make continuous ref resolution merge-safe"]:::done
   W_21["W-21: Preserve ref identity through temporary removal"]:::done
+  W_22["W-22: Discover annotated Page Object children"]:::progress,critical
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -202,6 +206,7 @@ graph TD
   Y_03 -->|distills| D_12
   Y_04 -->|distills| D_12
   Y_04 -->|supersedes| Y_03
+  class W_22 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff

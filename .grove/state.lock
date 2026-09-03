@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:d5f4db28c580a2a533de1bf3433efbac3caade447d29d3fb3fbb062e41859d0f
+# checksum: sha256:df8a91bbf08ace3de4a5e3f158e9215cb45c8f27606f86953b024b670bfb23b0
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -51,6 +51,10 @@ g G-10 status=verified fitness_kind=count t_created=2026-09-02T13:53:17Z t_updat
   area: A-03
   fitness_target: 3
   fitness_current: 5
+
+g G-11 status=unverified fitness_kind=count t_created=2026-09-03T15:49:53Z t_updated=2026-09-03T15:49:53Z "Discover annotated Page Object children"
+  area: A-02
+  fitness_target: 1
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -511,6 +515,21 @@ w W-21 type=bug status=done cynefin=clear t_created=2026-09-03T11:44:42Z t_updat
     | Interface trace: the new batch capture is exported only from @ayme-dev/webmcp/internal and used by the Vue example; the public ayme PageState API is unchanged.
   plan:
     | Implement candidate-based identity selection, public-seam browser regressions, batched element ref capture, observer filtering, and the agreed demo cleanup.
+
+w W-22 type=feature status=progress cynefin=complicated session=host:3886aba7e6393a63 session_at=2026-09-03T15:50:09Z t_created=2026-09-03T15:49:53Z t_updated=2026-09-03T15:50:09Z "Discover annotated Page Object children"
+  goals: G-11
+  fitness: G-11=+1
+  surface: packages/unplugin-webmcp
+  ac:
+    | Public synchronous fields and getters whose represented concrete class is directly decorated with @WebMCP are singular Page Object Children, including factory-produced intersections with phantom selector metadata.
+    | Annotated component classes need not declare their own constructor; ordinary methods, Promise-returning getters, and subclasses whose base alone is annotated are not singular children.
+    | A public parameterless method returning Promise<AnnotatedComponent[]> is a component collection, while parameterized methods, synchronous component arrays, Maps, Sets, and generic iterables are not.
+    | Existing Locator and BrowserLocator fields and getters remain singular children regardless of match cardinality.
+    | WebMCP consumes the consumer-created collection array without instantiating members or calling locator.all(), and collection indexing is limited to the current returned array without stable identity.
+  hypothesis:
+    | Separating member eligibility from static value classification and recognizing only direct annotated classes plus the explicit Promise-array shape will derive the required manifests without constructor-shape inference or arbitrary wrapper unwrapping.
+  evidence_strategy:
+    | Focused manifest-derivation tests assert observable manifests for positive and negative field, getter, method, factory-intersection, locator, and collection cases; package typecheck and the full repository test suite provide regression evidence.
 
 d D-01 status=superseded t_created=2026-08-27T08:43:08Z t_updated=2026-08-27T11:48:35Z "Use the five-workspace monorepo layout"
   context:
