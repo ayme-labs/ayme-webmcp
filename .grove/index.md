@@ -34,6 +34,7 @@
 | G-09 | POM barrel imports remain browser-loadable | count; current=1 target=1 | verified |
 | G-10 | Consumers can use Structural Refs in browser capabilities | count; current=5 target=3 | verified |
 | G-11 | Enforce browser-side Playwright compatibility | count; current=4 target=4 | verified |
+| G-12 | Make the single-document Playwright adapter truthfully verifiable | count; current= target=4 | unverified |
 
 ## Work items
 
@@ -64,6 +65,10 @@
 | W-23 | feature | Make the upstream corpus self-verifying | G-11 | clear | ⊤ | done |  |
 | W-24 | feature | Delegate browser semantics to InjectedScript | G-11 | complicated | ⊤ | done |  |
 | W-25 | feature | Record a zero-exclusion compatibility baseline | G-11 | complicated | ⊤ | done |  |
+| W-26 | bug | Correct the single-document adapter contract | G-12 | complicated | ⊤ | ready | ★ |
+| W-27 | feature | Implement browser-native setup and callback operations | G-12 | complicated | ⊤ | proposed | ★ |
+| W-28 | bug | Make upstream compatibility evidence truthful | G-12 | complicated | ⊤ | proposed | ★ |
+| W-29 | bug | Close distribution compliance and report the new baseline | G-12 | clear | ⊤ | proposed | ★ |
 
 ## Decisions
 
@@ -82,7 +87,8 @@
 | D-11 | Capture only the top-level document | accepted |  |
 | D-12 | Preserve best-effort node continuity in Page State Sessions | accepted | D-10 |
 | D-13 | Use upstream tests as compatibility contract | superseded |  |
-| D-14 | Use a compiled Playwright-compatible browser adapter | accepted | D-13 |
+| D-14 | Use a compiled Playwright-compatible browser adapter | superseded | D-13 |
+| D-15 | Use a compiled Playwright-compatible single-document adapter | accepted | D-14 |
 
 ## Open questions
 
@@ -123,6 +129,7 @@ graph TD
   G_09["G-09: POM barrel imports remain browser-loadable"]:::goal
   G_10["G-10: Consumers can use Structural Refs in browser capabilities"]:::goal
   G_11["G-11: Enforce browser-side Playwright compatibility"]:::goal
+  G_12["G-12: Make the single-document Playwright adapter truthfully verifiable"]:::goal
   W_01["W-01: Establish the monorepo walking skeleton"]:::done
   W_02["W-02: Preserve spike behavior through package extraction"]:::done
   W_03["W-03: Extract Vue Page Object activation composable"]:::done
@@ -148,6 +155,10 @@ graph TD
   W_23["W-23: Make the upstream corpus self-verifying"]:::done
   W_24["W-24: Delegate browser semantics to InjectedScript"]:::done
   W_25["W-25: Record a zero-exclusion compatibility baseline"]:::done
+  W_26["W-26: Correct the single-document adapter contract"]:::ready,critical
+  W_27["W-27: Implement browser-native setup and callback operations"]:::feature,critical
+  W_28["W-28: Make upstream compatibility evidence truthful"]:::feature,critical
+  W_29["W-29: Close distribution compliance and report the new baseline"]:::feature,critical
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -162,6 +173,7 @@ graph TD
   D_12["D-12: Preserve best-effort node continuity in Page State Sessions"]:::decision
   D_13["D-13: Use upstream tests as compatibility contract"]:::decision
   D_14["D-14: Use a compiled Playwright-compatible browser adapter"]:::decision
+  D_15["D-15: Use a compiled Playwright-compatible single-document adapter"]:::decision
   Q_01["Q-01: Choose the public activation interface"]:::question
   Q_02["Q-02: Choose the compact structural output contract"]:::question
   Q_03["Q-03: Choose multiple POM root match behavior"]:::question
@@ -179,6 +191,7 @@ graph TD
   D_05 -->|supersedes| D_01
   D_12 -->|supersedes| D_10
   D_14 -->|supersedes| D_13
+  D_15 -->|supersedes| D_14
   Q_01 -->|asks| D_06
   Q_01 -->|asks| W_03
   Q_02 -->|asks| W_10
@@ -215,12 +228,20 @@ graph TD
   W_23 -->|implements| D_13
   W_24 -->|implements| D_14
   W_25 -->|implements| D_14
+  W_26 ==>|blocks| W_27
+  W_26 -->|implements| D_15
+  W_27 ==>|blocks| W_28
+  W_27 -->|implements| D_15
+  W_28 ==>|blocks| W_29
+  W_28 -->|implements| D_15
+  W_29 -->|implements| D_15
   Y_02 -->|distills| D_08
   Y_03 -->|distills| D_10
   Y_03 -->|distills| D_11
   Y_03 -->|distills| D_12
   Y_04 -->|distills| D_12
   Y_04 -->|supersedes| Y_03
+  class W_26,W_27,W_28,W_29 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff

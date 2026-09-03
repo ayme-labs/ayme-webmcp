@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:68c2e489c3496ea4ee7292fa10eeba2ce3ae82c989ad7d13c5323d5fe329c050
+# checksum: sha256:bc5e649c8bbe3cbab0355637621ad10bba09a32cfaad85d317f0fca16004554d
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -56,6 +56,10 @@ g G-11 status=verified fitness_kind=count t_created=2026-09-03T14:15:39Z t_updat
   area: A-02
   fitness_target: 4
   fitness_current: 4
+
+g G-12 status=unverified fitness_kind=count t_created=2026-09-03T15:52:54Z t_updated=2026-09-03T15:52:54Z "Make the single-document Playwright adapter truthfully verifiable"
+  area: A-02
+  fitness_target: 4
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -582,6 +586,73 @@ w W-25 type=feature status=done cynefin=complicated t_created=2026-09-03T14:19:5
   plan:
     | Remove harness exclusions and driver fallback, strengthen guards, and regenerate the per-test baseline.
 
+w W-26 type=bug status=ready cynefin=complicated t_created=2026-09-03T15:52:54Z t_updated=2026-09-03T15:53:50Z "Correct the single-document adapter contract"
+  goals: G-12
+  fitness: G-12=+1
+  ac:
+    | createPage targets only the current Window and exposes no alternate-window option.
+    | Nested locator filters match pinned Playwright serialization, preserve empty filters, and reject cross-page locators.
+    | Internal locator resolution uses an explicit brand and fails diagnostically for incompatible locator-like values.
+    | Implemented methods support their accepted Playwright argument shapes or explicitly reject unsupported valid options instead of silently ignoring them.
+    | Focused runtime tests cover the corrected contract and the unused resolveOne helper is removed.
+  hypothesis:
+    | A strict single-document boundary and explicit internal identity remove misleading flexibility while keeping Playwright's public interfaces as the POM seam.
+  repro:
+    | Current PR accepts malformed nested filters, permits cross-page filter locators, relies on an unbranded resolver hook, and silently ignores valid options.
+  evidence_strategy:
+    | Run focused runtime tests, typecheck, lint, and package build.
+  plan:
+    | Refine Page and Locator around ADR-0015 without adding iframe, cross-window, or driver-fallback behavior.
+
+w W-27 type=feature status=proposed cynefin=complicated t_created=2026-09-03T15:52:56Z t_updated=2026-09-03T15:53:35Z "Implement browser-native setup and callback operations"
+  goals: G-12
+  fitness: G-12=+1
+  ac:
+    | setContent and basic evaluate execute inside the controlled document through the browser adapter.
+    | waitForFunction executes browser-realm predicates when its Playwright-compatible argument shapes can be represented without a Node transport dependency.
+    | These methods never route through the real Playwright Page in the compatibility fixture.
+    | Focused tests distinguish successful browser execution from transport or unsupported-member failures.
+  hypothesis:
+    | Implementing browser-feasible setup and callback methods directly will let unchanged upstream specs reach their intended locator and page operations without harness exceptions.
+  evidence_strategy:
+    | Run focused Page tests and representative unchanged upstream specs that currently fail during setup or callback transport.
+  plan:
+    | Follow the pinned Playwright Page orchestration where it applies, while keeping browser-process navigation and other out-of-scope capabilities absent.
+
+w W-28 type=bug status=proposed cynefin=complicated t_created=2026-09-03T15:53:18Z t_updated=2026-09-03T15:53:35Z "Make upstream compatibility evidence truthful"
+  goals: G-12
+  fitness: G-12=+1
+  ac:
+    | The compatibility bridge initializes the adapter deterministically in one browser init script.
+    | Guard tests run in the declared package and CI test commands and prove public Page and Locator calls do not fall back to the real driver.
+    | A passing baseline entry requires evidence that the intended adapter operation was reached; incidental, transport, unsupported-dispatch, and no-assertion passes do not count.
+    | The compatibility command verifies copied-spec checksums before running unchanged upstream tests.
+  hypothesis:
+    | Method-entry evidence turns the upstream corpus from a stable failure ledger into a trustworthy compatibility contract without editing upstream specs or adding routing policy.
+  repro:
+    | The current five-entry passing baseline consists of no-assertion, unsupported-operation, or callback-serialization false positives, and the guard suite is outside declared test commands.
+  evidence_strategy:
+    | Run adapter guards, baseline-script unit tests, checksum verification, and controlled false-positive and regression cases.
+  plan:
+    | Keep every selected upstream test visible while separating verified compatibility passes from diagnostic outcomes.
+
+w W-29 type=bug status=proposed cynefin=clear t_created=2026-09-03T15:53:19Z t_updated=2026-09-03T15:53:35Z "Close distribution compliance and report the new baseline"
+  goals: G-12
+  fitness: G-12=+1
+  ac:
+    | The public packed WebMCP artifact includes applicable Playwright Apache-2.0 license and notice material.
+    | The packed-consumer test verifies the third-party notice files in the produced tarball.
+    | Package and workspace build, typecheck, lint, unit, guard, packed-consumer, and compatibility commands pass according to their declared contracts.
+    | The unchanged 473-test corpus is rerun with no real-Playwright method routing, and the report explains verified passes plus failure phases and leading causes.
+  hypothesis:
+    | A clean package artifact plus an execution-evidenced corpus provides a safe merge checkpoint and the data needed to decide whether any harness exception is justified.
+  repro:
+    | The public WebMCP tarball absorbs compiled Playwright code without verified Apache-2.0 license and notice material.
+  evidence_strategy:
+    | Inspect the packed tarball, run the full verification suite, save the per-test baseline, and summarize corpus outcome counts and failure clusters.
+  plan:
+    | Finish release compliance, run the corrected end-to-end evidence loop, and stop for user alignment before adding harness policy or broader runtime scope.
+
 d D-01 status=superseded t_created=2026-08-27T08:43:08Z t_updated=2026-08-27T11:48:35Z "Use the five-workspace monorepo layout"
   context:
     | The open-source WebMCP library needs independently publishable core and Vite packages, a private example application, and shared tooling configuration.
@@ -687,9 +758,13 @@ d D-13 status=superseded t_created=2026-09-03T14:15:39Z t_updated=2026-09-03T14:
   decision:
     | See ADR-0013: docs/adr/0013-use-upstream-playwright-tests-as-the-browser-compatibility-contract.md.
 
-d D-14 status=accepted t_created=2026-09-03T14:15:40Z t_updated=2026-09-03T14:20:13Z "Use a compiled Playwright-compatible browser adapter"
+d D-14 status=superseded t_created=2026-09-03T14:15:40Z t_updated=2026-09-03T15:51:54Z "Use a compiled Playwright-compatible browser adapter"
   decision:
     | See ADR-0014: docs/adr/0014-use-a-compiled-playwright-compatible-browser-adapter.md.
+
+d D-15 status=accepted t_created=2026-09-03T15:51:54Z t_updated=2026-09-03T15:53:20Z "Use a compiled Playwright-compatible single-document adapter"
+  decision:
+    | See ADR-0015: docs/adr/0015-use-a-compiled-playwright-compatible-single-document-adapter.md.
 
 q Q-01 status=deferred cynefin=complicated t_created=2026-08-27T12:43:03Z t_updated=2026-08-27T14:13:29Z "Choose the public activation interface"
   why:
@@ -772,6 +847,7 @@ e B-02 targets W-16 t_created=2026-09-02T13:55:47Z
 e D-05 supersedes D-01 t_created=2026-08-27T11:48:25Z
 e D-12 supersedes D-10 t_created=2026-09-02T13:33:00Z
 e D-14 supersedes D-13 t_created=2026-09-03T14:15:40Z
+e D-15 supersedes D-14 t_created=2026-09-03T15:51:54Z
 e Q-01 asks D-06 t_created=2026-08-27T12:43:04Z
 e Q-01 asks W-03 t_created=2026-08-27T14:13:29Z
 e Q-02 asks W-10 t_created=2026-08-31T19:05:06Z
@@ -808,6 +884,13 @@ e W-22 implements D-14 t_created=2026-09-03T14:16:29Z
 e W-23 implements D-13 t_created=2026-09-03T14:19:19Z
 e W-24 implements D-14 t_created=2026-09-03T14:19:46Z
 e W-25 implements D-14 t_created=2026-09-03T14:20:13Z
+e W-26 blocks W-27 t_created=2026-09-03T15:52:57Z
+e W-26 implements D-15 t_created=2026-09-03T15:52:55Z
+e W-27 blocks W-28 t_created=2026-09-03T15:53:19Z
+e W-27 implements D-15 t_created=2026-09-03T15:52:57Z
+e W-28 blocks W-29 t_created=2026-09-03T15:53:21Z
+e W-28 implements D-15 t_created=2026-09-03T15:53:19Z
+e W-29 implements D-15 t_created=2026-09-03T15:53:20Z
 e Y-02 distills D-08 t_created=2026-08-27T14:40:25Z
 e Y-03 distills D-10 t_created=2026-09-02T09:50:35Z
 e Y-03 distills D-11 t_created=2026-09-02T09:50:35Z
