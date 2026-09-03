@@ -252,6 +252,121 @@ test("shows the app model and page state in separate inspector tabs", async ({
   await expect(output).toContainText("ListPage.items[1]");
 });
 
+test("toggles application-model selections and gives hover precedence", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  await expect(page.locator(".highlight-section")).toHaveCount(0);
+
+  const itemInstances = page.locator('[data-instance-list="ListItem"]');
+  await itemInstances.locator(".instances-heading").click();
+
+  const firstInstance = itemInstances.locator(
+    '[data-instance-path="ListPage.items[0]"]'
+  );
+  const secondInstance = itemInstances.locator(
+    '[data-instance-path="ListPage.items[1]"]'
+  );
+  await firstInstance.locator(".instance-heading").click();
+  await secondInstance.locator(".instance-heading").click();
+
+  const firstArchiveMember = firstInstance.locator(
+    '[data-instance-member-name="ListPage.items[0].archiveButton"]'
+  );
+  const secondArchiveMember = secondInstance.locator(
+    '[data-instance-member-name="ListPage.items[1].archiveButton"]'
+  );
+  const firstArchiveButton = page.getByRole("button", {
+    name: "Archive item-1",
+  });
+  const secondArchiveButton = page.getByRole("button", {
+    name: "Archive item-2",
+  });
+
+  await firstArchiveMember.hover();
+  await expect(firstArchiveButton).toHaveAttribute("data-ayme-highlight", "");
+  await firstArchiveMember.click();
+  await expect(firstArchiveMember).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("tab", { name: "Page State" }).hover();
+  await expect(firstArchiveButton).toHaveAttribute("data-ayme-highlight", "");
+
+  await firstArchiveButton.evaluate((element) =>
+    element.removeAttribute("data-ayme-highlight")
+  );
+  await page.waitForTimeout(80);
+  await expect(firstArchiveButton).not.toHaveAttribute("data-ayme-highlight");
+
+  await firstArchiveButton.evaluate((element) =>
+    element.setAttribute("data-highlight-refresh", "attribute")
+  );
+  await expect(firstArchiveButton).toHaveAttribute("data-ayme-highlight", "");
+
+  await firstArchiveButton.evaluate((element) => {
+    element.removeAttribute("data-ayme-highlight");
+    const text = [...element.childNodes].find(
+      (node) => node.nodeType === Node.TEXT_NODE
+    );
+    if (!text) throw new Error("Expected archive button text.");
+    text.textContent = `${text.textContent} `;
+  });
+  await expect(firstArchiveButton).toHaveAttribute("data-ayme-highlight", "");
+
+  await secondArchiveMember.hover();
+  await expect(firstArchiveButton).not.toHaveAttribute("data-ayme-highlight");
+  await expect(secondArchiveButton).toHaveAttribute("data-ayme-highlight", "");
+  await expect(firstArchiveMember).toHaveAttribute("aria-pressed", "true");
+
+  await page.locator('[data-pom-class="ListItem"] .pom-heading').hover();
+  await expect(firstArchiveButton).toHaveAttribute("data-ayme-highlight", "");
+
+  await secondArchiveMember.click();
+  await expect(firstArchiveMember).toHaveAttribute("aria-pressed", "false");
+  await expect(secondArchiveMember).toHaveAttribute("aria-pressed", "true");
+
+  await secondArchiveMember.click();
+  await expect(secondArchiveMember).toHaveAttribute("aria-pressed", "false");
+  await page.locator('[data-pom-class="ListItem"] .pom-heading').hover();
+  await expect(firstArchiveButton).not.toHaveAttribute("data-ayme-highlight");
+  await expect(secondArchiveButton).not.toHaveAttribute("data-ayme-highlight");
+});
+
+test("highlights collection and class-level application-model targets", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const itemCard = page.locator('[data-pom-class="ListItem"]');
+  const classArchiveMember = itemCard.locator(
+    '[data-member-name="archiveButton"]'
+  );
+  const archiveButtons = page.getByRole("button", { name: /Archive item-/ });
+
+  await classArchiveMember.hover();
+  await expect(archiveButtons).toHaveCount(2);
+  await expect(archiveButtons.nth(0)).toHaveAttribute(
+    "data-ayme-highlight",
+    ""
+  );
+  await expect(archiveButtons.nth(1)).toHaveAttribute(
+    "data-ayme-highlight",
+    ""
+  );
+
+  const pageCard = page.locator('[data-pom-class="ListPage"]');
+  const itemsMember = pageCard.locator('[data-member-name="items"]');
+  const itemRoots = page.locator(".item-row");
+
+  await itemsMember.hover();
+  await expect(itemRoots).toHaveCount(2);
+  await expect(itemRoots.nth(0)).toHaveAttribute("data-ayme-highlight", "");
+  await expect(itemRoots.nth(1)).toHaveAttribute("data-ayme-highlight", "");
+
+  await page.locator('[data-pom-class="ListPage"] .pom-heading').hover();
+  await expect(itemRoots.nth(0)).not.toHaveAttribute("data-ayme-highlight");
+  await expect(itemRoots.nth(1)).not.toHaveAttribute("data-ayme-highlight");
+});
+
 test("runs the same POM behavior through registered WebMCP tools", async ({
   page,
 }) => {
@@ -493,7 +608,10 @@ test("demonstrates the list app and invokes the generated POM tools from the deb
     archiveDialogCard.locator('[data-member-name="root"]')
   ).toContainText("absent");
 
-  await page.getByRole("button", { name: "Clear" }).click();
+  await page
+    .getByLabel("Recent executions")
+    .getByRole("button", { name: "Clear" })
+    .click();
   await expect(
     page.getByText("Invoke a tool to see its execution here.")
   ).toBeVisible();
