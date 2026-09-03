@@ -420,4 +420,75 @@ describe("live Page Object registry", () => {
 
     registration.dispose();
   });
+
+  it("resolves method-backed collections from the current returned array", async () => {
+    const registry = await import("./registry");
+    registry.configureAymeRuntime({} as BrowserPage);
+
+    const firstArchive = vi.fn(() => "first");
+    const secondArchive = vi.fn(() => "second");
+    const replacementArchive = vi.fn(() => "replacement");
+    const first = {
+      root: { count: async () => 1 },
+      archive: firstArchive,
+    };
+    const second = {
+      root: { count: async () => 1 },
+      archive: secondArchive,
+    };
+    const replacement = {
+      root: { count: async () => 1 },
+      archive: replacementArchive,
+    };
+    let currentItems = [first, second];
+    const items = vi.fn(async () => currentItems.slice());
+    class ItemsPage {}
+
+    registry.registerCompiledPom(
+      ItemsPage,
+      {
+        className: "ItemsPage",
+        tools: [],
+        members: [
+          {
+            memberName: "items",
+            kind: "component",
+            access: "method",
+            componentClassName: "Item",
+            collection: true,
+          },
+        ],
+        components: [
+          {
+            className: "Item",
+            members: [{ memberName: "root", kind: "locator", access: "field" }],
+            tools: [action("archive")],
+          },
+        ],
+      },
+      () => ({ items })
+    );
+    const registration = registry.createPageRegistration(ItemsPage);
+
+    await vi.runOnlyPendingTimersAsync();
+    const tool = registry.listRegisteredTools()[0];
+    if (!tool) throw new Error("Expected a collection tool.");
+
+    await expect(tool.execute({ index: 1, args: {} })).resolves.toEqual({
+      ok: true,
+      result: "second",
+    });
+    expect(secondArchive).toHaveBeenCalledOnce();
+    expect(firstArchive).not.toHaveBeenCalled();
+
+    currentItems = [replacement];
+    await expect(tool.execute({ index: 0, args: {} })).resolves.toEqual({
+      ok: true,
+      result: "replacement",
+    });
+    expect(replacementArchive).toHaveBeenCalledOnce();
+    expect(items).toHaveBeenCalledTimes(3);
+
+    registration.dispose();
+  });
 });

@@ -73,6 +73,20 @@ export class AnnotatedChildrenPom {
     return [];
   }
 
+  async readonlyComponentCollection(): Promise<readonly AnnotatedComponent[]> {
+    return [];
+  }
+
+  async readonlyArrayComponentCollection(): Promise<
+    ReadonlyArray<AnnotatedComponent>
+  > {
+    return [];
+  }
+
+  async tupleCollection(): Promise<[AnnotatedComponent, AnnotatedComponent]> {
+    return undefined as unknown as [AnnotatedComponent, AnnotatedComponent];
+  }
+
   async parameterizedCollection(
     selector: string
   ): Promise<AnnotatedComponent[]> {

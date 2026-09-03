@@ -61,6 +61,7 @@
 | W-20 | bug | Make continuous ref resolution merge-safe | G-10 | complicated | ⊤ | done |  |
 | W-21 | bug | Preserve ref identity through temporary removal | G-10 | clear | ⊤ | done |  |
 | W-22 | feature | Discover annotated Page Object children | G-11 | complicated | ⊤ | done |  |
+| W-23 | bug | Correct annotated Page Object child regressions | G-11 | complicated | ⊤ | done |  |
 
 ## Decisions
 
@@ -140,6 +141,7 @@ graph TD
   W_20["W-20: Make continuous ref resolution merge-safe"]:::done
   W_21["W-21: Preserve ref identity through temporary removal"]:::done
   W_22["W-22: Discover annotated Page Object children"]:::done
+  W_23["W-23: Correct annotated Page Object child regressions"]:::done
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision

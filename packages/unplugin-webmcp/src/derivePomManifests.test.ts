@@ -184,6 +184,20 @@ describe("derivePomManifests", () => {
         componentClassName: "AnnotatedComponent",
         collection: true,
       },
+      {
+        memberName: "readonlyComponentCollection",
+        kind: "component",
+        access: "method",
+        componentClassName: "AnnotatedComponent",
+        collection: true,
+      },
+      {
+        memberName: "readonlyArrayComponentCollection",
+        kind: "component",
+        access: "method",
+        componentClassName: "AnnotatedComponent",
+        collection: true,
+      },
     ]);
     expect(manifest.components).toEqual([
       {

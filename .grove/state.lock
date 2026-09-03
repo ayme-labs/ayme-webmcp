@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:59a607a182310d31b06c9a2bda0703f8e55f3d8c7ca90102442fa4185a1102c0
+# checksum: sha256:f1edc449aacf654e3a565ab49bbc623a3a53ca19fa8108a48d797a3bd28c30a2
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -536,6 +536,31 @@ w W-22 type=feature status=done cynefin=complicated t_created=2026-09-03T15:49:5
     | package build, typecheck, lint, and repository unit suite passed; the full unit suite reported 166 passing tests.
     | format check, boundary check, and Grove check passed.
     | browser validation: webmcp 1 test passed; example-vue 2 passed and 7 failed because existing undecorated constructor-shaped POM components no longer match the approved direct-annotation contract; app files were outside the mutation boundary.
+
+w W-23 type=bug status=done cynefin=complicated t_created=2026-09-03T16:09:18Z t_updated=2026-09-03T16:22:44Z "Correct annotated Page Object child regressions"
+  goals: G-11
+  fitness: G-11=+0
+  surface: packages/unplugin-webmcp, packages/webmcp, apps/example-vue/playwright/pom, apps/example-vue/tests
+  ac:
+    | The example-vue end-to-end suite passes with ListItem and ArchiveDialog directly decorated with @WebMCP, and only directly affected manifest expectations or snapshots change.
+    | A public-seam registry test proves a method collection member is backed by a parameterless method returning a newly produced Promise component array, and resolution awaits the method and uses the current returned array and index.
+    | Compiler manifest tests prove Promise<AnnotatedComponent[]> and Promise<readonly AnnotatedComponent[]> or Promise<ReadonlyArray<AnnotatedComponent>> collections while tuples, Maps, Sets, and generic iterables remain excluded.
+    | Focused compiler and runtime tests, relevant typechecks, the full repository test and end-to-end suites, format, lint, boundaries, and Grove checks pass.
+  hypothesis:
+    | The approved direct-annotation semantics are correct, so annotating the example child classes and adding seam coverage for method collections and readonly arrays will close the regression without production runtime changes unless the new contract test proves one necessary.
+  repro:
+    | At baseline 04f093b1, the example-vue browser suite reports seven failures because ListItem and ArchiveDialog are not directly decorated with @WebMCP, so their child manifests and dependent behavior do not match the approved direct-annotation contract.
+  evidence_strategy:
+    | Run the baseline browser reproducer, add each failing compiler or runtime test before its correction, run each test green after the correction, then run focused checks and the complete repository validation commands with commit SHAs recorded.
+  evidence:
+    | baseline 04f093b1: pnpm build passed; example-vue browser suite reproduced 7 failures in 9 tests, with ListItem and ArchiveDialog missing from the direct-annotation manifest.
+    | red-to-green example correction: adding direct @WebMCP annotations to ListItem and ArchiveDialog made pnpm --filter @ayme-dev/example-vue test:e2e pass 9 tests; no snapshots changed.
+    | public registry seam: pnpm --filter @ayme-dev/webmcp test -- src/registry.test.ts passed 34 tests, including method-backed collection invocation, Promise awaiting, current-array replacement, and index resolution.
+    | compiler contract: pnpm --filter @ayme-dev/unplugin-webmcp test -- src/derivePomManifests.test.ts passed 17 tests covering mutable and readonly Promise arrays plus tuple exclusion; no compiler production change was required.
+    | typechecks passed for unplugin-webmcp, webmcp, and example-vue; pnpm test completed 9 successful tasks; pnpm test:e2e completed 5 successful tasks with 1 Chromium and 9 example-vue tests passing.
+    | format check, lint, boundaries, and Grove check passed.
+  why:
+    | This follows W-22 because its browser evidence recorded seven example-vue failures outside that work item's mutation boundary.
 
 d D-01 status=superseded t_created=2026-08-27T08:43:08Z t_updated=2026-08-27T11:48:35Z "Use the five-workspace monorepo layout"
   context:
