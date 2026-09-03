@@ -10,15 +10,11 @@ import type {
   RegisteredPomTool,
   ToolManifest,
 } from "./contracts";
-import {
-  BrowserLocatorImpl,
-  type BrowserLocator,
-  type BrowserPage,
-} from "./browserPage";
+import type { Locator, Page } from "@playwright/test";
 
 type CompiledPom = {
   manifest: PomManifest;
-  instantiate(page: BrowserPage): object;
+  instantiate(page: Page): object;
 };
 
 type LiveRegisteredPomTool = RegisteredPomTool & {
@@ -38,21 +34,21 @@ export type RegisteredPomRoot = {
   element: Element;
 };
 
-let browserPage: BrowserPage | undefined;
+let browserPage: Page | undefined;
 const compiledPoms = new WeakMap<object, CompiledPom>();
 const registeredPoms = new Set<RegisteredPom>();
 const subscribers = new Set<() => void>();
 let mutationObserver: MutationObserver | undefined;
 let probeTimer: ReturnType<typeof setTimeout> | undefined;
 
-export function configureAymeRuntime(page: BrowserPage) {
+export function configureAymeRuntime(page: Page) {
   browserPage = page;
 }
 
 export function registerCompiledPom(
   PomClass: object,
   manifest: PomManifest,
-  instantiate: (page: BrowserPage) => object
+  instantiate: (page: Page) => object
 ) {
   compiledPoms.set(PomClass, { manifest, instantiate });
 }
@@ -484,7 +480,7 @@ async function collectRegisteredPomRoots(
         const path = member.collection
           ? `${prefix}.${member.memberName}[${index}]`
           : `${prefix}.${member.memberName}`;
-        const elements = browserLocatorElements(candidate.root);
+        const elements = locatorElements(candidate.root);
         if (elements.length === 1) {
           const element = elements[0];
           if (element) roots.push({ label: path, element });
@@ -523,7 +519,7 @@ async function probeMembers(
     try {
       const value = await readMember(instance, member);
       if (member.kind === "locator") {
-        if (!isBrowserLocator(value))
+        if (!isLocator(value))
           throw new Error(`POM member ${memberPath} is not a browser locator.`);
         observations.push({
           memberName: memberPath,
@@ -721,16 +717,19 @@ function isCallable(value: unknown): value is (...args: unknown[]) => unknown {
   return typeof value === "function";
 }
 
-function isBrowserLocator(value: unknown): value is BrowserLocator {
+function isLocator(value: unknown): value is Locator {
   return isRecord(value) && typeof value.count === "function";
 }
 
-function browserLocatorElements(locator: BrowserLocator): Element[] {
-  return locator instanceof BrowserLocatorImpl ? locator.resolveElements() : [];
+function locatorElements(locator: Locator): Element[] {
+  const impl = locator as unknown as Record<string, unknown>;
+  if (typeof impl.resolveElements === "function")
+    return (impl.resolveElements as () => Element[])();
+  return [];
 }
 
-function isPomComponent(value: unknown): value is { root: BrowserLocator } {
-  return isRecord(value) && isBrowserLocator(value.root);
+function isPomComponent(value: unknown): value is { root: Locator } {
+  return isRecord(value) && isLocator(value.root);
 }
 
 function asComponents(value: unknown): unknown[] {

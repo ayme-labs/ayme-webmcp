@@ -5,29 +5,34 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "default": "./src/index.ts"
-    },
-    "./tsdown": {
-      "types": "./src/tsdown.ts",
-      "default": "./src/tsdown.ts"
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.mjs"
     }
   },
   "scripts": {
+    "build": "tsdown",
     "lint": "eslint src --max-warnings 0",
-    "test": "vitest run --passWithNoTests",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "playwright-core": "github:enekesabel/playwright#path:/packages/playwright-core&b25d782e3fbdf21abdae60e974e49b78ca07e828"
+    "test": "vitest run --passWithNoTests && node --test scripts/upstream-baseline.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "node scripts/upstream-baseline.mjs check",
+    "baseline:update": "node scripts/upstream-baseline.mjs update",
+    "baseline:check": "node scripts/upstream-baseline.mjs check",
+    "upstream:sync": "node scripts/upstream-specs.mjs sync",
+    "upstream:check": "node scripts/upstream-specs.mjs check"
   },
   "devDependencies": {
     "@ayme-dev/eslint-config": "workspace:*",
     "@ayme-dev/typescript-config": "workspace:*",
+    "@playwright/test": "^1.62.1",
+    "@types/formidable": "^3.5.1",
     "@types/node": "^24.0.0",
     "@vitest/browser-playwright": "^4.1.11",
     "eslint": "^10.9.1",
+    "formidable": "^3.5.4",
     "playwright": "^1.62.1",
+    "playwright-core": "github:enekesabel/playwright#path:/packages/playwright-core&b25d782e3fbdf21abdae60e974e49b78ca07e828",
+    "tsdown": "^0.22.14",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11"
   }

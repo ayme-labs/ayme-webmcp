@@ -1,4 +1,3 @@
-import { playwrightInjectedPlugin } from "@ayme-dev/playwright-browser/tsdown";
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
@@ -12,5 +11,4 @@ export default defineConfig({
   dts: true,
   entry: ["src/index.ts", "src/internal.ts"],
   format: ["esm"],
-  plugins: [playwrightInjectedPlugin()],
 });

@@ -280,9 +280,7 @@ function isPublicInstanceMember(member: ts.ClassElement) {
 
 function isLocatorType(type: ts.Type) {
   const symbol = type.aliasSymbol ?? type.getSymbol();
-  return (
-    symbol?.getName() === "BrowserLocator" || symbol?.getName() === "Locator"
-  );
+  return symbol?.getName() === "Locator";
 }
 
 function hasWebMcpClassDecorator(declaration: ts.ClassDeclaration) {

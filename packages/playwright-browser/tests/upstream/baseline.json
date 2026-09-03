@@ -1,0 +1,10 @@
+{
+  "source": {
+    "repository": "enekesabel/playwright",
+    "commit": "b25d782e3fbdf21abdae60e974e49b78ca07e828"
+  },
+  "selectedTestCount": 473,
+  "passingIds": [
+    "retarget.spec.ts > should not retarget anchor into parent label"
+  ]
+}

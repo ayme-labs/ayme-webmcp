@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, reactive, ref, shallowRef } from "vue";
 
+import type { TraceEntry } from "@ayme-dev/playwright-browser";
 import type {
   JsonValue,
   PomMemberManifest,
   PomMemberObservation,
   RegisteredPomTool,
-  TraceEntry,
 } from "@ayme-dev/webmcp";
 import type { RegisteredPom } from "@ayme-dev/webmcp/internal";
 

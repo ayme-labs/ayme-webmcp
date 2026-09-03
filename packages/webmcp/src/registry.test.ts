@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { BrowserPage } from "./browserPage";
+import type { Page } from "@playwright/test";
 import type { PomManifest } from "./contracts";
 
 class FakeMutationObserver {
@@ -54,7 +54,7 @@ describe("live Page Object registry", () => {
 
   it("observes while at least one Page Object is registered", async () => {
     const registry = await import("./registry");
-    registry.configureAymeRuntime({} as BrowserPage);
+    registry.configureAymeRuntime({} as Page);
 
     class FirstPage {}
     class SecondPage {}
@@ -98,7 +98,7 @@ describe("live Page Object registry", () => {
 
   it("coalesces DOM mutations and ignores unchanged observations", async () => {
     const registry = await import("./registry");
-    registry.configureAymeRuntime({} as BrowserPage);
+    registry.configureAymeRuntime({} as Page);
 
     const count = vi.fn(async () => 1);
     class PageWithLocator {}
@@ -133,7 +133,7 @@ describe("live Page Object registry", () => {
 
   it("schedules an initial probe for every added Page Object", async () => {
     const registry = await import("./registry");
-    registry.configureAymeRuntime({} as BrowserPage);
+    registry.configureAymeRuntime({} as Page);
 
     class FirstPage {}
     registry.registerCompiledPom(
@@ -166,7 +166,7 @@ describe("live Page Object registry", () => {
 
   it("keeps same-class registrations independent", async () => {
     const registry = await import("./registry");
-    registry.configureAymeRuntime({} as BrowserPage);
+    registry.configureAymeRuntime({} as Page);
 
     class ReusedPage {}
     registry.registerCompiledPom(
@@ -199,7 +199,7 @@ describe("live Page Object registry", () => {
 
   it("bounds recursive component manifests to the current component path", async () => {
     const registry = await import("./registry");
-    registry.configureAymeRuntime({} as BrowserPage);
+    registry.configureAymeRuntime({} as Page);
 
     class RecursivePage {}
     registry.registerCompiledPom(
@@ -253,7 +253,7 @@ describe("live Page Object registry", () => {
 
   it("lists tools for live singular and nested component roots", async () => {
     const registry = await import("./registry");
-    registry.configureAymeRuntime({} as BrowserPage);
+    registry.configureAymeRuntime({} as Page);
 
     let dialogRootCount = 1;
     let panelRootCount = 0;
@@ -341,7 +341,7 @@ describe("live Page Object registry", () => {
 
   it("lists collection tools only for their direct live roots", async () => {
     const registry = await import("./registry");
-    registry.configureAymeRuntime({} as BrowserPage);
+    registry.configureAymeRuntime({} as Page);
 
     let rootCount = 0;
     class ItemsPage {}

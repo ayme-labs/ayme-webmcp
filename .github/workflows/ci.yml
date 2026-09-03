@@ -37,6 +37,13 @@ jobs:
         if: github.event_name == 'pull_request'
         run: pnpm run commitlint --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.event.pull_request.head.sha }}"
       - run: pnpm run check
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-browser-report
+          path: packages/playwright-browser/test-results/report.json
+          if-no-files-found: ignore
 
   vue-compatibility:
     name: Vue 3.2 compatibility

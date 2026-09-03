@@ -1,4 +1,3 @@
-export { createBrowserPage } from "./browserPage";
 export { capturePageState } from "./pageState";
 export {
   configureAymeRuntime,

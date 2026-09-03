@@ -142,7 +142,7 @@ it(
         [
           'const main = await import("@ayme-dev/webmcp");',
           'const internal = await import("@ayme-dev/webmcp/internal");',
-          'if (typeof main.createBrowserPage !== "function") throw new Error("missing createBrowserPage");',
+          'if (typeof main.WebMCP !== "function") throw new Error("missing WebMCP");',
           'if (typeof internal.configureAymeRuntime !== "function") throw new Error("missing configureAymeRuntime");',
           'console.log("ok");',
         ].join("\n")

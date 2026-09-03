@@ -1,4 +1,4 @@
-import type { Locator } from "playwright";
+import type { Locator } from "@playwright/test";
 
 export class ArchiveDialog {
   readonly root: Locator;

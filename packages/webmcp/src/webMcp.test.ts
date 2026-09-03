@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { BrowserPage } from "./browserPage";
+import type { Page } from "@playwright/test";
 
 type PublishedTool = { name: string };
 
@@ -79,7 +79,7 @@ describe("WebMCP publisher", () => {
 
     const registry = await import("./registry");
     const { synchronizeWebMcpTools } = await import("./webMcp");
-    registry.configureAymeRuntime({} as BrowserPage);
+    registry.configureAymeRuntime({} as Page);
 
     let rootCount = 1;
     class ItemsPage {}
@@ -175,7 +175,7 @@ describe("WebMCP publisher", () => {
 
     const registry = await import("./registry");
     const { synchronizeWebMcpTools } = await import("./webMcp");
-    registry.configureAymeRuntime({} as BrowserPage);
+    registry.configureAymeRuntime({} as Page);
 
     class SharedPage {}
     registry.registerCompiledPom(

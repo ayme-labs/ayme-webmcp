@@ -2,7 +2,8 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createBrowserPage } from "./browserPage";
+import { createPage } from "@ayme-dev/playwright-browser";
+
 import {
   configureAymeRuntime,
   createPageRegistration,
@@ -21,7 +22,7 @@ describe("registered Page Object roots", () => {
       <div class="many"></div>
       <div class="many"></div>
     `;
-    const { page } = createBrowserPage();
+    const page = createPage();
     configureAymeRuntime(page);
 
     class ExamplePage {}

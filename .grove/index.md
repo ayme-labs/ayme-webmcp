@@ -6,15 +6,15 @@
 
 | Measure | Count | Composition |
 | --- | --- | --- |
-| C (content) | 19 | validated B 3 · answered Q 2 · accepted D 11 · active Discovery 3 |
-| V (uncertainty) | 4 | open Q 1 · pending B 0 · W below DoR 0 · uncovered surface 3 |
+| C (content) | 20 | validated B 3 · answered Q 2 · accepted D 12 · active Discovery 3 |
+| V (uncertainty) | 3 | open Q 1 · pending B 0 · W below DoR 0 · uncovered surface 2 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 17 | 4 | C: validated B 3 · answered Q 2 · accepted D 9 · active Discovery 3; V: open Q 1 · pending B 0 · W below DoR 0 · uncovered surface 3 |
+| A-02 | Page Object interoperability | 18 | 3 | C: validated B 3 · answered Q 2 · accepted D 10 · active Discovery 3; V: open Q 1 · pending B 0 · W below DoR 0 · uncovered surface 2 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
 
@@ -31,7 +31,7 @@
 | G-07 | Assistant receives POM-aware structural page state | count; current=4 target=4 | verified |
 | G-08 | Structural page state is review-ready | count; current=3 target=2 | verified |
 | G-09 | POM barrel imports remain browser-loadable | count; current=1 target=1 | verified |
-| G-10 | Enforce browser-side Playwright compatibility | count; current= target=5 | unverified |
+| G-10 | Enforce browser-side Playwright compatibility | count; current=5 target=7 | partial |
 
 ## Work items
 
@@ -51,9 +51,13 @@
 | W-12 | bug | Contain internal packages in packed WebMCP | G-08 | clear | ⊤ | done |  |
 | W-13 | feature | Correct structural page-state projection | G-08 | complicated | ⊤ | done |  |
 | W-14 | feature | Mitigate Playwright-tainted POM barrels | G-09 | complicated | ⊤ | done |  |
-| W-15 | feature | Build the Playwright-typed runtime seam | G-10 | complicated | ⊤ | ready | ★ |
-| W-16 | feature | Install the unchanged upstream contract | G-10 | complicated | ⊤ | ready |  |
-| W-17 | feature | Record the compatibility baseline | G-10 | complicated | ⊤ | ready | ★ |
+| W-15 | feature | Build the Playwright-typed runtime seam | G-10 | complicated | ⊤ | done |  |
+| W-16 | feature | Install the unchanged upstream contract | G-10 | complicated | ⊤ | done |  |
+| W-17 | feature | Record the compatibility baseline | G-10 | complicated | ⊤ | done |  |
+| W-18 | feature | Ship the compiled browser adapter | G-10 | complicated | ⊤ | done |  |
+| W-19 | feature | Make the upstream corpus self-verifying | G-10 | clear | ⊤ | done |  |
+| W-20 | feature | Delegate browser semantics to InjectedScript | G-10 | complicated | ⊤ | ready | ★ |
+| W-21 | feature | Record a zero-exclusion compatibility baseline | G-10 | complicated | ⊤ | ready | ★ |
 
 ## Decisions
 
@@ -71,6 +75,7 @@
 | D-10 | Use capture-scoped Structural Refs | accepted |  |
 | D-11 | Capture only the top-level document | accepted |  |
 | D-12 | Use upstream tests as compatibility contract | accepted |  |
+| D-13 | Use a compiled Playwright-compatible browser adapter | accepted | D-12 |
 
 ## Open questions
 
@@ -93,8 +98,9 @@
 
 | ID | Title | Status | Causes work | Themed work |
 | --- | --- | --- | --- | --- |
-| T-01 | Browser runtime compatibility | open | – | W-15 |
-| T-02 | Upstream compatibility contract | open | – | W-16, W-17 |
+| T-01 | Browser runtime compatibility | done | – | W-15 |
+| T-02 | Upstream compatibility contract | done | – | W-16, W-17 |
+| T-03 | Compiled browser compatibility | open | – | W-18, W-19, W-20, W-21 |
 
 ## Discoveries
 
@@ -132,9 +138,13 @@ graph TD
   W_12["W-12: Contain internal packages in packed WebMCP"]:::done
   W_13["W-13: Correct structural page-state projection"]:::done
   W_14["W-14: Mitigate Playwright-tainted POM barrels"]:::done
-  W_15["W-15: Build the Playwright-typed runtime seam"]:::ready,critical
-  W_16["W-16: Install the unchanged upstream contract"]:::ready
-  W_17["W-17: Record the compatibility baseline"]:::ready,critical
+  W_15["W-15: Build the Playwright-typed runtime seam"]:::done
+  W_16["W-16: Install the unchanged upstream contract"]:::done
+  W_17["W-17: Record the compatibility baseline"]:::done
+  W_18["W-18: Ship the compiled browser adapter"]:::done
+  W_19["W-19: Make the upstream corpus self-verifying"]:::done
+  W_20["W-20: Delegate browser semantics to InjectedScript"]:::ready,critical
+  W_21["W-21: Record a zero-exclusion compatibility baseline"]:::ready,critical
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -147,6 +157,7 @@ graph TD
   D_10["D-10: Use capture-scoped Structural Refs"]:::decision
   D_11["D-11: Capture only the top-level document"]:::decision
   D_12["D-12: Use upstream tests as compatibility contract"]:::decision
+  D_13["D-13: Use a compiled Playwright-compatible browser adapter"]:::decision
   Q_01["Q-01: Choose the public activation interface"]:::question
   Q_02["Q-02: Choose the compact structural output contract"]:::question
   Q_03["Q-03: Choose multiple POM root match behavior"]:::question
@@ -156,6 +167,7 @@ graph TD
   B_03["B-03: Unchanged upstream specifications can use a replacement fixture"]:::assumption
   T_01["T-01: Browser runtime compatibility"]:::theme
   T_02["T-02: Upstream compatibility contract"]:::theme
+  T_03["T-03: Compiled browser compatibility"]:::theme
   Y_01["Y-01: Shared Page Object behavior"]:::discovery
   Y_02["Y-02: Framework lifecycle owns Page Object disposal"]:::discovery
   Y_03["Y-03: Synthetic roots are observation-only"]:::discovery
@@ -165,6 +177,7 @@ graph TD
   B_02 -.->|targets| W_15
   B_03 -.->|targets| W_16
   D_05 -->|supersedes| D_01
+  D_13 -->|supersedes| D_12
   Q_01 -->|asks| D_06
   Q_01 -->|asks| W_03
   Q_02 -->|asks| W_10
@@ -199,10 +212,15 @@ graph TD
   W_16 -->|implements| D_12
   W_17 -->|implements| D_12
   W_17 -->|produces| Q_04
+  W_18 ==>|blocks| W_20
+  W_18 -->|implements| D_13
+  W_19 ==>|blocks| W_21
+  W_20 ==>|blocks| W_21
+  W_20 -->|implements| D_13
   Y_02 -->|distills| D_08
   Y_03 -->|distills| D_10
   Y_03 -->|distills| D_11
-  class W_15,W_17 critical
+  class W_20,W_21 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff
