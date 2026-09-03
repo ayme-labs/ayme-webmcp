@@ -23,7 +23,10 @@ A WebMCP Tool generated from a Page Object Action selected for WebMCP exposure.
 A model-facing observation of the current page that combines its observable structure with associations to Page Objects.
 
 **Structural Ref**:
-A capture-scoped identity for a node in Structural Page State. It is stable only within that capture.
+A capture-scoped address for a node in Structural Page State. The ref itself has no identity guarantee across captures; within a Page State Session, an earlier ref may resolve to the current incarnation of a reconciled node.
+
+**Page State Session**:
+The lifetime within one browser document during which Ayme maintains best-effort continuity between successive Structural Page States.
 
 **Page Object Root**:
 The page element that anchors one Page Object instance in the observed structure.
