@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:3aec064c481b6e74a843cbdac8c0d1be8e7cfb98de667ccbdbbfb94fc00113e9
+# checksum: sha256:5a569425d06a806cbae974146328f9f9e4e2716bc56633f037d82d38c150295c
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -50,7 +50,7 @@ g G-09 status=verified fitness_kind=count t_created=2026-09-02T07:13:35Z t_updat
 g G-10 status=partial fitness_kind=count t_created=2026-09-02T12:15:44Z t_updated=2026-09-03T11:15:41Z "Enforce browser-side Playwright compatibility"
   area: A-02
   fitness_target: 7
-  fitness_current: 5
+  fitness_current: 6
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -501,7 +501,7 @@ w W-19 type=feature status=done cynefin=clear t_created=2026-09-03T11:15:00Z t_u
   plan:
     | Replace repeated JSON metadata with one typed definition, then simplify synchronization and baseline orchestration around it.
 
-w W-20 type=feature status=ready cynefin=complicated t_created=2026-09-03T11:15:18Z t_updated=2026-09-03T11:15:41Z "Delegate browser semantics to InjectedScript"
+w W-20 type=feature status=done cynefin=complicated t_created=2026-09-03T11:15:18Z t_updated=2026-09-03T13:28:21Z "Delegate browser semantics to InjectedScript"
   goals: G-10
   theme: T-03
   fitness: G-10=+1
@@ -515,6 +515,9 @@ w W-20 type=feature status=ready cynefin=complicated t_created=2026-09-03T11:15:
     | Following Playwright's Locator to Page to InjectedScript delegation will reduce duplicate semantics while improving behavioral parity.
   evidence_strategy:
     | Run focused browser tests for selector composition, actions, state checks, ARIA capture, and locator expectations, plus package type-check and export inspection.
+  evidence:
+    | Split src/index.ts into focused modules (types, injected, selectors, locator, page, index). Locator composes Playwright selectors and delegates to Page. Page resolves via real pinned InjectedScript (lazy init). Bridge loads compiled dist with real InjectedScript—no TS transpilation, no stub. Removed ARIA harness exclusion (trustworthy now). Upstream baseline: 0 regressions, 2 newly passing (nth queries), 3/473 total. Build, typecheck, lint, vitest, example-vue e2e all green.
+    | Correction: moved all terminal operations (fill, click, press, waitFor, requireSingle, isInState, typing loops, keyboard dispatch, mutation polling) from LocatorImpl to PageImpl. LocatorImpl now only composes selectors/labels and delegates terminal calls. Page owns retries, timeouts, and InjectedScript primitives. resolveElements() kept on Locator for webmcp duck-typing. All checks green: 3/3 baseline, 0 regressions, example-vue 7/7.
   plan:
     | Separate Page, Locator, and InjectedScript responsibilities, then migrate existing operations to the shared browser primitives without adding public abstractions.
 

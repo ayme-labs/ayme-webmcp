@@ -37,12 +37,6 @@ export function harnessUnsupportedReason(specBasename) {
   if (specBasename === "page-basic.spec.ts")
     return "mixed-subject suite tests multiple driver-backed Page APIs";
 
-  if (
-    specBasename === "page-aria-snapshot.spec.ts" ||
-    specBasename === "page-aria-snapshot-ai.spec.ts"
-  )
-    return "InjectedScript is stubbed; results are not meaningful until the real module is loaded";
-
   if (specBasename === "page-wait-for-function.spec.ts")
     return "proxy cannot serialize function arguments; passes are incidental error-message matches";
 

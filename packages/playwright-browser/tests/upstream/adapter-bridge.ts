@@ -1,16 +1,16 @@
 /**
  * Bridges the @ayme-dev/playwright-browser in-browser adapter with
- * Playwright Test's Node.js fixture. Bundles the actual adapter source,
- * injects it into the browser page, and creates proxy Page/Locator
- * objects that route compatibility calls through the adapter while
- * forwarding explicit infrastructure through the real Playwright driver.
+ * Playwright Test's Node.js fixture. Loads the compiled dist bundle
+ * (which includes the real pinned InjectedScript), injects it into
+ * the browser page, and creates proxy Page/Locator objects that route
+ * compatibility calls through the adapter while forwarding explicit
+ * infrastructure through the real Playwright driver.
  */
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { Locator, Page } from "@playwright/test";
-import ts from "typescript";
 
 // @ts-expect-error -- .mjs policy module has no type declarations
 import {
@@ -21,7 +21,7 @@ import {
 export { DRIVER_ALLOWLIST, harnessUnsupportedReason };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ADAPTER_SOURCE_PATH = resolve(__dirname, "../../src/index.ts");
+const ADAPTER_DIST_PATH = resolve(__dirname, "../../dist/index.mjs");
 
 // Locator-creating page methods: return a proxy locator chain.
 const LOCATOR_CREATING_METHODS = new Set([
@@ -61,38 +61,11 @@ let cachedBundle: string | undefined;
 function buildAdapterBundle(): string {
   if (cachedBundle) return cachedBundle;
 
-  let source = readFileSync(ADAPTER_SOURCE_PATH, "utf8");
+  const dist = readFileSync(ADAPTER_DIST_PATH, "utf8");
 
-  // Replace the virtual module import with an inline stub.
-  // ARIA capture is not needed for the compatibility bridge.
-  source = source.replace(
-    /import\s*\{[^}]*\}\s*from\s*["']virtual:ayme-playwright-injected["'];?/,
-    [
-      "class InjectedScript {",
-      "  constructor(_w, _o) {}",
-      "  ariaSnapshot() { throw new Error('ARIA capture not available in bridge'); }",
-      "  captureAriaSnapshot() { throw new Error('ARIA capture not available in bridge'); }",
-      "}",
-    ].join("\n")
-  );
+  // Strip ES module export declaration so the code runs as a script.
+  const js = dist.replace(/^export\s+\{[^}]*\}.*$/gm, "");
 
-  // Transpile TypeScript → JavaScript (handles parameter properties,
-  // type annotations, access modifiers, etc.)
-  const transpiled = ts.transpileModule(source, {
-    compilerOptions: {
-      target: ts.ScriptTarget.ESNext,
-      module: ts.ModuleKind.ESNext,
-      removeComments: false,
-    },
-  }).outputText;
-
-  // Strip ES module syntax: `export function` → `function`, etc.
-  let js = transpiled
-    .replace(/^export\s+(function|class|const|let|var)\s/gm, "$1 ")
-    .replace(/^export\s+\{[^}]*\}.*$/gm, "")
-    .replace(/^export\s*;$/gm, "");
-
-  // Wrap as browser-injectable IIFE that assigns to window explicitly.
   cachedBundle = [
     "window.__aymeAdapter = (function() {",
     js,

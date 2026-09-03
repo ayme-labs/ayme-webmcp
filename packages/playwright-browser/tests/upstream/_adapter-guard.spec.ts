@@ -99,16 +99,12 @@ test("page-basic is flagged as mixed-subject suite", () => {
   expect(reason).toContain("mixed-subject");
 });
 
-test("page-aria-snapshot is flagged for stubbed InjectedScript", () => {
-  const reason = harnessUnsupportedReason("page-aria-snapshot.spec.ts");
-  expect(reason).not.toBeNull();
-  expect(reason).toContain("InjectedScript");
+test("page-aria-snapshot is not flagged (real InjectedScript in bridge)", () => {
+  expect(harnessUnsupportedReason("page-aria-snapshot.spec.ts")).toBeNull();
 });
 
-test("page-aria-snapshot-ai is flagged for stubbed InjectedScript", () => {
-  const reason = harnessUnsupportedReason("page-aria-snapshot-ai.spec.ts");
-  expect(reason).not.toBeNull();
-  expect(reason).toContain("InjectedScript");
+test("page-aria-snapshot-ai is not flagged (real InjectedScript in bridge)", () => {
+  expect(harnessUnsupportedReason("page-aria-snapshot-ai.spec.ts")).toBeNull();
 });
 
 // ── False-green prevention: ordinary single-subject detection ───────

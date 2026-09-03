@@ -7,14 +7,14 @@
 | Measure | Count | Composition |
 | --- | --- | --- |
 | C (content) | 20 | validated B 3 · answered Q 2 · accepted D 12 · active Discovery 3 |
-| V (uncertainty) | 3 | open Q 1 · pending B 0 · W below DoR 0 · uncovered surface 2 |
+| V (uncertainty) | 2 | open Q 1 · pending B 0 · W below DoR 0 · uncovered surface 1 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 18 | 3 | C: validated B 3 · answered Q 2 · accepted D 10 · active Discovery 3; V: open Q 1 · pending B 0 · W below DoR 0 · uncovered surface 2 |
+| A-02 | Page Object interoperability | 18 | 2 | C: validated B 3 · answered Q 2 · accepted D 10 · active Discovery 3; V: open Q 1 · pending B 0 · W below DoR 0 · uncovered surface 1 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
 
@@ -31,7 +31,7 @@
 | G-07 | Assistant receives POM-aware structural page state | count; current=4 target=4 | verified |
 | G-08 | Structural page state is review-ready | count; current=3 target=2 | verified |
 | G-09 | POM barrel imports remain browser-loadable | count; current=1 target=1 | verified |
-| G-10 | Enforce browser-side Playwright compatibility | count; current=5 target=7 | partial |
+| G-10 | Enforce browser-side Playwright compatibility | count; current=6 target=7 | partial |
 
 ## Work items
 
@@ -56,7 +56,7 @@
 | W-17 | feature | Record the compatibility baseline | G-10 | complicated | ⊤ | done |  |
 | W-18 | feature | Ship the compiled browser adapter | G-10 | complicated | ⊤ | done |  |
 | W-19 | feature | Make the upstream corpus self-verifying | G-10 | clear | ⊤ | done |  |
-| W-20 | feature | Delegate browser semantics to InjectedScript | G-10 | complicated | ⊤ | ready | ★ |
+| W-20 | feature | Delegate browser semantics to InjectedScript | G-10 | complicated | ⊤ | done |  |
 | W-21 | feature | Record a zero-exclusion compatibility baseline | G-10 | complicated | ⊤ | ready | ★ |
 
 ## Decisions
@@ -143,7 +143,7 @@ graph TD
   W_17["W-17: Record the compatibility baseline"]:::done
   W_18["W-18: Ship the compiled browser adapter"]:::done
   W_19["W-19: Make the upstream corpus self-verifying"]:::done
-  W_20["W-20: Delegate browser semantics to InjectedScript"]:::ready,critical
+  W_20["W-20: Delegate browser semantics to InjectedScript"]:::done
   W_21["W-21: Record a zero-exclusion compatibility baseline"]:::ready,critical
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
@@ -220,7 +220,7 @@ graph TD
   Y_02 -->|distills| D_08
   Y_03 -->|distills| D_10
   Y_03 -->|distills| D_11
-  class W_20,W_21 critical
+  class W_21 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff
