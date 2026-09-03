@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:b672fbac15fb9e7f31a925b9f771a3668dbe35ec65ca2142967f44e2df8dac31
+# checksum: sha256:68c2e489c3496ea4ee7292fa10eeba2ce3ae82c989ad7d13c5323d5fe329c050
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -42,15 +42,20 @@ g G-08 status=verified fitness_kind=count t_created=2026-09-01T09:29:11Z t_updat
   fitness_target: 2
   fitness_current: 3
 
-g G-09 status=verified fitness_kind=count t_created=2026-09-02T07:13:35Z t_updated=2026-09-02T12:17:36Z "POM barrel imports remain browser-loadable"
+g G-09 status=verified fitness_kind=count t_created=2026-09-02T07:13:35Z t_updated=2026-09-02T07:59:00Z "POM barrel imports remain browser-loadable"
   area: A-02
   fitness_target: 1
   fitness_current: 1
 
-g G-10 status=partial fitness_kind=count t_created=2026-09-02T12:15:44Z t_updated=2026-09-03T11:15:41Z "Enforce browser-side Playwright compatibility"
+g G-10 status=verified fitness_kind=count t_created=2026-09-02T13:53:17Z t_updated=2026-09-02T15:32:44Z "Consumers can use Structural Refs in browser capabilities"
+  area: A-03
+  fitness_target: 3
+  fitness_current: 5
+
+g G-11 status=verified fitness_kind=count t_created=2026-09-03T14:15:39Z t_updated=2026-09-03T14:20:19Z "Enforce browser-side Playwright compatibility"
   area: A-02
-  fitness_target: 7
-  fitness_current: 6
+  fitness_target: 4
+  fitness_current: 4
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -355,7 +360,7 @@ w W-13 type=feature status=done cynefin=complicated t_created=2026-09-02T08:44:5
   plan:
     | Use vertical tests at the public placement and tool execution seams, then apply the smallest shared projection fixes.
 
-w W-14 type=feature status=done cynefin=complicated t_created=2026-09-02T07:13:57Z t_updated=2026-09-02T12:17:36Z "Mitigate Playwright-tainted POM barrels"
+w W-14 type=feature status=done cynefin=complicated t_created=2026-09-02T07:13:57Z t_updated=2026-09-02T07:59:00Z "Mitigate Playwright-tainted POM barrels"
   goals: G-09
   fitness: G-09=+1
   surface: packages/unplugin-webmcp/src/index.ts, packages/unplugin-webmcp/src/rewritePomImports.ts, packages/unplugin-webmcp/src/rewritePomImports.test.ts, apps/example-vue/playwright/pom/ListPage.ts, apps/example-vue/playwright/pom/components.ts, apps/example-vue/tests/vue-webmcp.spec.ts
@@ -378,173 +383,204 @@ w W-14 type=feature status=done cynefin=complicated t_created=2026-09-02T07:13:5
   why:
     | Issue #15 requires a narrow internal mitigation for Playwright-tainted local barrels without a public option or runtime shim.
 
-w W-15 type=feature status=done cynefin=complicated t_created=2026-09-02T12:17:52Z t_updated=2026-09-02T13:21:22Z "Build the Playwright-typed runtime seam"
+w W-15 type=feature status=done cynefin=complicated t_created=2026-09-02T13:53:40Z t_updated=2026-09-02T14:22:41Z "Expose public page-state resolution"
   goals: G-10
-  theme: T-01
   fitness: G-10=+1
-  surface: packages/playwright-browser/src, packages/webmcp/src, apps/example-vue/src
+  surface: packages/webmcp/src, packages/playwright-browser/src
   ac:
-    | The private package exports one Page factory typed with Playwright Test's Page interface, and Locator values are constructed only through Page and Locator methods.
-    | The runtime uses ordinary partial objects without Ayme-owned Page or Locator interfaces, compatibility aliases, or custom unsupported-operation machinery.
-    | The existing Just-in-Time InjectedScript bridge and structural ARIA capture continue to work.
-    | WebMCP and the example consume the new package directly, and the old browserPage module and exports are removed.
+    | The public Ayme facade captures and renders Structural Page State asynchronously.
+    | PageState resolves current real refs to current refs and DOM elements with one ordered outcome per input.
+    | Synthetic refs resolve only when composition knows their originating DOM element.
+    | Existing POM decoration and top-level-document rendering remain unchanged.
+    | A real Chromium test verifies the public interface at the Page State Session seam.
   hypothesis:
-    | Moving the existing in-browser behavior behind Playwright's public types will simplify the seam without changing the surrounding runtime responsibilities.
+    | Retaining the capture's ref-to-element association behind a PageState value provides consumer resolution without changing StructuralTree semantics.
   evidence_strategy:
-    | Run focused package, WebMCP, and example tests plus typechecks, and record the changed export and caller trace.
+    | Run focused application tests, real-browser tests, type checking, linting, and build verification.
   evidence:
-    | playwright-browser/src/index.ts: createPage() factory returns Page typed against playwright's Page interface; LocatorImpl constructed only through Page.locator/Page.getByRole/Locator.locator/Locator.getByRole methods.
-    | No Ayme-owned Page/Locator interfaces remain; browserPage.ts deleted; registry.ts uses playwright Page/Locator types directly with duck-typed locatorElements().
-    | InjectedScript bridge + ARIA capture unchanged; playwright-browser browser test (1/1) green; e2e tests (7/7) green including ARIA snapshot assertions.
-    | example-vue imports createPage from @ayme-dev/playwright-browser directly; webmcp public API exports only contracts+decorators; browserPage module removed. Caller trace: registry.ts, useAymeExperiment.ts, DebugPanel.vue, 2 unplugin fixtures, 4 test files.
-    | Full check: build green (4 packages), lint green (6 packages), typecheck green (6 packages), unit tests 149/0, e2e tests 7/0, boundaries 123 files 0 issues.
-    | REVISION: all Page/Locator types now imported from @playwright/test (not playwright); type re-exports removed from playwright-browser package.
-    | createPage(options) now returns Page directly (not {page,trace,resetTrace}); tracing via onTrace(entry: TraceEntry) callback; consumer collects entries itself.
-    | Legacy BrowserLocator compiler-name allowance removed from derivePomManifests.ts; stale BrowserLocator docs in example-vue/README.md updated to Locator; zero BrowserLocator/BrowserPage references remain.
-    | Post-revision full check: build 4/4, lint 6/6, typecheck 6/6, unit tests 149/0, e2e 7/0, boundaries 123 files 0 issues.
-    | Cleanup: removed unused exported resolveLocatorElements and unused Locator type import from playwright-browser/src/index.ts. Package now exports only: ariaSnapshot, captureAriaSnapshot, createPage, TraceEntry, BrowserInteractionPacing, CaptureAriaSnapshotResult.
+    | Integrated c84be0b2. pnpm --filter @ayme-dev/webmcp exec vitest run src/ayme.test.ts src/pageState.test.ts: 15 passed. pnpm --filter @ayme-dev/webmcp exec vitest run --config vitest.browser.config.ts: Chromium 1 passed. pnpm --filter @ayme-dev/webmcp typecheck: passed. Implementer also reported workspace build, lint, test, format check, and packed-consumer verification passed.
   plan:
-    | Implement the minimal runtime seam in the private package, then cut internal consumers directly with no compatibility bridge.
-    | Access Grove state only through the grove CLI; never read or edit state.lock or journal.log directly.
+    | Implement local tracker ticket 01 and keep WebMCP publication unchanged.
 
-w W-16 type=feature status=done cynefin=complicated t_created=2026-09-02T12:18:15Z t_updated=2026-09-02T13:40:17Z "Install the unchanged upstream contract"
+w W-16 type=feature status=done cynefin=complicated t_created=2026-09-02T13:54:52Z t_updated=2026-09-02T15:22:08Z "Retarget historical refs through reconciliation"
   goals: G-10
-  theme: T-02
   fitness: G-10=+1
-  surface: packages/playwright-browser/tests, packages/playwright-browser/scripts, packages/playwright-browser/package.json, packages/playwright-browser/playwright.config.ts
+  surface: packages/webmcp/src, packages/structural-observation/src, packages/playwright-browser/src
   ac:
-    | A package-local manifest records the pinned Playwright source and all 22 selected specification paths.
-    | The synchronization command copies selected specifications byte-for-byte and the check command detects upstream or local drift.
-    | The selected specification bodies remain unchanged, with required assets and infrastructure supplied outside those files.
-    | The replacement pageTest fixture routes compatibility operations through the Ayme adapter and only explicit test infrastructure through the real Playwright driver.
+    | Historical refs retarget to the current ref and DOM element across repeated reconciled captures.
+    | Every observed alias in one lineage resolves to the same current node.
+    | Added nodes become resolvable while removed and ambiguous nodes resolve as unresolved.
+    | A retained PageState resolves through the session's latest baseline within one Document.
+    | A real Chromium test verifies a multi-capture changed-ref lineage.
   hypothesis:
-    | Replacing the sibling fixture and required infrastructure will let unchanged Playwright specifications exercise the in-browser adapter as an executable contract.
+    | StructuralTree before-node links can retarget a private session identity without changing public Structural Ref semantics.
   evidence_strategy:
-    | Verify copied file hashes, run the synchronization check, and execute representative upstream specifications far enough to observe adapter behavior.
+    | Run real-browser lineage tests, focused session tests, StructuralTree tests, type checking, linting, and build verification.
   evidence:
-    | Manifest at tests/upstream/manifest.json records pinned source enekesabel/playwright@b25d782e with 22 selected specs under tests/page.
-    | Sync script (upstream-specs.ts sync) fetched all 22 specs byte-for-byte from the pinned commit; check script (upstream-specs.ts check) verified all 22 checksums and detected simulated local drift. Checksums recorded in checksums.json.
-    | Replacement pageTest.ts provides explicit DRIVER_ALLOWLIST, TestServer fixture (setRoute, waitForRequest, setRedirect, setCSP, serveFile, observe, disconnect), platform and browser info fixtures, toContainYaml matcher, and rafraf utility. Config utils at tests/config/utils.ts supply attachFrame, detachFrame, expectedSSLError, and unshift. Playwright config targets tests/upstream/*.spec.ts with chromium.
-    | Final verification: 22 pinned upstream specs match checksums and remain byte-for-byte unchanged; 13/13 adapter guard tests pass; typecheck, unit test, and lint pass. Driver-backed and stubbed-InjectedScript suites are annotated harness-unsupported so they cannot create false compatibility evidence.
+    | Integrated 1df394a1. WebMCP tests: 31 passed. Structural observation tests: 106 passed. Chromium page-state session tests: 2 passed. WebMCP and structural-observation typechecks passed. Implementer pnpm check passed build, lint, workspace tests, 7 Playwright E2E tests, formatting, and 102 boundary checks.
   plan:
-    | Install the source manifest and synchronization workflow before building the package-local fixture and its explicit driver allowlist.
-    | Copy locator-list.spec.ts, locator-query.spec.ts, locator-convenience.spec.ts, locator-is-visible.spec.ts, locator-click.spec.ts, locator-misc-1.spec.ts, locator-misc-2.spec.ts, locator-frame.spec.ts, selectors-get-by.spec.ts, selectors-text.spec.ts, selectors-misc.spec.ts, selectors-frame.spec.ts, retarget.spec.ts, page-aria-snapshot.spec.ts, page-aria-snapshot-ai.spec.ts, page-set-content.spec.ts, page-basic.spec.ts, page-filechooser.spec.ts, page-goto.spec.ts, page-wait-for-function.spec.ts, page-wait-for-request.spec.ts, and page-wait-for-response.spec.ts.
-    | Access Grove state only through the grove CLI; never read or edit state.lock or journal.log directly.
+    | Implement local tracker ticket 02 without redesigning StructuralTree matching heuristics.
 
-w W-17 type=feature status=done cynefin=complicated t_created=2026-09-02T12:18:38Z t_updated=2026-09-02T15:02:00Z "Record the compatibility baseline"
+w W-17 type=feature status=done cynefin=clear t_created=2026-09-02T13:56:09Z t_updated=2026-09-02T15:32:44Z "Adapt WebMCP to the shared Page State Session"
   goals: G-10
-  theme: T-02
   fitness: G-10=+1
-  surface: packages/playwright-browser/tests/upstream, packages/playwright-browser/scripts, packages/playwright-browser/playwright.config.ts
+  surface: packages/webmcp/src, packages/webmcp/package.json
   ac:
-    | Every test in all selected upstream specification files executes, including tests for intentionally unsupported browser capabilities.
-    | Harness and fixture defects no longer prevent the compatibility operations under observation from running.
-    | A generated baseline records currently passing upstream test identifiers, and a raw Playwright report preserves the complete result set.
-    | The baseline report presents passing tests, failure clusters, and harness limitations for user alignment before compatibility implementation begins.
+    | get_page_state delegates capture and rendering to the shared default Page State Session.
+    | Refs returned through WebMCP resolve through the public Ayme facade in the same Document.
+    | WebMCP retains no separate reconciliation baseline, alias map, or resolver.
+    | Existing WebMCP rendering, tool synchronization, and POM decoration remain unchanged.
+    | Packed consumers can import the public Page State Session interface without private dependency leaks.
   hypothesis:
-    | A complete unfiltered run will provide a maintainable compatibility boundary without a manually classified API ledger.
+    | A thin WebMCP adapter can reuse the default Ayme facade without changing existing model-facing behavior.
   evidence_strategy:
-    | Run the complete selected corpus, save the machine-readable results and passing baseline, and verify that a simulated passing-test regression is detected.
+    | Run WebMCP tests, packed-consumer verification, and the complete repository check.
   evidence:
-    | Full corpus executed: 473 tests, 1 compatibility pass, 211 harness-unsupported, 261 known failures. Baseline recorded with 1 passing test (retarget.spec.ts > should not retarget anchor into parent label). Regression gate verified: detects simulated regression (exit 1) and accepts clean baseline (exit 0). 22 upstream spec checksums verified. 13 guard tests pass. tsc/eslint/vitest pass.
-    | Harness-unsupported breakdown: 85 InjectedScript-stubbed (aria-snapshot*), 19 mixed-subject (page-basic), 64 driver-allowlist overlap (page-goto), 17 driver-allowlist overlap (page-set-content), 26 serialization limitation (page-wait-for-function). False-green prevention: 4 tests in page-wait-for-function.spec.ts identified and classified; no unclassified false-greens remain.
-    | Files created/modified: scripts/upstream-baseline.mjs (update/check commands), scripts/upstream-baseline.test.mjs (7 parsing/comparison unit tests), tests/upstream/baseline.json (committed baseline), tests/upstream/adapter-bridge.ts (page-wait-for-function HU case), tests/upstream/_adapter-guard.spec.ts (serialization guard test), tests/upstream/pageTest.ts (headless fixture), packages/playwright-core/lib/coreBundle.ts (shim for upstream import), package.json (test:e2e, baseline:update, baseline:check scripts).
-    | CORRECTION PASS: (1) Orchestration fixes: run-check/run-update commands tolerate Playwright exit 1, fail on spawn/signal/missing/malformed report. (2) Scope: only 22 manifest specs in corpus run; guard tests excluded; report.json is clean 22-spec corpus. (3) Completeness: every manifest spec validated present, IDs unique, selectedTestCount=473 + specCount=22 persisted in baseline.json and enforced on check. Provenance validated. (4) Skipped separated: 1 passed + 260 failed + 1 skipped + 211 HU = 473 reconciled. (5) Shared policy: harness-policy.mjs is single source of truth for DRIVER_ALLOWLIST and harnessUnsupportedReason, imported by adapter-bridge.ts and upstream-baseline.mjs. (6) CI artifact: upload-artifact@v4 step added with always()+ignore. (7) 13 Node baseline tests run in package test script. (8) Full verification: all gates pass, simulated regression/incomplete/count-mismatch/provenance all correctly rejected.
-    | FINAL CORRECTION: (1) runCorpus rejects exit ≠ 0/1 as runner/config failure. (2) validateReportErrors rejects non-empty report.errors before baseline update/check; 4 focused unit tests added. (3) Removed unused DRIVER_ALLOWLIST import from baseline script. (4) Removed dead specCount from baseline.json and generation. (5) All touched files formatted. Verification: 22/22 checksums, tsc clean, lint clean, 1 vitest + 17 node tests pass, baseline:check passes (473 tests, 1+260+1+211=473 reconciled), format:check clean, report.json = 22 specs 473 tests 0 errors.
+    | Integrated 7c7bb52b. Final pnpm check passed build, lint, typecheck, workspace tests including 32 WebMCP tests, 7 Playwright E2E tests, formatting, and boundary checks. WebMCP-to-Ayme shared-session retargeting regression passed.
   plan:
-    | Stabilize only the harness, record the first trustworthy result set, and stop for Q-04 alignment without implementing compatibility behavior.
+    | Implement local tracker ticket 03 without changing Page State Session semantics.
 
-w W-18 type=feature status=done cynefin=complicated t_created=2026-09-03T11:14:43Z t_updated=2026-09-03T12:07:41Z "Ship the compiled browser adapter"
+w W-18 type=feature status=done cynefin=clear t_created=2026-09-03T09:49:30Z t_updated=2026-09-03T10:04:25Z "Highlight application-model elements from the demo inspector"
   goals: G-10
-  theme: T-03
   fitness: G-10=+1
-  surface: packages/playwright-browser/src, packages/playwright-browser/package.json, packages/playwright-browser/tsdown.config.ts, packages/webmcp, apps/example-vue
+  surface: apps/example-vue/src/debug/DebugPanel.vue, apps/example-vue/src/style.css
   ac:
-    | The private package build emits an importable Page factory and includes the pinned InjectedScript implementation.
-    | WebMCP and the example use the package without registering or importing an InjectedScript build plugin.
-    | Existing package, WebMCP, example, ARIA capture, and debug trace behavior remains green.
-    | The package exposes no public build-plugin entry or duplicate Page and Locator interfaces.
+    | Hovering an application-model member highlights its corresponding live element.
+    | Clicking an application-model member pins the highlight until it is cleared or another member is selected.
+    | The inspector reports the selected member and current structural ref after resolution.
+    | A missing or non-actionable target is reported without breaking the inspector.
   hypothesis:
-    | Compiling the existing reviewed InjectedScript transform inside the private package will remove consumer build integration without changing runtime behavior.
+    | Linking application-model members to their live structural refs will make ref resolution observable through hover and click interactions.
   evidence_strategy:
-    | Run package builds, packed-consumer tests, browser tests, example tests, type-checks, and an export-surface inspection.
+    | Verify the interactions with component tests and Playwright, then run the repository check.
   evidence:
-    | tsdown.config.ts uses playwrightInjectedPlugin() to embed pinned InjectedScript at package build time. dist/index.mjs (299.81 KB) is self-contained with zero external imports. dist/index.d.mts exports only ariaSnapshot, captureAriaSnapshot, createPage, BrowserInteractionPacing, CaptureAriaSnapshotResult, TraceEntry. No virtual module references in type output.
-    | Consumer plugin registrations removed from: webmcp/tsdown.config.ts, webmcp/vitest.config.ts, example-vue/vite.config.ts, example-vue/vitest.config.ts, playwright-browser/vitest.config.ts. Package ./tsdown export removed. No consumer imports @ayme-dev/playwright-browser/tsdown.
-    | Full verification: build 5/5 packages; typecheck 6/6; lint 6/6; test 10/10 tasks (playwright-browser vitest 1/1 browser + 17/17 node:test, webmcp 22/22 incl packed-consumer, structural-observation 105/105, unplugin 16/16, webmcp-vue 3/3, example-vue 2/2); boundaries 132 files 0 issues; grove check ok.
-    | Correction pass complete: (1) build-only plugin+d.ts moved from src/ to build/, src/tsdown.ts and src/playwright-injected.d.ts deleted, tsdown.config.ts updated to import from build/, tsconfig.json includes build/playwright-injected.d.ts; (2) playwright-core moved from dependencies to devDependencies; (3) pnpm-workspace.yaml esbuild set to true (required: esbuild resolves as real dep via tsdown→tsx chain, origin/main had no esbuild in tree); (4) d.ts reduced from 398KB→0.91KB using deps.neverBundle for @playwright/test — preserves type import instead of inlining. Verified: build, typecheck, 17 baseline tests, 22 webmcp tests (packed consumer), example-vue vite build all pass.
-  plan:
-    | Move InjectedScript assembly into the package build, update internal consumers to the compiled output, and remove consumer plugin configuration.
+    | Application-model hover, pin, and clear interactions passed in the example-vue Playwright suite. Full pnpm check passed with 33 WebMCP tests, 106 structural-observation tests, 8 E2E tests, build, lint, typecheck, formatting, and boundaries.
 
-w W-19 type=feature status=done cynefin=clear t_created=2026-09-03T11:15:00Z t_updated=2026-09-03T11:50:19Z "Make the upstream corpus self-verifying"
+w W-19 type=feature status=done cynefin=clear t_created=2026-09-03T10:28:31Z t_updated=2026-09-03T10:46:03Z "Simplify application-model highlighting interactions"
   goals: G-10
-  theme: T-03
   fitness: G-10=+1
-  surface: packages/playwright-browser/tests/upstream, packages/playwright-browser/scripts
+  surface: apps/example-vue/src/debug/DebugPanel.vue, apps/example-vue/src/ayme/useAymeExperiment.ts, apps/example-vue/src/style.css, packages/webmcp/src/pageState.ts, packages/webmcp/src/index.ts
   ac:
-    | One typed corpus definition records the pinned upstream source, selected specification filenames, and content hashes.
-    | The synchronization operation refreshes the unchanged selected specifications and their hashes from the pinned source.
-    | The normal compatibility check verifies corpus integrity before executing tests.
-    | The baseline workflow exposes one check operation and one deliberate update operation while preserving per-test regression detection.
+    | The application-model inspector has no separate element-focus section or Clear control.
+    | Clicking the selected application-model target clears it; clicking a different target switches selection.
+    | Hovering temporarily takes visual precedence over selection, and leaving restores the selected target.
+    | Collection and class-level application-model targets can highlight all matching live instances, while indexed targets highlight one instance.
+    | The public PageState API exposes ref-based resolution only; resolveElement and its public type are removed.
+    | Component-level selection behavior and real DOM highlighting are covered by tests.
   hypothesis:
-    | Combining repeated corpus metadata and reducing the command surface will preserve the contract with less package-owned tooling.
+    | A single target-driven inspector with explicit hover precedence will make application-model highlighting easier to understand, while grouped internal targets cover repeated component instances without expanding the public API.
   evidence_strategy:
-    | Run tooling unit tests, synchronize into a temporary copy, detect a modified specification, and verify baseline regression and promotion behavior.
+    | Run focused component or state tests and Playwright demo tests for toggle, switching, hover precedence, repeated instances, and public typecheck; run grove check and repository validation.
   evidence:
-    | corpus.json replaces manifest.json+checksums.json: one typed definition records source (repository, commit, basePath) and specs as a filename-to-sha256-hash record. manifest.json and checksums.json deleted.
-    | upstream-specs.mjs sync refreshes spec files and updates hashes in corpus.json; check verifies all 22 local spec files match corpus hashes. verifyIntegrity() and specNames() exported for use by baseline script.
-    | upstream-baseline.mjs calls requireCorpusIntegrity() before every corpus run, verifying all spec file hashes match corpus.json. Integrity failure exits with code 2 before Playwright executes.
-    | Baseline workflow simplified: check (and alias run-check) verifies integrity+runs corpus+gates; update (and alias run-update) verifies integrity+runs corpus+promotes. Per-test regression detection preserved via compareBaseline. Legacy report-only commands removed.
-    | Verification: vitest 1/1 browser test, 17/17 node:test baseline tests, spec integrity check 22/22 specs match, drift detection correctly rejects modified spec (exit 1), typecheck clean, lint 0 warnings, grove check ok. All upstream spec files byte-for-byte unchanged.
-    | CORRECTION: corpus.json replaced with corpus.ts using as const; exports UpstreamSpecName union (keyof typeof corpus.specs) and typed specNames array. Node 24 imports corpus.ts natively. Sync rewrites corpus.ts. run-check/run-update aliases removed; only check/update commands remain. Package scripts updated. pnpm-workspace.yaml restored to esbuild: set this to true or false.
-    | Correction verification: Node 24 imports corpus.ts (22 specs, correct source); vitest 1/1; node:test 17/17; spec integrity 22/22; typecheck clean; lint 0 warnings; grove check ok. Upstream specs byte-for-byte unchanged.
-  plan:
-    | Replace repeated JSON metadata with one typed definition, then simplify synchronization and baseline orchestration around it.
+    | Simplified application-model highlighting interactions; public PageState remains ref-based; collection and class-level targets resolve to all matching live instances; pnpm check passed, including 9 Playwright E2E tests.
 
-w W-20 type=feature status=done cynefin=complicated t_created=2026-09-03T11:15:18Z t_updated=2026-09-03T13:28:21Z "Delegate browser semantics to InjectedScript"
+w W-20 type=bug status=done cynefin=complicated t_created=2026-09-03T10:57:18Z t_updated=2026-09-03T11:13:59Z "Make continuous ref resolution merge-safe"
   goals: G-10
-  theme: T-03
-  fitness: G-10=+1
-  surface: packages/playwright-browser/src, packages/playwright-browser/src/index.test.ts
+  fitness: G-10=+0
+  surface: packages/webmcp/src/pageState.ts, packages/webmcp/src/ayme.test.ts, packages/webmcp/src/ayme.browser.test.ts, packages/webmcp/package.json, packages/structural-observation/src/StructuralTree.ts, packages/structural-observation/src/StructuralTree.test.ts
   ac:
-    | Locator composes one Playwright selector representation and delegates terminal operations to its owning Page.
-    | Page coordinates supported operations, retries, and timeouts through the pinned InjectedScript primitives.
-    | Local selector, accessible-name, visibility, actionability, and expectation implementations are removed where InjectedScript provides them.
-    | The package retains one public Page factory and preserves the existing debug trace behavior.
-  hypothesis:
-    | Following Playwright's Locator to Page to InjectedScript delegation will reduce duplicate semantics while improving behavioral parity.
+    | Synthetic refs allocated by one Document session never collide across captures.
+    | A historical synthetic ref follows an unambiguous matched POM root, while removed and ambiguous roots never resolve to an unrelated element.
+    | An observed alias cannot be silently reassigned to a different session identity.
+    | The WebMCP Chromium session scenario is isolated and runs through the root pnpm check merge gate.
+    | Renderer-sensitive expectations use the compact syntax from current main.
+  repro:
+    | With a fresh synthetic allocator per capture, removing the first omitted POM root reuses its ref for the next root; exact-ref precedence then resolves the historical ref to the wrong DOM element. The Chromium session tests are also excluded from every task reached by pnpm check.
   evidence_strategy:
-    | Run focused browser tests for selector composition, actions, state checks, ARIA capture, and locator expectations, plus package type-check and export inspection.
+    | Add public-facade regressions for synthetic removal, continuity, reordering, and ambiguity; run WebMCP unit and Chromium suites, then the full pnpm check on the rebased branch.
   evidence:
-    | Split src/index.ts into focused modules (types, injected, selectors, locator, page, index). Locator composes Playwright selectors and delegates to Page. Page resolves via real pinned InjectedScript (lazy init). Bridge loads compiled dist with real InjectedScript—no TS transpilation, no stub. Removed ARIA harness exclusion (trustworthy now). Upstream baseline: 0 regressions, 2 newly passing (nth queries), 3/473 total. Build, typecheck, lint, vitest, example-vue e2e all green.
-    | Correction: moved all terminal operations (fill, click, press, waitFor, requireSingle, isInState, typing loops, keyboard dispatch, mutation polling) from LocatorImpl to PageImpl. LocatorImpl now only composes selectors/labels and delegates terminal calls. Page owns retries, timeouts, and InjectedScript primitives. resolveElements() kept on Locator for webmcp duck-typing. All checks green: 3/3 baseline, 0 regressions, example-vue 7/7.
+    | pnpm check passed after rebasing onto origin/main: all builds, lint, typechecks, unit tests, 9 example Playwright tests, the WebMCP Chromium session test, formatting, and package boundaries are green.
+    | Public facade regression proves synthetic roots retain identity through reordering; removing Account leaves historical s_1/s_3 unresolved while historical Billing s_2/s_4 resolves to current s_5. StructuralTree also tests raw after-ref lineage directly.
+    | PageStateSession now owns one monotonic synthetic allocator, alias rebinding throws an invariant error, dead per-identity alias sets are removed, and ambiguity is queried without exposing a collection.
   plan:
-    | Separate Page, Locator, and InjectedScript responsibilities, then migrate existing operations to the shared browser primitives without adding public abstractions.
+    | Own synthetic allocation in PageStateSession, expose fresh-after-ref reconciliation lineage, fail closed on alias collisions, consolidate the Chromium session scenario, and register it as the WebMCP test:e2e task.
+  why:
+    | This repairs correctness and validation of the already-verified Page State Session outcome without expanding its public API.
 
-w W-21 type=feature status=progress cynefin=complicated session=host:75cd936167237b83 session_at=2026-09-03T13:35:55Z t_created=2026-09-03T11:15:39Z t_updated=2026-09-03T13:58:40Z "Record a zero-exclusion compatibility baseline"
+w W-21 type=bug status=done cynefin=clear t_created=2026-09-03T11:44:42Z t_updated=2026-09-03T12:10:38Z "Preserve ref identity through temporary removal"
   goals: G-10
-  theme: T-03
-  fitness: G-10=+1
-  surface: packages/playwright-browser/tests/upstream, packages/playwright-browser/scripts, packages/playwright-browser/playwright.config.ts, packages/playwright-browser/package.json, .github/workflows/ci.yml
+  fitness: G-10=+0
+  surface: packages/webmcp/src/pageState.ts, packages/webmcp/src/ayme.browser.test.ts, apps/example-vue/src/ayme/useAymeExperiment.ts, apps/example-vue/src/debug/DebugPanel.vue
   ac:
-    | Unchanged upstream specifications receive the compiled Ayme adapter through the package-local Page fixture.
-    | Public Page and Locator calls do not fall back to the real Playwright driver through a method allowlist.
-    | Every collected upstream test is reported as passed, failed, or upstream-skipped, with no harness-excluded category.
-    | Adapter guards fail if compatibility calls accidentally reach the real Playwright implementation.
-    | The generated per-test baseline and complete report pass integrity, completeness, and regression checks.
-  hypothesis:
-    | Loading the compiled adapter and real InjectedScript through one fixture will turn all selected results into meaningful compatibility evidence.
+    | A historical ref resolves to the same identity after the same element is hidden and shown or detached and reattached.
+    | Conflicting identity evidence and duplicate current identity claims fail closed.
+    | Application-model highlighting batches element ref lookup, tracks selector-relevant DOM mutations, and ignores its own marker mutations.
+    | The inspector labels its scoped snapshot honestly and contains no redundant highlightability wrapper.
+  repro:
+    | A real browser capture observes a visible element, omits it while hidden, then observes the same element again; resolving the original ref throws because its historical alias is bound to a removed identity.
   evidence_strategy:
-    | Run the complete unchanged corpus, reconcile every result, inspect adapter guards, save the per-test baseline, and demonstrate a simulated regression failure.
+    | Run focused WebMCP browser tests and example tests, regular type checks, the full workspace check, and Grove check.
   evidence:
-    | Guard tests: 7/7 passed (adapter proxy present, click/fill/count reach DOM, zero harness exclusions, no driver fallback on goto/setContent/evaluate/route/waitForTimeout)
-    | Upstream baseline: 22 specs, 473 tests, 5 passing, 0 regressions, 0 newly passing. Zero harness-excluded category. Reconciliation: 5 passed + 467 failed + 1 skipped = 473 total.
-    | Simulated regression test: injected fake passing ID into baseline → baseline:check exits 1 and prints "REGRESSIONS: - SIMULATED-REGRESSION > fake test that used to pass". Restored baseline after verification.
-    | Build, typecheck, lint, vitest (1/1), baseline unit tests (14/14), example-vue e2e (7/7) all green. No driver allowlist fallback, zero harness exclusions, complete reconciliation.
-    | Correction: deleted harness-policy.mjs and removed "no specs are harness-excluded" guard test. Zero exclusions now enforced structurally by baseline parser having no exclusion concept. Driver-fallback guard retained. Guard tests 6/6, vitest 1/1, baseline unit tests 14/14, typecheck+lint green.
-    | Correction: createPageProxy no longer leaks real driver properties (keyboard/mouse/touchscreen). All member access routed through adapter. Guard tests strengthened: goto(about:blank), setContent(valid HTML), evaluate(fn), waitForTimeout(0), route+handler, plus keyboard/mouse/touchscreen leak guards. 7/7 guards, typecheck+lint green. Baseline re-run: 5/473 unchanged.
+    | Red browser regression committed as 84c745f1; the prior implementation failed with the expected Structural Ref alias collision.
+    | Green implementation committed as 28845e26; WebMCP Chromium 1/1, WebMCP unit 33/33, example Playwright 9/9, and pnpm check passed.
+    | Interface trace: the new batch capture is exported only from @ayme-dev/webmcp/internal and used by the Vue example; the public ayme PageState API is unchanged.
   plan:
-    | Move harness-only injection under test infrastructure, replace source transpilation and stubs with the compiled artifact, remove exclusion policy, and regenerate the baseline.
+    | Implement candidate-based identity selection, public-seam browser regressions, batched element ref capture, observer filtering, and the agreed demo cleanup.
+
+w W-22 type=feature status=done cynefin=complicated t_created=2026-09-03T14:16:28Z t_updated=2026-09-03T14:18:45Z "Ship the compiled browser adapter"
+  goals: G-11
+  fitness: G-11=+1
+  ac:
+    | The private package emits a self-contained Page factory with pinned InjectedScript semantics.
+    | WebMCP and the example consume the package without an InjectedScript build plugin.
+    | The package exposes Playwright Page and Locator types without parallel Ayme interfaces.
+  hypothesis:
+    | Compiling the pinned InjectedScript inside a private Playwright-typed package removes consumer build integration without changing runtime behavior.
+  evidence_strategy:
+    | Run package builds, typechecks, packed-consumer tests, browser tests, and export inspection.
+  evidence:
+    | @ayme-dev/playwright-browser builds as a self-contained module; WebMCP and example integration, workspace typecheck/tests, packed consumer, and 7 example E2E tests pass. Commits b99f1ffd and d967904c.
+  plan:
+    | Extract the runtime, compile InjectedScript in-package, and make clean consumer cuts.
+
+w W-23 type=feature status=done cynefin=clear t_created=2026-09-03T14:18:56Z t_updated=2026-09-03T14:19:24Z "Make the upstream corpus self-verifying"
+  goals: G-11
+  fitness: G-11=+1
+  ac:
+    | The typed corpus records upstream source, selected filenames, and hashes.
+    | Sync refreshes the selected upstream specs without modifying them.
+    | Compatibility checks verify file integrity and compare stable per-test IDs.
+  hypothesis:
+    | One typed corpus source can pin provenance, filenames, and hashes while copied upstream tests remain unchanged.
+  evidence_strategy:
+    | Run hash verification, baseline unit tests, the corpus gate, and a simulated regression.
+  evidence:
+    | corpus.ts types all 22 upstream spec names and hashes; integrity checking, 14 baseline unit tests, baseline update/check, and simulated regression detection pass. Commit d967904c.
+  plan:
+    | Use corpus.ts as the source of truth with one check command and one deliberate update command.
+
+w W-24 type=feature status=done cynefin=complicated t_created=2026-09-03T14:19:33Z t_updated=2026-09-03T14:19:51Z "Delegate browser semantics to InjectedScript"
+  goals: G-11
+  fitness: G-11=+1
+  ac:
+    | Locator composes selectors and delegates terminal operations.
+    | Page coordinates supported actions, retries, and timeouts through InjectedScript.
+    | Local implementations of semantics already supplied by InjectedScript are removed.
+  hypothesis:
+    | Routing Locator through Page into Playwright InjectedScript reduces duplicated browser semantics and improves compatibility.
+  evidence_strategy:
+    | Run focused browser action, state, ARIA, type, export, and upstream compatibility checks.
+  evidence:
+    | Locator-to-Page-to-InjectedScript delegation is implemented; focused action, state, ARIA, type, export, workspace, and upstream checks pass. Commit b99f1ffd.
+  plan:
+    | Split Page and Locator responsibilities and delegate selector, actionability, state, and ARIA behavior.
+
+w W-25 type=feature status=done cynefin=complicated t_created=2026-09-03T14:19:59Z t_updated=2026-09-03T14:20:19Z "Record a zero-exclusion compatibility baseline"
+  goals: G-11
+  fitness: G-11=+1
+  ac:
+    | Unchanged selected upstream specs run through the package-local fixture.
+    | Public Page and Locator members never fall back to the real Playwright driver.
+    | Every selected test is classified only as pass, fail, or upstream skip.
+    | Guard tests and a per-test baseline enforce integrity, completeness, and regression detection.
+  hypothesis:
+    | A compiled adapter using the real InjectedScript can make every selected upstream result ordinary compatibility evidence.
+  evidence_strategy:
+    | Run all upstream specs, adapter guards, hash checks, baseline checks, and a simulated regression.
+  evidence:
+    | The 473-test corpus reconciles as 5 passing, 467 failing, and 1 upstream skip with zero exclusions or regressions; 7 adapter guards, hash verification, and simulated regression detection pass. Commit 0cd28a2e.
+  plan:
+    | Remove harness exclusions and driver fallback, strengthen guards, and regenerate the per-test baseline.
 
 d D-01 status=superseded t_created=2026-08-27T08:43:08Z t_updated=2026-08-27T11:48:35Z "Use the five-workspace monorepo layout"
   context:
@@ -635,7 +671,7 @@ d D-09 status=accepted t_created=2026-08-31T15:47:55Z t_updated=2026-08-31T15:48
   decision:
     | See ADR-0009: docs/adr/0009-let-ayme-own-live-page-object-observation.md.
 
-d D-10 status=accepted t_created=2026-08-31T18:36:54Z t_updated=2026-09-02T09:50:35Z "Use capture-scoped Structural Refs"
+d D-10 status=superseded t_created=2026-08-31T18:36:54Z t_updated=2026-09-02T13:33:00Z "Use capture-scoped Structural Refs"
   decision:
     | See ADR-0010: docs/adr/0010-use-capture-scoped-structural-refs.md.
 
@@ -643,13 +679,17 @@ d D-11 status=accepted t_created=2026-08-31T18:37:10Z t_updated=2026-09-02T09:50
   decision:
     | See ADR-0011: docs/adr/0011-capture-only-the-top-level-document.md.
 
-d D-12 status=accepted t_created=2026-09-02T12:15:44Z t_updated=2026-09-03T11:10:41Z "Use upstream tests as compatibility contract"
+d D-12 status=accepted t_created=2026-09-02T13:33:00Z t_updated=2026-09-02T13:56:54Z "Preserve best-effort node continuity in Page State Sessions"
   decision:
-    | See ADR-0012: docs/adr/0012-use-upstream-playwright-tests-as-the-browser-compatibility-contract.md.
+    | See ADR-0012: docs/adr/0012-preserve-best-effort-node-continuity-in-page-state-sessions.md.
 
-d D-13 status=accepted t_created=2026-09-03T11:10:41Z t_updated=2026-09-03T11:15:19Z "Use a compiled Playwright-compatible browser adapter"
+d D-13 status=superseded t_created=2026-09-03T14:15:39Z t_updated=2026-09-03T14:19:19Z "Use upstream tests as compatibility contract"
   decision:
-    | See ADR-0013: docs/adr/0013-use-a-compiled-playwright-compatible-browser-adapter.md.
+    | See ADR-0013: docs/adr/0013-use-upstream-playwright-tests-as-the-browser-compatibility-contract.md.
+
+d D-14 status=accepted t_created=2026-09-03T14:15:40Z t_updated=2026-09-03T14:20:13Z "Use a compiled Playwright-compatible browser adapter"
+  decision:
+    | See ADR-0014: docs/adr/0014-use-a-compiled-playwright-compatible-browser-adapter.md.
 
 q Q-01 status=deferred cynefin=complicated t_created=2026-08-27T12:43:03Z t_updated=2026-08-27T14:13:29Z "Choose the public activation interface"
   why:
@@ -677,10 +717,6 @@ q Q-03 status=answered cynefin=complicated t_created=2026-08-31T19:05:06Z t_upda
   outcome:
     | Resolve collection members to their existing indexed component paths. For every indexed or singular root: zero matches are absent, exactly one observable match is decorated, and multiple matches are ambiguous and absent. A uniquely resolved eligible ARIA-omitted root may receive a synthetic ref.
 
-q Q-04 status=open cynefin=complex t_created=2026-09-02T12:15:46Z t_updated=2026-09-02T12:18:39Z "Choose the first compatibility improvement scope"
-  why:
-    | The trustworthy upstream baseline must reveal the actual failure clusters before implementation scope is selected.
-
 b B-01 status=validated cynefin=complicated t_created=2026-08-31T13:49:50Z t_updated=2026-08-31T13:49:50Z "Vue 3.2.0 supports lifecycle integration"
   vm:
     | Run the Vue package typecheck and lifecycle tests against exact Vue 3.2.0, 3.3.0, 3.4.0, 3.5.29, and 3.5.42.
@@ -689,27 +725,13 @@ b B-01 status=validated cynefin=complicated t_created=2026-08-31T13:49:50Z t_upd
   result:
     | Every exact version passed typechecking and all three lifecycle tests in an isolated checkout at commit 4f510a0.
 
-b B-02 status=validated cynefin=complicated t_created=2026-09-02T12:15:45Z t_updated=2026-09-02T12:17:53Z "The existing InjectedScript bridge is sufficient"
+b B-02 status=validated cynefin=complicated t_created=2026-09-02T13:55:47Z t_updated=2026-09-02T13:55:48Z "Existing capture and reconciliation seams support session continuity"
   vm:
-    | Load the pinned generated InjectedScript artifact through the existing virtual module and run the package browser test.
+    | Inspect browser capture output, changed-ref reconciliation links, ambiguity behavior, and current-tree projection tests.
   threshold:
-    | The reviewed artifact loads without regeneration and the existing ARIA capture test passes.
+    | The existing interfaces expose current ref-to-element associations and one-to-one before-state links without changing matching heuristics.
   result:
-    | The existing virtual module loaded the pinned artifact and the package test passed on 2026-09-02.
-
-b B-03 status=validated cynefin=complicated t_created=2026-09-02T12:15:45Z t_updated=2026-09-02T12:18:16Z "Unchanged upstream specifications can use a replacement fixture"
-  vm:
-    | Inspect the selected Playwright files, their pageTest imports, fixtures, and required assets.
-  threshold:
-    | The selected files can remain byte-for-byte unchanged when package-local pageTest infrastructure supplies the driver and adapter.
-  result:
-    | The completed upstream inventory identified 22 complete specification files whose sibling pageTest dependency can be replaced package-locally.
-
-t T-01 status=done t_created=2026-09-02T12:15:44Z t_updated=2026-09-02T13:21:22Z "Browser runtime compatibility"
-
-t T-02 status=done t_created=2026-09-02T12:15:45Z t_updated=2026-09-02T15:02:00Z "Upstream compatibility contract"
-
-t T-03 status=open t_created=2026-09-03T11:14:43Z t_updated=2026-09-03T11:14:43Z "Compiled browser compatibility"
+    | Capture exposes refsByElement; reconciliation exposes getBeforeNode for changed refs and add-remove outcomes for ambiguous candidates.
 
 y Y-01 status=active t_created=2026-08-27T13:24:26Z t_updated=2026-08-27T13:25:03Z "Shared Page Object behavior"
   tags: Page Object Model (POM), Generated WebMCP Tool
@@ -723,22 +745,33 @@ y Y-02 status=active t_created=2026-08-27T14:40:25Z t_updated=2026-08-27T14:40:2
   invariant:
     | A framework integration can own Page Object activation and disposal for its lifecycle while the core runtime remains framework-neutral.
 
-y Y-03 status=active t_created=2026-09-02T09:50:35Z t_updated=2026-09-02T09:50:35Z "Synthetic roots are observation-only"
+y Y-03 status=superseded t_created=2026-09-02T09:50:35Z t_updated=2026-09-02T13:37:32Z "Synthetic roots are observation-only"
   tags: Structural Page State, Structural Ref, Page Object Root
   surface: packages/structural-observation/src, packages/webmcp/src
   invariant:
     | Structural Page State keeps a captured top-level document's observable hierarchy separate from Page Object decoration. A synthetic Structural Ref identifies a Page Object Root omitted from the distilled tree, carries page-state identity and Page Object association only, and must not represent ARIA semantics or Playwright actionability.
+  revalidation:
+    | 2026-09-02T13:37:05Z from=D-12
+
+y Y-04 status=active t_created=2026-09-02T13:37:31Z t_updated=2026-09-02T13:37:32Z "Synthetic roots remain observation-only"
+  tags: Structural Page State, Structural Ref, Page State Session, Page Object Root
+  surface: packages/structural-observation/src, packages/webmcp/src
+  invariant:
+    | Structural Page State keeps a captured top-level document's observable hierarchy separate from Page Object decoration. A synthetic Structural Ref may resolve to its known Page Object Root DOM element within a Page State Session, but does not represent ARIA semantics or Playwright actionability.
 
 a A-01 status=present t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:42:21Z "Repository foundation"
   surface: apps, packages, package.json, pnpm-workspace.yaml, pnpm-lock.yaml, turbo.json, devbox.json, devbox.lock, .gitignore
 
 a A-02 status=present t_created=2026-08-27T12:43:02Z t_updated=2026-08-27T12:43:02Z "Page Object interoperability"
 
+a A-03 status=present t_created=2026-09-02T13:53:17Z t_updated=2026-09-02T13:53:17Z "Consumer browser capabilities"
+  surface: packages/webmcp/src, packages/playwright-browser/src, packages/structural-observation/src
+
 e B-01 targets W-05 t_created=2026-08-31T13:49:50Z
-e B-02 targets W-15 t_created=2026-09-02T12:17:53Z
-e B-03 targets W-16 t_created=2026-09-02T12:18:16Z
+e B-02 targets W-16 t_created=2026-09-02T13:55:47Z
 e D-05 supersedes D-01 t_created=2026-08-27T11:48:25Z
-e D-13 supersedes D-12 t_created=2026-09-03T11:10:41Z
+e D-12 supersedes D-10 t_created=2026-09-02T13:33:00Z
+e D-14 supersedes D-13 t_created=2026-09-03T14:15:40Z
 e Q-01 asks D-06 t_created=2026-08-27T12:43:04Z
 e Q-01 asks W-03 t_created=2026-08-27T14:13:29Z
 e Q-02 asks W-10 t_created=2026-08-31T19:05:06Z
@@ -767,17 +800,17 @@ e W-12 implements D-04 t_created=2026-09-01T09:30:33Z
 e W-13 implements D-10 t_created=2026-09-02T08:44:53Z
 e W-13 implements D-11 t_created=2026-09-02T08:44:53Z
 e W-13 produces Y-03 t_created=2026-09-02T09:50:35Z
-e W-15 blocks W-17 t_created=2026-09-02T12:18:39Z
-e W-15 implements D-12 t_created=2026-09-02T12:17:53Z
-e W-16 blocks W-17 t_created=2026-09-02T12:18:39Z
-e W-16 implements D-12 t_created=2026-09-02T12:18:16Z
-e W-17 implements D-12 t_created=2026-09-02T12:18:39Z
-e W-17 produces Q-04 t_created=2026-09-02T12:18:39Z
-e W-18 blocks W-20 t_created=2026-09-03T11:15:19Z
-e W-18 implements D-13 t_created=2026-09-03T11:14:44Z
-e W-19 blocks W-21 t_created=2026-09-03T11:15:40Z
-e W-20 blocks W-21 t_created=2026-09-03T11:15:41Z
-e W-20 implements D-13 t_created=2026-09-03T11:15:19Z
+e W-15 blocks W-16 t_created=2026-09-02T13:56:55Z
+e W-16 blocks W-17 t_created=2026-09-02T13:56:55Z
+e W-16 implements D-12 t_created=2026-09-02T13:55:31Z
+e W-17 implements D-12 t_created=2026-09-02T13:56:54Z
+e W-22 implements D-14 t_created=2026-09-03T14:16:29Z
+e W-23 implements D-13 t_created=2026-09-03T14:19:19Z
+e W-24 implements D-14 t_created=2026-09-03T14:19:46Z
+e W-25 implements D-14 t_created=2026-09-03T14:20:13Z
 e Y-02 distills D-08 t_created=2026-08-27T14:40:25Z
 e Y-03 distills D-10 t_created=2026-09-02T09:50:35Z
 e Y-03 distills D-11 t_created=2026-09-02T09:50:35Z
+e Y-03 distills D-12 t_created=2026-09-02T13:37:05Z
+e Y-04 distills D-12 t_created=2026-09-02T13:37:31Z
+e Y-04 supersedes Y-03 t_created=2026-09-02T13:37:31Z

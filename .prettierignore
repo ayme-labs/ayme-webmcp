@@ -9,6 +9,6 @@ node_modules/
 .turbo/
 dist/
 test-results/
-
 # Pinned upstream Playwright contract — keep byte-for-byte identical
 packages/playwright-browser/tests/upstream/*.spec.ts
+apps/example-vue/tests/vue-webmcp.spec.ts-snapshots/

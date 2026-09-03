@@ -34,6 +34,11 @@ export type RegisteredPomRoot = {
   element: Element;
 };
 
+export type RegisteredPomTarget = {
+  path: string;
+  element: Element;
+};
+
 let browserPage: Page | undefined;
 const compiledPoms = new WeakMap<object, CompiledPom>();
 const registeredPoms = new Set<RegisteredPom>();
@@ -182,6 +187,28 @@ export async function listRegisteredPomRoots(): Promise<RegisteredPomRoot[]> {
     );
   }
   return roots;
+}
+
+export async function listRegisteredPomTargets(): Promise<
+  RegisteredPomTarget[]
+> {
+  const targets: RegisteredPomTarget[] = [];
+  for (const registration of registeredPoms) {
+    const components = new Map(
+      registration.manifest.components.map((component) => [
+        component.className,
+        component,
+      ])
+    );
+    await collectPomTargets(
+      registration.instance,
+      registration.manifest.members,
+      registration.id,
+      components,
+      targets
+    );
+  }
+  return targets;
 }
 
 export function listRegisteredPomTools() {
@@ -496,6 +523,74 @@ async function collectRegisteredPomRoots(
           components,
           roots,
           new Set(componentClasses).add(component.className)
+        );
+      }
+    } catch {
+      continue;
+    }
+  }
+}
+
+async function collectPomTargets(
+  instance: object,
+  members: readonly PomMemberManifest[],
+  prefix: string,
+  components: ReadonlyMap<string, PomComponentManifest>,
+  targets: RegisteredPomTarget[],
+  componentClasses: ReadonlySet<string> = new Set(),
+  aliasPrefixes: readonly string[] = []
+): Promise<void> {
+  for (const member of members) {
+    const memberPath = `${prefix}.${member.memberName}`;
+    const memberAliasPaths = aliasPrefixes.map(
+      (aliasPrefix) => `${aliasPrefix}.${member.memberName}`
+    );
+    try {
+      const value = await readMember(instance, member);
+      if (member.kind === "locator") {
+        if (!isLocator(value)) continue;
+        for (const element of locatorElements(value)) {
+          targets.push({ path: memberPath, element });
+          for (const aliasPath of memberAliasPaths)
+            targets.push({ path: aliasPath, element });
+        }
+        continue;
+      }
+
+      const component = components.get(member.componentClassName);
+      if (!component) continue;
+      const values = member.collection ? asComponents(value) : [value];
+      for (const [index, candidate] of values.entries()) {
+        if (!isPomComponent(candidate)) continue;
+        const componentPath = member.collection
+          ? `${memberPath}[${index}]`
+          : memberPath;
+        const componentAliases = [
+          memberPath,
+          ...memberAliasPaths,
+          component.className,
+        ];
+        for (const element of locatorElements(candidate.root)) {
+          targets.push({ path: `${componentPath}.root`, element });
+          for (const aliasPath of componentAliases) {
+            targets.push({ path: aliasPath, element });
+            if (aliasPath !== component.className)
+              targets.push({ path: `${aliasPath}.root`, element });
+          }
+          targets.push({ path: `${component.className}.root`, element });
+        }
+        if (componentClasses.has(component.className)) continue;
+        await collectPomTargets(
+          candidate,
+          component.members.filter(
+            (child) =>
+              !(child.kind === "locator" && child.memberName === "root")
+          ),
+          componentPath,
+          components,
+          targets,
+          new Set(componentClasses).add(component.className),
+          componentAliases
         );
       }
     } catch {

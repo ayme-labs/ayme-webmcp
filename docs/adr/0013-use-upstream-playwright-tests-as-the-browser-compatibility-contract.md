@@ -1,5 +1,5 @@
 ---
-status: superseded by ADR-0013
+status: superseded by ADR-0014
 ---
 
 # Use upstream Playwright tests as the browser compatibility contract

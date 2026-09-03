@@ -1,6 +1,6 @@
 ---
 status: accepted
-supersedes: ADR-0012
+supersedes: ADR-0013
 ---
 
 # Use a compiled Playwright-compatible browser adapter

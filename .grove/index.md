@@ -6,15 +6,16 @@
 
 | Measure | Count | Composition |
 | --- | --- | --- |
-| C (content) | 20 | validated B 3 · answered Q 2 · accepted D 12 · active Discovery 3 |
-| V (uncertainty) | 2 | open Q 1 · pending B 0 · W below DoR 0 · uncovered surface 1 |
+| C (content) | 18 | validated B 2 · answered Q 2 · accepted D 11 · active Discovery 3 |
+| V (uncertainty) | 0 | open Q 0 · pending B 0 · W below DoR 0 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 18 | 2 | C: validated B 3 · answered Q 2 · accepted D 10 · active Discovery 3; V: open Q 1 · pending B 0 · W below DoR 0 · uncovered surface 1 |
+| A-02 | Page Object interoperability | 14 | 0 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 |
+| A-03 | Consumer browser capabilities | 4 | 0 | C: validated B 1 · answered Q 0 · accepted D 1 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
 
@@ -31,7 +32,8 @@
 | G-07 | Assistant receives POM-aware structural page state | count; current=4 target=4 | verified |
 | G-08 | Structural page state is review-ready | count; current=3 target=2 | verified |
 | G-09 | POM barrel imports remain browser-loadable | count; current=1 target=1 | verified |
-| G-10 | Enforce browser-side Playwright compatibility | count; current=6 target=7 | partial |
+| G-10 | Consumers can use Structural Refs in browser capabilities | count; current=5 target=3 | verified |
+| G-11 | Enforce browser-side Playwright compatibility | count; current=4 target=4 | verified |
 
 ## Work items
 
@@ -51,13 +53,17 @@
 | W-12 | bug | Contain internal packages in packed WebMCP | G-08 | clear | ⊤ | done |  |
 | W-13 | feature | Correct structural page-state projection | G-08 | complicated | ⊤ | done |  |
 | W-14 | feature | Mitigate Playwright-tainted POM barrels | G-09 | complicated | ⊤ | done |  |
-| W-15 | feature | Build the Playwright-typed runtime seam | G-10 | complicated | ⊤ | done |  |
-| W-16 | feature | Install the unchanged upstream contract | G-10 | complicated | ⊤ | done |  |
-| W-17 | feature | Record the compatibility baseline | G-10 | complicated | ⊤ | done |  |
-| W-18 | feature | Ship the compiled browser adapter | G-10 | complicated | ⊤ | done |  |
-| W-19 | feature | Make the upstream corpus self-verifying | G-10 | clear | ⊤ | done |  |
-| W-20 | feature | Delegate browser semantics to InjectedScript | G-10 | complicated | ⊤ | done |  |
-| W-21 | feature | Record a zero-exclusion compatibility baseline | G-10 | complicated | ⊤ | progress | ★ |
+| W-15 | feature | Expose public page-state resolution | G-10 | complicated | ⊤ | done |  |
+| W-16 | feature | Retarget historical refs through reconciliation | G-10 | complicated | ⊤ | done |  |
+| W-17 | feature | Adapt WebMCP to the shared Page State Session | G-10 | clear | ⊤ | done |  |
+| W-18 | feature | Highlight application-model elements from the demo inspector | G-10 | clear | ⊤ | done |  |
+| W-19 | feature | Simplify application-model highlighting interactions | G-10 | clear | ⊤ | done |  |
+| W-20 | bug | Make continuous ref resolution merge-safe | G-10 | complicated | ⊤ | done |  |
+| W-21 | bug | Preserve ref identity through temporary removal | G-10 | clear | ⊤ | done |  |
+| W-22 | feature | Ship the compiled browser adapter | G-11 | complicated | ⊤ | done |  |
+| W-23 | feature | Make the upstream corpus self-verifying | G-11 | clear | ⊤ | done |  |
+| W-24 | feature | Delegate browser semantics to InjectedScript | G-11 | complicated | ⊤ | done |  |
+| W-25 | feature | Record a zero-exclusion compatibility baseline | G-11 | complicated | ⊤ | done |  |
 
 ## Decisions
 
@@ -72,10 +78,11 @@
 | D-07 | Use structural POMs and explicit WebMCP exposure | accepted |  |
 | D-08 | Package Vue lifecycle integration separately | accepted |  |
 | D-09 | Let Ayme own live Page Object observation | accepted |  |
-| D-10 | Use capture-scoped Structural Refs | accepted |  |
+| D-10 | Use capture-scoped Structural Refs | superseded |  |
 | D-11 | Capture only the top-level document | accepted |  |
-| D-12 | Use upstream tests as compatibility contract | accepted |  |
-| D-13 | Use a compiled Playwright-compatible browser adapter | accepted | D-12 |
+| D-12 | Preserve best-effort node continuity in Page State Sessions | accepted | D-10 |
+| D-13 | Use upstream tests as compatibility contract | superseded |  |
+| D-14 | Use a compiled Playwright-compatible browser adapter | accepted | D-13 |
 
 ## Open questions
 
@@ -84,23 +91,13 @@
 | Q-01 | Choose the public activation interface | complicated | D-06, W-03 | deferred |
 | Q-02 | Choose the compact structural output contract | complicated | W-10 | answered |
 | Q-03 | Choose multiple POM root match behavior | complicated | W-10 | answered |
-| Q-04 | Choose the first compatibility improvement scope | complex |  | open |
 
 ## Assumptions
 
 | ID | Assumption | Tests | Targets | Status |
 | --- | --- | --- | --- | --- |
 | B-01 | Vue 3.2.0 supports lifecycle integration |  | W-05 | validated |
-| B-02 | The existing InjectedScript bridge is sufficient |  | W-15 | validated |
-| B-03 | Unchanged upstream specifications can use a replacement fixture |  | W-16 | validated |
-
-## Themes
-
-| ID | Title | Status | Causes work | Themed work |
-| --- | --- | --- | --- | --- |
-| T-01 | Browser runtime compatibility | done | – | W-15 |
-| T-02 | Upstream compatibility contract | done | – | W-16, W-17 |
-| T-03 | Compiled browser compatibility | open | – | W-18, W-19, W-20, W-21 |
+| B-02 | Existing capture and reconciliation seams support session continuity |  | W-16 | validated |
 
 ## Discoveries
 
@@ -108,7 +105,8 @@
 | --- | --- | --- | --- |
 | Y-01 | Shared Page Object behavior | Generated WebMCP Tool, Page Object Model (POM) | active |
 | Y-02 | Framework lifecycle owns Page Object disposal | Page Object | active |
-| Y-03 | Synthetic roots are observation-only | Page Object Root, Structural Page State, Structural Ref | active |
+| Y-03 | Synthetic roots are observation-only | Page Object Root, Structural Page State, Structural Ref | superseded |
+| Y-04 | Synthetic roots remain observation-only | Page Object Root, Page State Session, Structural Page State, Structural Ref | active |
 
 ## Dependency graph
 
@@ -123,7 +121,8 @@ graph TD
   G_07["G-07: Assistant receives POM-aware structural page state"]:::goal
   G_08["G-08: Structural page state is review-ready"]:::goal
   G_09["G-09: POM barrel imports remain browser-loadable"]:::goal
-  G_10["G-10: Enforce browser-side Playwright compatibility"]:::goal
+  G_10["G-10: Consumers can use Structural Refs in browser capabilities"]:::goal
+  G_11["G-11: Enforce browser-side Playwright compatibility"]:::goal
   W_01["W-01: Establish the monorepo walking skeleton"]:::done
   W_02["W-02: Preserve spike behavior through package extraction"]:::done
   W_03["W-03: Extract Vue Page Object activation composable"]:::done
@@ -138,13 +137,17 @@ graph TD
   W_12["W-12: Contain internal packages in packed WebMCP"]:::done
   W_13["W-13: Correct structural page-state projection"]:::done
   W_14["W-14: Mitigate Playwright-tainted POM barrels"]:::done
-  W_15["W-15: Build the Playwright-typed runtime seam"]:::done
-  W_16["W-16: Install the unchanged upstream contract"]:::done
-  W_17["W-17: Record the compatibility baseline"]:::done
-  W_18["W-18: Ship the compiled browser adapter"]:::done
-  W_19["W-19: Make the upstream corpus self-verifying"]:::done
-  W_20["W-20: Delegate browser semantics to InjectedScript"]:::done
-  W_21["W-21: Record a zero-exclusion compatibility baseline"]:::progress,critical
+  W_15["W-15: Expose public page-state resolution"]:::done
+  W_16["W-16: Retarget historical refs through reconciliation"]:::done
+  W_17["W-17: Adapt WebMCP to the shared Page State Session"]:::done
+  W_18["W-18: Highlight application-model elements from the demo inspector"]:::done
+  W_19["W-19: Simplify application-model highlighting interactions"]:::done
+  W_20["W-20: Make continuous ref resolution merge-safe"]:::done
+  W_21["W-21: Preserve ref identity through temporary removal"]:::done
+  W_22["W-22: Ship the compiled browser adapter"]:::done
+  W_23["W-23: Make the upstream corpus self-verifying"]:::done
+  W_24["W-24: Delegate browser semantics to InjectedScript"]:::done
+  W_25["W-25: Record a zero-exclusion compatibility baseline"]:::done
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -156,28 +159,26 @@ graph TD
   D_09["D-09: Let Ayme own live Page Object observation"]:::decision
   D_10["D-10: Use capture-scoped Structural Refs"]:::decision
   D_11["D-11: Capture only the top-level document"]:::decision
-  D_12["D-12: Use upstream tests as compatibility contract"]:::decision
-  D_13["D-13: Use a compiled Playwright-compatible browser adapter"]:::decision
+  D_12["D-12: Preserve best-effort node continuity in Page State Sessions"]:::decision
+  D_13["D-13: Use upstream tests as compatibility contract"]:::decision
+  D_14["D-14: Use a compiled Playwright-compatible browser adapter"]:::decision
   Q_01["Q-01: Choose the public activation interface"]:::question
   Q_02["Q-02: Choose the compact structural output contract"]:::question
   Q_03["Q-03: Choose multiple POM root match behavior"]:::question
-  Q_04["Q-04: Choose the first compatibility improvement scope"]:::question
   B_01["B-01: Vue 3.2.0 supports lifecycle integration"]:::assumption
-  B_02["B-02: The existing InjectedScript bridge is sufficient"]:::assumption
-  B_03["B-03: Unchanged upstream specifications can use a replacement fixture"]:::assumption
-  T_01["T-01: Browser runtime compatibility"]:::theme
-  T_02["T-02: Upstream compatibility contract"]:::theme
-  T_03["T-03: Compiled browser compatibility"]:::theme
+  B_02["B-02: Existing capture and reconciliation seams support session continuity"]:::assumption
   Y_01["Y-01: Shared Page Object behavior"]:::discovery
   Y_02["Y-02: Framework lifecycle owns Page Object disposal"]:::discovery
   Y_03["Y-03: Synthetic roots are observation-only"]:::discovery
+  Y_04["Y-04: Synthetic roots remain observation-only"]:::discovery
   A_01["A-01: Repository foundation"]:::area
   A_02["A-02: Page Object interoperability"]:::area
+  A_03["A-03: Consumer browser capabilities"]:::area
   B_01 -.->|targets| W_05
-  B_02 -.->|targets| W_15
-  B_03 -.->|targets| W_16
+  B_02 -.->|targets| W_16
   D_05 -->|supersedes| D_01
-  D_13 -->|supersedes| D_12
+  D_12 -->|supersedes| D_10
+  D_14 -->|supersedes| D_13
   Q_01 -->|asks| D_06
   Q_01 -->|asks| W_03
   Q_02 -->|asks| W_10
@@ -206,21 +207,20 @@ graph TD
   W_13 -->|implements| D_10
   W_13 -->|implements| D_11
   W_13 -->|produces| Y_03
-  W_15 ==>|blocks| W_17
-  W_15 -->|implements| D_12
+  W_15 ==>|blocks| W_16
   W_16 ==>|blocks| W_17
   W_16 -->|implements| D_12
   W_17 -->|implements| D_12
-  W_17 -->|produces| Q_04
-  W_18 ==>|blocks| W_20
-  W_18 -->|implements| D_13
-  W_19 ==>|blocks| W_21
-  W_20 ==>|blocks| W_21
-  W_20 -->|implements| D_13
+  W_22 -->|implements| D_14
+  W_23 -->|implements| D_13
+  W_24 -->|implements| D_14
+  W_25 -->|implements| D_14
   Y_02 -->|distills| D_08
   Y_03 -->|distills| D_10
   Y_03 -->|distills| D_11
-  class W_21 critical
+  Y_03 -->|distills| D_12
+  Y_04 -->|distills| D_12
+  Y_04 -->|supersedes| Y_03
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff

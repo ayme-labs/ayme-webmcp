@@ -126,13 +126,17 @@ function renderStructuralNode<TNode>(
     renderState?.incremental &&
     compact &&
     effectiveChildren.length === 0 &&
-    propertyLines.length === 0
+    propertyLines.length === 0 &&
+    inlinePomLabel(properties) === undefined
   ) {
     const statusPrefix = statusToken === undefined ? "" : `${statusToken} `;
-    return `${indent(depth)}- ${statusPrefix}[${identityToken(node, options)}]`;
+    return `${indent(depth)}- ${statusPrefix}${nodeIdentity(node, options)}`;
   }
 
-  const header = [...prefixes, formatNodeHeader(node, options)].join(" ");
+  const header = [
+    ...prefixes,
+    formatNodeHeader(node, options, properties),
+  ].join(" ");
   const inlineText = effectiveChildren.filter(
     (child): child is string => typeof child === "string"
   );
@@ -159,11 +163,14 @@ function renderStructuralNode<TNode>(
 
 function formatNodeHeader(
   node: StructuralNode,
-  options: CompactStructuralTreeRenderOptions
+  options: CompactStructuralTreeRenderOptions,
+  properties: readonly StructuralNodeProperty[]
 ): string {
-  const identity = `[${identityToken(node, options)}]`;
-  if (node.ref.startsWith("s_")) return identity;
-  const segments: string[] = [identity, node.role];
+  const segments: string[] = [nodeIdentity(node, options)];
+  const pom = inlinePomLabel(properties);
+  if (pom !== undefined) segments.push(pom);
+  else if (!node.ref.startsWith("s_") && node.role !== "generic")
+    segments.push(node.role);
   if (node.name) segments.push(`"${escapeQuoted(node.name)}"`);
   const state = node.state;
   if (state.checked === true) segments.push("[checked]");
@@ -179,12 +186,31 @@ function formatNodeHeader(
   return segments.join(" ");
 }
 
+function nodeIdentity(
+  node: StructuralNode,
+  options: CompactStructuralTreeRenderOptions
+): string {
+  return options.identity?.has(node.ref)
+    ? `[${identityToken(node, options)}]`
+    : node.ref;
+}
+
 function identityToken(
   node: StructuralNode,
   options: CompactStructuralTreeRenderOptions
 ): string {
   const identity = options.identity?.get(node.ref);
   return identity ? `id=${identity.semanticNodeId}` : `ref=${node.ref}`;
+}
+
+function inlinePomLabel(
+  properties: readonly StructuralNodeProperty[]
+): string | undefined {
+  const pom = properties.find((property) => property.name === "pom");
+  if (pom === undefined || typeof pom.value !== "string") return undefined;
+  return /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[\d+\])*$/.test(pom.value)
+    ? pom.value
+    : undefined;
 }
 
 function extraPropertyLines(
@@ -194,38 +220,44 @@ function extraPropertyLines(
   options: CompactStructuralTreeRenderOptions,
   renderState: CompactStructuralTreeRenderState | undefined
 ): string[] {
-  const lines = properties.map(
-    (property) =>
-      `${indent(depth + 1)}- /${property.name}: ${formatPropertyValue(
-        property.value
-      )}`
+  const pom = inlinePomLabel(properties);
+  const lines = properties.map((property) => {
+    if (property.name === "pom" && pom !== undefined) return undefined;
+    return `${indent(depth + 1)}- /${property.name}: ${formatPropertyValue(
+      property.value
+    )}`;
+  });
+  const retainedLines = lines.filter(
+    (line): line is string => line !== undefined
   );
   const identity = options.identity?.get(node.ref);
   if (identity && renderState?.includeIdentityDetails) {
-    lines.push(`${indent(depth + 1)}- /name: ${formatScalar(identity.name)}`);
-    lines.push(
+    retainedLines.push(
+      `${indent(depth + 1)}- /name: ${formatScalar(identity.name)}`
+    );
+    retainedLines.push(
       `${indent(depth + 1)}- /description: ${formatScalar(identity.description)}`
     );
-    return lines;
+    return retainedLines;
   }
 
   const shouldEnrich =
     !identity && options.enrichNodeRefs?.has(node.ref) === true;
-  if (!shouldEnrich || node.enrichment === null) return lines;
+  if (!shouldEnrich || node.enrichment === null) return retainedLines;
 
   if (node.enrichment.strippedHtml !== "")
-    lines.push(
+    retainedLines.push(
       `${indent(depth + 1)}- /html: ${formatScalar(
         node.enrichment.strippedHtml
       )}`
     );
   if (node.enrichment.locators.length > 0)
-    lines.push(
+    retainedLines.push(
       `${indent(depth + 1)}- /locators: ${JSON.stringify(
         node.enrichment.locators
       )}`
     );
-  return lines;
+  return retainedLines;
 }
 
 function mapTree<TNode, TOutput>(

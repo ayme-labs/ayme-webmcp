@@ -392,6 +392,21 @@ describe("StructuralTree.reconcile aria-ref identity", () => {
   - checkbox "Buy milk" [checked] [ref=e4]
 `.trim();
 
+  it("exposes lineage by the raw after ref when a synthetic ref is preserved", () => {
+    const factory = new SyntheticAriaRefFactory();
+    const before = StructuralTree.fromAriaSnapshotYaml("- generic", factory);
+    const after = StructuralTree.fromAriaSnapshotYaml("- generic", factory);
+    const beforeRef = before.root.ref;
+    const afterRef = after.root.ref;
+
+    expect(afterRef).not.toBe(beforeRef);
+
+    const reconciled = StructuralTree.reconcile(before, after);
+
+    expect(reconciled.root.ref).toBe(beforeRef);
+    expect(reconciled.getBeforeNodeForAfterRef(afterRef)?.ref).toBe(beforeRef);
+  });
+
   it("reconciles a unique same-parent re-ref as one updated node with accessible before-state", () => {
     const factory = new SyntheticAriaRefFactory();
     const before = StructuralTree.fromAriaSnapshotYaml(BEFORE, factory);
@@ -407,6 +422,7 @@ describe("StructuralTree.reconcile aria-ref identity", () => {
       childListChanged: false,
     });
     expect(reconciled.getBeforeNode(updated.ref)?.ref).toBe(ref("e2"));
+    expect(reconciled.getBeforeNodeForAfterRef(ref("e4"))?.ref).toBe(ref("e2"));
     expect(reconciled.getNodesByStatus("added")).toEqual([]);
     expect(reconciled.getNodesByStatus("removed")).toEqual([]);
   });
@@ -478,6 +494,18 @@ describe("StructuralTree.reconcile aria-ref identity", () => {
     expect(
       reconciled.getNodesByStatus("removed").map((node) => node.ref)
     ).toEqual(["e2"]);
+    expect(reconciled.wasBeforeRefAmbiguous(ref("e2"))).toBe(true);
+  });
+
+  it("does not report an ordinary unmatched removal as ambiguous", () => {
+    const [before, after] = parsePair(
+      '- generic [ref=e1]:\n  - button "Old" [ref=e2]',
+      "- generic [ref=e1]"
+    );
+
+    const reconciled = StructuralTree.reconcile(before, after);
+
+    expect(reconciled.wasBeforeRefAmbiguous(ref("e2"))).toBe(false);
   });
 
   it("treats exact ref as authoritative when a role change collides with a heuristic candidate", () => {
