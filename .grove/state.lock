@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:5a569425d06a806cbae974146328f9f9e4e2716bc56633f037d82d38c150295c
+# checksum: sha256:b672fbac15fb9e7f31a925b9f771a3668dbe35ec65ca2142967f44e2df8dac31
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -521,7 +521,7 @@ w W-20 type=feature status=done cynefin=complicated t_created=2026-09-03T11:15:1
   plan:
     | Separate Page, Locator, and InjectedScript responsibilities, then migrate existing operations to the shared browser primitives without adding public abstractions.
 
-w W-21 type=feature status=ready cynefin=complicated t_created=2026-09-03T11:15:39Z t_updated=2026-09-03T11:16:17Z "Record a zero-exclusion compatibility baseline"
+w W-21 type=feature status=progress cynefin=complicated session=host:75cd936167237b83 session_at=2026-09-03T13:35:55Z t_created=2026-09-03T11:15:39Z t_updated=2026-09-03T13:58:40Z "Record a zero-exclusion compatibility baseline"
   goals: G-10
   theme: T-03
   fitness: G-10=+1
@@ -536,6 +536,13 @@ w W-21 type=feature status=ready cynefin=complicated t_created=2026-09-03T11:15:
     | Loading the compiled adapter and real InjectedScript through one fixture will turn all selected results into meaningful compatibility evidence.
   evidence_strategy:
     | Run the complete unchanged corpus, reconcile every result, inspect adapter guards, save the per-test baseline, and demonstrate a simulated regression failure.
+  evidence:
+    | Guard tests: 7/7 passed (adapter proxy present, click/fill/count reach DOM, zero harness exclusions, no driver fallback on goto/setContent/evaluate/route/waitForTimeout)
+    | Upstream baseline: 22 specs, 473 tests, 5 passing, 0 regressions, 0 newly passing. Zero harness-excluded category. Reconciliation: 5 passed + 467 failed + 1 skipped = 473 total.
+    | Simulated regression test: injected fake passing ID into baseline → baseline:check exits 1 and prints "REGRESSIONS: - SIMULATED-REGRESSION > fake test that used to pass". Restored baseline after verification.
+    | Build, typecheck, lint, vitest (1/1), baseline unit tests (14/14), example-vue e2e (7/7) all green. No driver allowlist fallback, zero harness exclusions, complete reconciliation.
+    | Correction: deleted harness-policy.mjs and removed "no specs are harness-excluded" guard test. Zero exclusions now enforced structurally by baseline parser having no exclusion concept. Driver-fallback guard retained. Guard tests 6/6, vitest 1/1, baseline unit tests 14/14, typecheck+lint green.
+    | Correction: createPageProxy no longer leaks real driver properties (keyboard/mouse/touchscreen). All member access routed through adapter. Guard tests strengthened: goto(about:blank), setContent(valid HTML), evaluate(fn), waitForTimeout(0), route+handler, plus keyboard/mouse/touchscreen leak guards. 7/7 guards, typecheck+lint green. Baseline re-run: 5/473 unchanged.
   plan:
     | Move harness-only injection under test infrastructure, replace source transpilation and stubs with the compiled artifact, remove exclusion policy, and regenerate the baseline.
 

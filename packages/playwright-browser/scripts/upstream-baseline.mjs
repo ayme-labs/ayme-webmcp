@@ -12,7 +12,6 @@ import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { harnessUnsupportedReason } from "../tests/upstream/harness-policy.mjs";
 import { corpus, specNames } from "../tests/upstream/corpus.ts";
 import { verifyIntegrity } from "./upstream-specs.mjs";
 
@@ -25,7 +24,7 @@ const BASELINE_PATH = resolve(PKG_ROOT, "tests/upstream/baseline.json");
 
 /**
  * Parse a Playwright JSON report into a flat list of test entries.
- * Each entry: { id, status, harnessUnsupported, reason, file }
+ * Each entry: { id, status, file }
  *
  * Stable ID: "specFilename > full test title"
  */
@@ -46,24 +45,9 @@ export function parseReport(report) {
         const file = spec.file ?? suite.file ?? "";
         const filename = file.split("/").pop() ?? file;
 
-        const harnessAnnotation =
-          (test.annotations ?? []).find(
-            (a) => a.type === "harness-unsupported"
-          ) ??
-          (result.annotations ?? []).find(
-            (a) => a.type === "harness-unsupported"
-          );
-
-        // Fallback: check shared policy when Playwright doesn't
-        // serialize the annotation (observed for @smoke-tagged tests).
-        const policyReason = harnessUnsupportedReason(filename);
-        const isHU = !!harnessAnnotation || !!policyReason;
-
         entries.push({
           id: `${filename} > ${fullTitle}`,
           status: result.status,
-          harnessUnsupported: isHU,
-          reason: harnessAnnotation?.description ?? policyReason ?? null,
           file: filename,
         });
       }
@@ -142,18 +126,12 @@ export function compareBaseline(entries, baseline, names) {
   const corpusSpecs = new Set(names);
   const corpusEntries = entries.filter((e) => corpusSpecs.has(e.file));
 
-  const passed = corpusEntries.filter(
-    (e) => e.status === "passed" && !e.harnessUnsupported
-  );
+  const passed = corpusEntries.filter((e) => e.status === "passed");
   const passedIds = new Set(passed.map((e) => e.id));
 
-  const hu = corpusEntries.filter((e) => e.harnessUnsupported);
-  const skipped = corpusEntries.filter(
-    (e) => e.status === "skipped" && !e.harnessUnsupported
-  );
+  const skipped = corpusEntries.filter((e) => e.status === "skipped");
   const failed = corpusEntries.filter(
-    (e) =>
-      e.status !== "passed" && e.status !== "skipped" && !e.harnessUnsupported
+    (e) => e.status !== "passed" && e.status !== "skipped"
   );
 
   const regressions = [...baselineSet].filter((id) => !passedIds.has(id));
@@ -168,7 +146,6 @@ export function compareBaseline(entries, baseline, names) {
     currentPassing: passed.map((e) => e.id).sort(),
     failed: failed.length,
     skipped: skipped.length,
-    harnessUnsupported: hu.length,
     total: corpusEntries.length,
   };
 }
@@ -178,10 +155,7 @@ export function compareBaseline(entries, baseline, names) {
 function clusterFailures(entries, corpusSpecs) {
   const failures = entries.filter(
     (e) =>
-      corpusSpecs.has(e.file) &&
-      e.status !== "passed" &&
-      e.status !== "skipped" &&
-      !e.harnessUnsupported
+      corpusSpecs.has(e.file) && e.status !== "passed" && e.status !== "skipped"
   );
   const byFile = new Map();
   for (const e of failures) {
@@ -190,22 +164,6 @@ function clusterFailures(entries, corpusSpecs) {
   return [...byFile.entries()]
     .sort((a, b) => b[1] - a[1])
     .map(([file, count]) => `  ${file}: ${count} failures`);
-}
-
-function huSummary(entries, corpusSpecs) {
-  const hu = entries.filter(
-    (e) => corpusSpecs.has(e.file) && e.harnessUnsupported
-  );
-  const byReason = new Map();
-  for (const e of hu) {
-    const r = e.reason ?? "unknown";
-    if (!byReason.has(r)) byReason.set(r, []);
-    byReason.get(r).push(e.file);
-  }
-  return [...byReason.entries()].map(([reason, files]) => {
-    const unique = [...new Set(files)];
-    return `  ${reason}\n    files: ${unique.join(", ")} (${files.length} tests)`;
-  });
 }
 
 // ── Corpus integrity ────────────────────────────────────────────────
@@ -276,7 +234,6 @@ function runCorpus() {
   }
 
   // Only 0 (all passed) and 1 (some tests failed) are expected.
-  // Any other status is a runner/config error.
   if (exitCode !== 0 && exitCode !== 1) {
     console.error(
       `ERROR: Playwright exited with unexpected status ${exitCode} (runner/config failure).`
@@ -341,7 +298,7 @@ function doUpdate(entries) {
   const corpusEntries = entries.filter((e) => corpusSpecs.has(e.file));
 
   const passing = corpusEntries
-    .filter((e) => e.status === "passed" && !e.harnessUnsupported)
+    .filter((e) => e.status === "passed")
     .map((e) => e.id)
     .sort();
 
@@ -400,12 +357,9 @@ function doCheck(entries) {
 
   const result = compareBaseline(entries, baseline, specNames);
 
-  // Reconcile: total = passed + failed + skipped + HU
+  // Reconcile: total = passed + failed + skipped
   const reconciled =
-    result.currentPassing.length +
-    result.failed +
-    result.skipped +
-    result.harnessUnsupported;
+    result.currentPassing.length + result.failed + result.skipped;
 
   console.log("Compatibility baseline check");
   console.log("─".repeat(40));
@@ -415,7 +369,6 @@ function doCheck(entries) {
   );
   console.log(`Failed: ${result.failed}`);
   console.log(`Skipped: ${result.skipped}`);
-  console.log(`Harness-unsupported: ${result.harnessUnsupported}`);
   console.log(`Reconciled: ${reconciled} / ${result.total}`);
   console.log(`Newly passing: ${result.newlyPassing.length}`);
   console.log(`Regressions: ${result.regressions.length}`);
@@ -424,12 +377,6 @@ function doCheck(entries) {
   if (clusters.length > 0) {
     console.log("\nFailure clusters:");
     for (const line of clusters) console.log(line);
-  }
-
-  const hu = huSummary(entries, corpusSpecs);
-  if (hu.length > 0) {
-    console.log("\nHarness-unsupported:");
-    for (const line of hu) console.log(line);
   }
 
   if (result.newlyPassing.length > 0) {

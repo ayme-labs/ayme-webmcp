@@ -5,8 +5,10 @@
   },
   "selectedTestCount": 473,
   "passingIds": [
-    "locator-query.spec.ts > should respect nth()",
-    "locator-query.spec.ts > should throw on capture w/ nth()",
-    "retarget.spec.ts > should not retarget anchor into parent label"
+    "page-basic.spec.ts > should iterate over page properties",
+    "page-goto.spec.ts > should not leak listeners during bad navigation",
+    "page-wait-for-function.spec.ts > should fail with ReferenceError on wrong page",
+    "page-wait-for-function.spec.ts > should fail with predicate throwing on first call",
+    "page-wait-for-function.spec.ts > should fail with predicate throwing sometimes"
   ]
 }

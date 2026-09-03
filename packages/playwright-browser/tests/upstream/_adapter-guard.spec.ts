@@ -4,25 +4,41 @@
  *
  * These tests would fail if the proxy was accidentally removed and
  * the real Playwright page/locator was passed through instead.
+ *
+ * Infrastructure operations (setContent, evaluate) use the real
+ * Playwright page directly; only the adapter proxy is tested.
  */
-import { test, expect, DRIVER_ALLOWLIST } from "./pageTest";
-import { harnessUnsupportedReason } from "./adapter-bridge";
+import { test as base, expect } from "@playwright/test";
+import { createAdapterPage } from "./adapter-bridge";
+
+const test = base.extend<{ adapterPage: import("@playwright/test").Page }>({
+  adapterPage: async ({ page }, use) => {
+    const proxy = await createAdapterPage(page);
+    await use(proxy);
+  },
+});
 
 // ── Proxy presence ──────────────────────────────────────────────────
 
-test("page fixture is the adapter proxy", async ({ page }) => {
-  expect((page as any).__aymeAdapter).toBe(true);
+test("page fixture is the adapter proxy", async ({ adapterPage }) => {
+  expect((adapterPage as any).__aymeAdapter).toBe(true);
 });
 
-test("page.locator returns an adapter proxy locator", async ({ page }) => {
+test("page.locator returns an adapter proxy locator", async ({
+  page,
+  adapterPage,
+}) => {
   await page.setContent("<div></div>");
-  const locator = page.locator("div");
+  const locator = adapterPage.locator("div");
   expect((locator as any).__aymeAdapter).toBe(true);
 });
 
 // ── Adapter routing works ───────────────────────────────────────────
 
-test("adapter locator.click reaches the DOM", async ({ page }) => {
+test("adapter locator.click reaches the DOM", async ({
+  page,
+  adapterPage,
+}) => {
   await page.setContent(`
     <button>Click me</button>
     <script>
@@ -32,103 +48,91 @@ test("adapter locator.click reaches the DOM", async ({ page }) => {
     </script>
   `);
 
-  await page.locator("button").click();
+  await adapterPage.locator("button").click();
 
-  // evaluate is in the driver allowlist — reads the actual DOM state
   const title = await page.evaluate(() => document.title);
   expect(title).toBe("adapter-click");
 });
 
-test("adapter locator.fill reaches the DOM", async ({ page }) => {
+test("adapter locator.fill reaches the DOM", async ({
+  page,
+  adapterPage,
+}) => {
   await page.setContent(`<input type="text" />`);
 
-  await page.locator("input").fill("hello");
+  await adapterPage.locator("input").fill("hello");
 
   const value = await page.evaluate(
-    () => (document.querySelector("input") as HTMLInputElement).value
+    () => (document.querySelector("input") as HTMLInputElement).value,
   );
   expect(value).toBe("hello");
 });
 
-test("adapter locator.count works through the bridge", async ({ page }) => {
+test("adapter locator.count works through the bridge", async ({
+  page,
+  adapterPage,
+}) => {
   await page.setContent("<ul><li>A</li><li>B</li><li>C</li></ul>");
-  const count = await page.locator("li").count();
+  const count = await adapterPage.locator("li").count();
   expect(count).toBe(3);
 });
 
-// ── False-green prevention: allowlist audit ─────────────────────────
+// ── False-green prevention: proxy does not leak to real driver ──────
 
-test("removed compatibility targets are not in the allowlist", () => {
-  const mustNotBeAllowlisted = [
-    "screenshot",
-    "frame",
-    "frames",
-    "mainFrame",
-    "waitForFunction",
-    "waitForRequest",
-    "waitForResponse",
-    "url",
-    "title",
-    "content",
-    "close",
-    "on",
-    "off",
-    "once",
-    "waitForEvent",
-    "setDefaultTimeout",
-    "setDefaultNavigationTimeout",
-    "reload",
-    "keyboard",
-    "mouse",
-    "touchscreen",
-  ];
+test("proxy page methods do not fall through to real Playwright driver", async ({
+  adapterPage,
+}) => {
+  // Use arguments that would SUCCEED on the real Playwright page so a
+  // leaked driver call would pass silently. Through the adapter these
+  // must all throw.
+  await expect(
+    (adapterPage as any).goto("about:blank"),
+  ).rejects.toThrow();
 
-  for (const method of mustNotBeAllowlisted) {
-    expect(
-      DRIVER_ALLOWLIST.has(method),
-      `"${method}" must not be in DRIVER_ALLOWLIST — it is a compatibility target tested by upstream specs`
-    ).toBe(false);
-  }
+  await expect(
+    (adapterPage as any).setContent("<div>ok</div>"),
+  ).rejects.toThrow();
+
+  await expect(
+    (adapterPage as any).evaluate(() => 1 + 1),
+  ).rejects.toThrow();
+
+  await expect(
+    (adapterPage as any).waitForTimeout(0),
+  ).rejects.toThrow();
+
+  await expect(
+    (adapterPage as any).route("**/*", () => {}),
+  ).rejects.toThrow();
 });
 
-// ── False-green prevention: special-case classification ─────────────
+test("proxy does not expose real driver sub-objects", async ({
+  page,
+  adapterPage,
+}) => {
+  // keyboard, mouse, and touchscreen are object properties on the real
+  // Playwright page. The proxy must not leak them.
 
-test("page-basic is flagged as mixed-subject suite", () => {
-  const reason = harnessUnsupportedReason("page-basic.spec.ts");
-  expect(reason).not.toBeNull();
-  expect(reason).toContain("mixed-subject");
-});
+  // The proxy returns a function (adapter routing), not the real object.
+  const proxyKbd = (adapterPage as any).keyboard;
+  const proxyMouse = (adapterPage as any).mouse;
+  const proxyTouch = (adapterPage as any).touchscreen;
 
-test("page-aria-snapshot is not flagged (real InjectedScript in bridge)", () => {
-  expect(harnessUnsupportedReason("page-aria-snapshot.spec.ts")).toBeNull();
-});
+  expect(proxyKbd).not.toBe(page.keyboard);
+  expect(proxyMouse).not.toBe(page.mouse);
+  expect(proxyTouch).not.toBe(page.touchscreen);
 
-test("page-aria-snapshot-ai is not flagged (real InjectedScript in bridge)", () => {
-  expect(harnessUnsupportedReason("page-aria-snapshot-ai.spec.ts")).toBeNull();
-});
+  // The real driver sub-objects have callable API methods (press, click,
+  // tap). Through the adapter proxy these must be undefined or throw.
+  await expect(
+    (adapterPage as any).keyboard("press", "a"),
+  ).rejects.toThrow();
 
-// ── False-green prevention: ordinary single-subject detection ───────
+  await expect(
+    (adapterPage as any).mouse("click", 0, 0),
+  ).rejects.toThrow();
 
-test("page-goto is flagged via allowlist overlap", () => {
-  const reason = harnessUnsupportedReason("page-goto.spec.ts");
-  expect(reason).not.toBeNull();
-  expect(reason).toContain("goto");
-});
-
-test("page-set-content is flagged via allowlist overlap", () => {
-  const reason = harnessUnsupportedReason("page-set-content.spec.ts");
-  expect(reason).not.toBeNull();
-  expect(reason).toContain("setContent");
-});
-
-test("page-wait-for-function is flagged for serialization limitation", () => {
-  const reason = harnessUnsupportedReason("page-wait-for-function.spec.ts");
-  expect(reason).not.toBeNull();
-  expect(reason).toContain("serialize");
-});
-
-test("locator specs are never flagged", () => {
-  expect(harnessUnsupportedReason("locator-click.spec.ts")).toBeNull();
-  expect(harnessUnsupportedReason("selectors-get-by.spec.ts")).toBeNull();
-  expect(harnessUnsupportedReason("retarget.spec.ts")).toBeNull();
+  await expect(
+    (adapterPage as any).touchscreen("tap", 0, 0),
+  ).rejects.toThrow();
 });

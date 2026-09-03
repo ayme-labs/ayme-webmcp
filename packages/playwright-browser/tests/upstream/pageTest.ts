@@ -1,9 +1,9 @@
 /**
  * Package-local replacement for Playwright's tests/page/pageTest.ts.
  *
- * Routes compatibility Page/Locator calls through the actual
+ * Routes all Page/Locator calls through the actual
  * @ayme-dev/playwright-browser createPage adapter running in the browser.
- * Only explicit test infrastructure goes through the real Playwright driver.
+ * No calls fall back to the real Playwright driver.
  *
  * Upstream spec files import { test, expect } from './pageTest' unchanged.
  */
@@ -13,20 +13,13 @@ import {
   type Page,
   type Frame,
 } from "@playwright/test";
-import { basename, dirname, resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import {
-  createAdapterPage,
-  DRIVER_ALLOWLIST,
-  harnessUnsupportedReason,
-} from "./adapter-bridge";
+import { createAdapterPage } from "./adapter-bridge";
 import { TestServer } from "./testServer";
 
 const __fixtureDir = dirname(fileURLToPath(import.meta.url));
-
-// Re-export the driver allowlist for guard tests.
-export { DRIVER_ALLOWLIST };
 
 // ── Fixtures ────────────────────────────────────────────────────────
 
@@ -60,7 +53,7 @@ export const test = base.extend<
   ServerFixtures & PlatformFixtures & CompatFixtures
 >({
   // ── Adapter page ──────────────────────────────────────────────────
-  // Wraps the real Playwright page with a proxy that routes
+  // Wraps the real Playwright page with a proxy that routes all
   // compatibility operations through the in-browser adapter.
   page: async ({ page }, use) => {
     const proxyPage = await createAdapterPage(page);
@@ -107,20 +100,6 @@ export const test = base.extend<
   toImpl: async ({}, use) => {
     await use((obj: unknown) => obj);
   },
-});
-
-// ── False-green prevention ──────────────────────────────────────────
-// Annotate tests whose results cannot be trusted as compatibility
-// evidence. At most one annotation per test; reason is computed from
-// three special cases then a filename+allowlist check.
-test.beforeEach(({}, testInfo) => {
-  const reason = harnessUnsupportedReason(basename(testInfo.file));
-  if (reason) {
-    testInfo.annotations.push({
-      type: "harness-unsupported",
-      description: reason,
-    });
-  }
 });
 
 // ── Expect ──────────────────────────────────────────────────────────

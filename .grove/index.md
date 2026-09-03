@@ -57,7 +57,7 @@
 | W-18 | feature | Ship the compiled browser adapter | G-10 | complicated | ⊤ | done |  |
 | W-19 | feature | Make the upstream corpus self-verifying | G-10 | clear | ⊤ | done |  |
 | W-20 | feature | Delegate browser semantics to InjectedScript | G-10 | complicated | ⊤ | done |  |
-| W-21 | feature | Record a zero-exclusion compatibility baseline | G-10 | complicated | ⊤ | ready | ★ |
+| W-21 | feature | Record a zero-exclusion compatibility baseline | G-10 | complicated | ⊤ | progress | ★ |
 
 ## Decisions
 
@@ -144,7 +144,7 @@ graph TD
   W_18["W-18: Ship the compiled browser adapter"]:::done
   W_19["W-19: Make the upstream corpus self-verifying"]:::done
   W_20["W-20: Delegate browser semantics to InjectedScript"]:::done
-  W_21["W-21: Record a zero-exclusion compatibility baseline"]:::ready,critical
+  W_21["W-21: Record a zero-exclusion compatibility baseline"]:::progress,critical
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision

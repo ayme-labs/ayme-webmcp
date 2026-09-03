@@ -3,22 +3,13 @@
  * Playwright Test's Node.js fixture. Loads the compiled dist bundle
  * (which includes the real pinned InjectedScript), injects it into
  * the browser page, and creates proxy Page/Locator objects that route
- * compatibility calls through the adapter while forwarding explicit
- * infrastructure through the real Playwright driver.
+ * all compatibility calls through the adapter.
  */
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { Locator, Page } from "@playwright/test";
-
-// @ts-expect-error -- .mjs policy module has no type declarations
-import {
-  DRIVER_ALLOWLIST,
-  harnessUnsupportedReason,
-} from "./harness-policy.mjs";
-
-export { DRIVER_ALLOWLIST, harnessUnsupportedReason };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ADAPTER_DIST_PATH = resolve(__dirname, "../../dist/index.mjs");
@@ -89,9 +80,6 @@ export async function createAdapterPage(realPage: Page): Promise<Page> {
   `);
 
   // Force a navigation so init scripts execute immediately.
-  // Tests that use setContent without a prior goto still get the adapter
-  // because setContent modifies the document in-place without
-  // clearing window globals set by the init scripts.
   await realPage.goto("about:blank");
 
   return createPageProxy(realPage);
@@ -104,33 +92,29 @@ function createPageProxy(realPage: Page): Page {
       if (prop === "__aymeAdapter") return true;
       if (prop === "then") return undefined;
 
-      // Infrastructure: real Playwright driver.
-      if (DRIVER_ALLOWLIST.has(prop)) {
-        const value = Reflect.get(target, prop, receiver);
-        return typeof value === "function" ? value.bind(target) : value;
-      }
-
       // Locator-creating: return proxy locator.
       if (LOCATOR_CREATING_METHODS.has(prop)) {
         return (...args: unknown[]) =>
           createLocatorProxy(realPage, [[prop, args]]);
       }
 
-      // Everything else: invoke directly on the adapter page in the
-      // browser. Unsupported methods hit the natural browser TypeError
-      // when the member is undefined — no custom guard needed.
-      const value = Reflect.get(target, prop, receiver);
-      if (typeof value === "function") {
-        return async (...args: unknown[]) =>
-          realPage.evaluate(
-            ({ method, args: a }) => {
-              const p = (window as any).__aymeAdapterPage;
-              return p[method](...a);
-            },
-            { method: prop, args: args as any[] }
-          );
-      }
-      return value;
+      // Everything else: route through the adapter page in the browser.
+      // Both method calls and property accesses go through the adapter
+      // so that unsupported members (keyboard, mouse, touchscreen, etc.)
+      // are never leaked from the real Playwright driver.
+      return (...args: unknown[]) =>
+        realPage.evaluate(
+          ({ member, args: a }) => {
+            const p = (window as any).__aymeAdapterPage;
+            const v = p[member];
+            if (typeof v === "function") return v.call(p, ...a);
+            if (a.length === 0 && v !== undefined) return v;
+            throw new TypeError(
+              `__aymeAdapterPage.${member} is not a function`
+            );
+          },
+          { member: prop, args: args as any[] }
+        );
     },
   }) as Page;
 }
@@ -176,8 +160,6 @@ function createLocatorProxy(realPage: Page, chain: ChainStep[]): Locator {
       }
 
       // Everything else: terminal evaluation in browser.
-      // Unsupported methods hit the natural browser TypeError when the
-      // member is undefined on the adapter locator.
       return async (...args: unknown[]) =>
         realPage.evaluate(
           ({ chain: c, method, args: a }) => {
@@ -191,6 +173,3 @@ function createLocatorProxy(realPage: Page, chain: ChainStep[]): Locator {
   };
   return new Proxy({}, handler) as unknown as Locator;
 }
-
-// harnessUnsupportedReason and DRIVER_ALLOWLIST are re-exported from
-// harness-policy.mjs (single source of truth).

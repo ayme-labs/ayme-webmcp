@@ -32,71 +32,7 @@ describe("parseReport", () => {
     assert.equal(entries.length, 1);
     assert.equal(entries[0].id, "locator-click.spec.ts > should click button");
     assert.equal(entries[0].status, "passed");
-    assert.equal(entries[0].harnessUnsupported, false);
     assert.equal(entries[0].file, "locator-click.spec.ts");
-  });
-
-  it("detects harness-unsupported annotations", () => {
-    const report = {
-      suites: [
-        {
-          title: "",
-          file: "tests/upstream/page-goto.spec.ts",
-          specs: [
-            {
-              title: "should work",
-              file: "tests/upstream/page-goto.spec.ts",
-              tests: [
-                {
-                  results: [
-                    {
-                      status: "passed",
-                      annotations: [
-                        {
-                          type: "harness-unsupported",
-                          description:
-                            '"goto" runs through the driver allowlist',
-                        },
-                      ],
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    };
-
-    const entries = parseReport(report);
-    assert.equal(entries[0].harnessUnsupported, true);
-    assert.ok(entries[0].reason.includes("goto"));
-  });
-
-  it("uses policy fallback when annotation is missing", () => {
-    const report = {
-      suites: [
-        {
-          title: "",
-          file: "tests/upstream/page-goto.spec.ts",
-          specs: [
-            {
-              title: "should work @smoke",
-              file: "tests/upstream/page-goto.spec.ts",
-              tests: [
-                {
-                  annotations: [],
-                  results: [{ status: "failed", annotations: [] }],
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    };
-
-    const entries = parseReport(report);
-    assert.equal(entries[0].harnessUnsupported, true);
   });
 
   it("handles nested suites in title path", () => {
@@ -169,8 +105,6 @@ describe("validateCompleteness", () => {
   const makeEntry = (file, title, status = "failed") => ({
     id: `${file} > ${title}`,
     status,
-    harnessUnsupported: false,
-    reason: null,
     file,
   });
 
@@ -212,11 +146,9 @@ describe("validateCompleteness", () => {
 // ── compareBaseline ─────────────────────────────────────────────────
 
 describe("compareBaseline", () => {
-  const makeEntry = (id, status, harnessUnsupported = false) => ({
+  const makeEntry = (id, status) => ({
     id,
     status,
-    harnessUnsupported,
-    reason: harnessUnsupported ? "stub" : null,
     file: id.split(" > ")[0],
   });
 
@@ -268,21 +200,6 @@ describe("compareBaseline", () => {
     assert.deepEqual(result.newlyPassing, ["locator-click.spec.ts > new test"]);
   });
 
-  it("excludes harness-unsupported from compatibility passes", () => {
-    const entries = [
-      makeEntry("page-goto.spec.ts > should work", "passed", true),
-      makeEntry("locator-click.spec.ts > should click", "passed"),
-    ];
-    const baseline = {
-      passingIds: ["locator-click.spec.ts > should click"],
-    };
-    const result = compareBaseline(entries, baseline, names);
-    assert.deepEqual(result.currentPassing, [
-      "locator-click.spec.ts > should click",
-    ]);
-    assert.equal(result.harnessUnsupported, 1);
-  });
-
   it("separates skipped from failed", () => {
     const entries = [
       makeEntry("locator-click.spec.ts > a", "failed"),
@@ -301,15 +218,12 @@ describe("compareBaseline", () => {
       makeEntry("locator-click.spec.ts > a", "passed"),
       makeEntry("locator-click.spec.ts > b", "failed"),
       makeEntry("locator-click.spec.ts > c", "skipped"),
-      makeEntry("page-goto.spec.ts > d", "passed", true),
+      makeEntry("page-goto.spec.ts > d", "passed"),
     ];
     const baseline = { passingIds: [] };
     const result = compareBaseline(entries, baseline, names);
     const reconciled =
-      result.currentPassing.length +
-      result.failed +
-      result.skipped +
-      result.harnessUnsupported;
+      result.currentPassing.length + result.failed + result.skipped;
     assert.equal(reconciled, result.total);
   });
 });
