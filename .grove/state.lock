@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:bc5e649c8bbe3cbab0355637621ad10bba09a32cfaad85d317f0fca16004554d
+# checksum: sha256:d731acefc331f0d1f186a0fb3caa700f54cea090d5b2c914b0156088ad6e525b
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -57,9 +57,10 @@ g G-11 status=verified fitness_kind=count t_created=2026-09-03T14:15:39Z t_updat
   fitness_target: 4
   fitness_current: 4
 
-g G-12 status=unverified fitness_kind=count t_created=2026-09-03T15:52:54Z t_updated=2026-09-03T15:52:54Z "Make the single-document Playwright adapter truthfully verifiable"
+g G-12 status=partial fitness_kind=count t_created=2026-09-03T15:52:54Z t_updated=2026-09-03T18:36:27Z "Make the single-document Playwright adapter truthfully verifiable"
   area: A-02
   fitness_target: 4
+  fitness_current: 1
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -586,7 +587,7 @@ w W-25 type=feature status=done cynefin=complicated t_created=2026-09-03T14:19:5
   plan:
     | Remove harness exclusions and driver fallback, strengthen guards, and regenerate the per-test baseline.
 
-w W-26 type=bug status=ready cynefin=complicated t_created=2026-09-03T15:52:54Z t_updated=2026-09-03T15:53:50Z "Correct the single-document adapter contract"
+w W-26 type=bug status=done cynefin=complicated t_created=2026-09-03T15:52:54Z t_updated=2026-09-03T18:36:27Z "Correct the single-document adapter contract"
   goals: G-12
   fitness: G-12=+1
   ac:
@@ -601,10 +602,12 @@ w W-26 type=bug status=ready cynefin=complicated t_created=2026-09-03T15:52:54Z 
     | Current PR accepts malformed nested filters, permits cross-page filter locators, relies on an unbranded resolver hook, and silently ignores valid options.
   evidence_strategy:
     | Run focused runtime tests, typecheck, lint, and package build.
+  evidence:
+    | Verified playwright-browser typecheck, lint, 39 Vitest tests plus 14 baseline parser tests, and build; verified webmcp typecheck, lint, 34 Vitest tests, and build; git diff --check passes.
   plan:
     | Refine Page and Locator around ADR-0015 without adding iframe, cross-window, or driver-fallback behavior.
 
-w W-27 type=feature status=proposed cynefin=complicated t_created=2026-09-03T15:52:56Z t_updated=2026-09-03T15:53:35Z "Implement browser-native setup and callback operations"
+w W-27 type=feature status=progress cynefin=complicated session=host:75cd936167237b83 session_at=2026-09-03T18:36:27Z t_created=2026-09-03T15:52:56Z t_updated=2026-09-03T18:36:27Z "Implement browser-native setup and callback operations"
   goals: G-12
   fitness: G-12=+1
   ac:

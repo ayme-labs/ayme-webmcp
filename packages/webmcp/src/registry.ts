@@ -10,6 +10,10 @@ import type {
   RegisteredPomTool,
   ToolManifest,
 } from "./contracts";
+import {
+  isAymeLocator,
+  resolveLocatorElements,
+} from "@ayme-dev/playwright-browser";
 import type { Locator, Page } from "@playwright/test";
 
 type CompiledPom = {
@@ -813,14 +817,11 @@ function isCallable(value: unknown): value is (...args: unknown[]) => unknown {
 }
 
 function isLocator(value: unknown): value is Locator {
-  return isRecord(value) && typeof value.count === "function";
+  return isAymeLocator(value);
 }
 
 function locatorElements(locator: Locator): Element[] {
-  const impl = locator as unknown as Record<string, unknown>;
-  if (typeof impl.resolveElements === "function")
-    return (impl.resolveElements as () => Element[])();
-  return [];
+  return resolveLocatorElements(locator);
 }
 
 function isPomComponent(value: unknown): value is { root: Locator } {

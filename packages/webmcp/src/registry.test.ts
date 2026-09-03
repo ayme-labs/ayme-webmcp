@@ -1,7 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { LOCATOR_BRAND } from "@ayme-dev/playwright-browser";
 import type { Page } from "@playwright/test";
 import type { PomManifest } from "./contracts";
+
+function brandedLocator(overrides: Record<string, unknown> = {}) {
+  const loc: Record<string | symbol, unknown> = { ...overrides };
+  loc[LOCATOR_BRAND] = Object.freeze({
+    ownerPage: {},
+    getSelector: () => "mock",
+    resolveElements: () => [],
+  });
+  return loc;
+}
 
 class FakeMutationObserver {
   static instances: FakeMutationObserver[] = [];
@@ -108,7 +119,7 @@ describe("live Page Object registry", () => {
         ...emptyManifest("PageWithLocator"),
         members: [{ memberName: "item", kind: "locator", access: "field" }],
       },
-      () => ({ item: { count } })
+      () => ({ item: brandedLocator({ count }) })
     );
     const registration = registry.createPageRegistration(PageWithLocator);
     const subscriber = vi.fn();
@@ -152,7 +163,7 @@ describe("live Page Object registry", () => {
         ...emptyManifest("LaterPage"),
         members: [{ memberName: "item", kind: "locator", access: "field" }],
       },
-      () => ({ item: { count } })
+      () => ({ item: brandedLocator({ count }) })
     );
     const later = registry.createPageRegistration(LaterPage);
 
@@ -197,6 +208,33 @@ describe("live Page Object registry", () => {
     ).toHaveBeenCalledOnce();
   });
 
+  it("reports an observation error for a manifest-declared locator without a brand", async () => {
+    const registry = await import("./registry");
+    registry.configureAymeRuntime({} as Page);
+
+    class UnbrandedLocatorPage {}
+    registry.registerCompiledPom(
+      UnbrandedLocatorPage,
+      {
+        ...emptyManifest("UnbrandedLocatorPage"),
+        members: [{ memberName: "link", kind: "locator", access: "field" }],
+      },
+      () => ({ link: { count: async () => 1 } })
+    );
+    const registration = registry.createPageRegistration(UnbrandedLocatorPage);
+
+    await vi.runOnlyPendingTimersAsync();
+
+    const poms = registry.listRegisteredPoms();
+    const observations = poms[0]?.memberObservations ?? [];
+    const linkObs = observations.find((o) => o.memberName === "link");
+    expect(linkObs).toBeDefined();
+    expect(linkObs?.count).toBe(0);
+    expect(linkObs?.error).toMatch(/not a browser locator/);
+
+    registration.dispose();
+  });
+
   it("bounds recursive component manifests to the current component path", async () => {
     const registry = await import("./registry");
     registry.configureAymeRuntime({} as Page);
@@ -235,7 +273,7 @@ describe("live Page Object registry", () => {
       },
       () => ({
         node: {
-          root: { count: async () => 1 },
+          root: brandedLocator({ count: async () => 1 }),
           open: vi.fn(),
         },
       })
@@ -298,10 +336,10 @@ describe("live Page Object registry", () => {
       },
       () => ({
         dialog: {
-          root: { count: async () => dialogRootCount },
+          root: brandedLocator({ count: async () => dialogRootCount }),
           confirm,
           panel: {
-            root: { count: async () => panelRootCount },
+            root: brandedLocator({ count: async () => panelRootCount }),
             save,
           },
         },
@@ -385,8 +423,8 @@ describe("live Page Object registry", () => {
         addItem: vi.fn(),
         items: [
           {
-            root: { count: async () => rootCount },
-            child: { root: { count: async () => 1 } },
+            root: brandedLocator({ count: async () => rootCount }),
+            child: { root: brandedLocator({ count: async () => 1 }) },
             archive: vi.fn(),
           },
         ],

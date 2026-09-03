@@ -9,6 +9,12 @@ export type {
   TraceEntry,
 } from "./types";
 
+export {
+  isAymeLocator,
+  LOCATOR_BRAND,
+  resolveLocatorElements,
+} from "./locator";
+
 // ── ARIA capture ────────────────────────────────────────────────────
 
 export function ariaSnapshot(root: Element) {
@@ -22,14 +28,13 @@ export function captureAriaSnapshot(root: Element) {
 // ── Page factory ────────────────────────────────────────────────────
 
 type CreatePageOptions = {
-  browserWindow?: Window;
   onTrace?: (entry: import("./types").TraceEntry) => void;
   pacing?: import("./types").BrowserInteractionPacing;
 };
 
 export function createPage(options: CreatePageOptions = {}): Page {
   return PageImpl.fromWindow(
-    options.browserWindow ?? window,
+    window,
     options.onTrace,
     options.pacing
   ) as unknown as Page;

@@ -1,6 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { LOCATOR_BRAND } from "@ayme-dev/playwright-browser";
 import type { Page } from "@playwright/test";
+
+function brandedLocator(overrides: Record<string, unknown> = {}) {
+  const loc: Record<string | symbol, unknown> = { ...overrides };
+  loc[LOCATOR_BRAND] = Object.freeze({
+    ownerPage: {},
+    getSelector: () => "mock",
+    resolveElements: () => [],
+  });
+  return loc;
+}
 
 type PublishedTool = { name: string };
 
@@ -109,7 +120,7 @@ describe("WebMCP publisher", () => {
         addItem: vi.fn(),
         items: [
           {
-            root: { count: async () => rootCount },
+            root: brandedLocator({ count: async () => rootCount }),
             archive: vi.fn(),
           },
         ],

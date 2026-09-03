@@ -1,6 +1,8 @@
 import { injectedScriptFor } from "./injected";
+import type { ByRoleOptions, LocatorOptions } from "./locator";
 import { LocatorImpl } from "./locator";
 import { getByRoleSelector } from "./selectors";
+
 import type { BrowserInteractionPacing, TraceEntry } from "./types";
 
 export class PageImpl {
@@ -38,15 +40,6 @@ export class PageImpl {
     return this.injected.querySelectorAll(
       parsed,
       this.document.documentElement
-    );
-  }
-
-  resolveOne(selector: string, strict?: boolean): Element | undefined {
-    const parsed = this.injected.parseSelector(selector);
-    return this.injected.querySelector(
-      parsed,
-      this.document.documentElement,
-      strict
     );
   }
 
@@ -204,7 +197,7 @@ export class PageImpl {
 
   // ── Locator creation ────────────────────────────────────────────
 
-  getByRole(role: string, options: { name?: string; exact?: boolean } = {}) {
+  getByRole(role: string, options: ByRoleOptions = {}) {
     const roleSelector = getByRoleSelector(role, options);
     const optString =
       options.name !== undefined ? `, ${JSON.stringify(options)}` : "";
@@ -216,12 +209,13 @@ export class PageImpl {
     );
   }
 
-  locator(selector: string) {
+  locator(selector: string, options?: LocatorOptions) {
     return new LocatorImpl(
       this,
       selector,
       `page.locator(${JSON.stringify(selector)})`,
-      this.onTrace
+      this.onTrace,
+      options
     );
   }
 
