@@ -173,6 +173,76 @@ export class LocatorImpl {
     return this.ownerPage.resolveAll(this.selector).length;
   }
 
+  // ── Expectations and callback operations ────────────────────────
+
+  /**
+   * The public Playwright matcher implementation calls this private-shaped
+   * protocol method. Keep it here, rather than teaching the bridge about
+   * individual matchers, so the pinned InjectedScript remains the semantic
+   * authority for text, count, and element-state expectations.
+   */
+  async _expect(expression: string, options: Record<string, unknown>) {
+    this.record({ operation: "expect" });
+    return this.ownerPage.expect(this.selector, expression, options);
+  }
+
+  async evaluate(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    pageFunction: string | ((element: Element, arg?: unknown) => any),
+    arg?: unknown
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Promise<any> {
+    return this._evaluateExpression(
+      typeof pageFunction === "function" ? pageFunction : String(pageFunction),
+      typeof pageFunction === "function",
+      arg
+    );
+  }
+
+  async _evaluateExpression(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expression: string | ((element: Element, arg?: unknown) => any),
+    isFunction: boolean,
+    arg?: unknown
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Promise<any> {
+    const element = this.ownerPage.requireSingle(this.selector, this.label);
+    return this.ownerPage.evaluateLocatorExpression(
+      element,
+      expression,
+      isFunction,
+      arg
+    );
+  }
+
+  async evaluateAll(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    pageFunction: string | ((elements: Element[], arg?: unknown) => any),
+    arg?: unknown
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Promise<any> {
+    return this._evaluateAllExpression(
+      typeof pageFunction === "function" ? pageFunction : String(pageFunction),
+      typeof pageFunction === "function",
+      arg
+    );
+  }
+
+  async _evaluateAllExpression(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expression: string | ((elements: Element[], arg?: unknown) => any),
+    isFunction: boolean,
+    arg?: unknown
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Promise<any> {
+    return this.ownerPage.evaluateLocatorExpression(
+      this.ownerPage.resolveAll(this.selector),
+      expression,
+      isFunction,
+      arg
+    );
+  }
+
   // ── Terminal operations (delegated to Page) ───────────────────
 
   async click(options?: Record<string, unknown>) {

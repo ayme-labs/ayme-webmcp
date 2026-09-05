@@ -252,6 +252,7 @@ function createLocatorProxy(realPage: Page, chain: ChainStep[]): Locator {
     get(_, prop) {
       if (typeof prop === "symbol") return undefined;
       if (prop === "__aymeAdapter") return true;
+      if (prop === "_apiName") return "Locator";
       if (prop === "then") return undefined;
 
       // Chain methods (including first/last): extend the chain and let
@@ -283,6 +284,51 @@ function createLocatorProxy(realPage: Page, chain: ChainStep[]): Locator {
         return () => createPageProxy(realPage);
       }
 
+      // Playwright's locator matchers call the private-shaped `_expect`
+      // protocol. Route that protocol to LocatorImpl so the pinned
+      // InjectedScript computes the matcher result, rather than allowing the
+      // Node driver to inspect the locator.
+      if (prop === "_expect") {
+        return async (expression: string, options: Record<string, unknown>) =>
+          realPage.evaluate(
+            ({ chain: c, expression: e, options: o }) => {
+              let current: any = (window as any).__aymeAdapterPage;
+              for (const [method, args] of c)
+                current = current[method](...args);
+              return current._expect(e, o);
+            },
+            {
+              chain,
+              expression,
+              // AbortSignal is a client-side control object, not serializable.
+              options: serializableExpectationOptions(options),
+            }
+          );
+      }
+
+      // Mirrors Locator.evaluate/evaluateAll transport: function source plus
+      // an explicit function bit and Playwright-serializable argument.
+      if (prop === "evaluate" || prop === "evaluateAll") {
+        return async (pageFunction: unknown, arg?: unknown) =>
+          realPage.evaluate(
+            ({ chain: c, method, expression, isFunction, arg: a }) => {
+              let current: any = (window as any).__aymeAdapterPage;
+              for (const [chainMethod, chainArgs] of c)
+                current = current[chainMethod](...chainArgs);
+              return method === "evaluate"
+                ? current._evaluateExpression(expression, isFunction, a)
+                : current._evaluateAllExpression(expression, isFunction, a);
+            },
+            {
+              chain,
+              method: prop,
+              expression: String(pageFunction),
+              isFunction: typeof pageFunction === "function",
+              arg,
+            }
+          );
+      }
+
       // Everything else: terminal evaluation in browser.
       return async (...args: unknown[]) =>
         realPage.evaluate(
@@ -296,4 +342,9 @@ function createLocatorProxy(realPage: Page, chain: ChainStep[]): Locator {
     },
   };
   return new Proxy({}, handler) as unknown as Locator;
+}
+
+function serializableExpectationOptions(options: Record<string, unknown>) {
+  const { signal: _signal, ...serializable } = options;
+  return serializable;
 }

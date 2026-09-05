@@ -5,6 +5,19 @@ import { getByRoleSelector } from "./selectors";
 
 import type { BrowserInteractionPacing, TraceEntry } from "./types";
 
+type InjectedExpectation = {
+  matches: boolean;
+  received?: { value?: unknown; ariaSnapshot?: string };
+};
+
+type ExpectCapableInjectedScript = {
+  expect(
+    element: Element | undefined,
+    options: { expression: string } & Record<string, unknown>,
+    elements: Element[]
+  ): Promise<InjectedExpectation>;
+};
+
 /**
  * Normalizes an expression the same way pinned b25d782
  * server/javascript.ts normalizeEvaluationExpression does:
@@ -118,6 +131,51 @@ export class PageImpl {
     return elements.every(
       (el) => this.elementState(el, "visible")?.matches !== true
     );
+  }
+
+  /**
+   * Adapts the client Locator._expect protocol to InjectedScript.expect.
+   * InjectedScript evaluates the un-negated matcher; this method returns the
+   * same polarity that Playwright's client matcher layer expects.
+   */
+  async expect(
+    selector: string,
+    expression: string,
+    options: Record<string, unknown>
+  ) {
+    const elements = this.resolveAll(selector);
+    const expectOptions = Object.fromEntries(
+      Object.entries(options).filter(
+        ([key]) => key !== "timeout" && key !== "signal"
+      )
+    );
+    const injected = this.injected as typeof this.injected &
+      ExpectCapableInjectedScript;
+    const result = await injected.expect(
+      elements[0],
+      { expression, ...expectOptions },
+      elements
+    );
+    const isNot = !!options.isNot;
+    const passes = result.matches !== isNot;
+    if (passes) return { matches: !isNot };
+    return { matches: isNot, received: result.received };
+  }
+
+  async evaluateLocatorExpression<T extends Element | Element[]>(
+    target: T,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expression: string | ((target: T, arg?: unknown) => any),
+    isFunction: boolean,
+    arg?: unknown
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Promise<any> {
+    if (typeof expression === "function") return await expression(target, arg);
+    const normalized = normalizeExpression(expression, isFunction);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const evaluated: any = this.window.eval(normalized);
+    if (isFunction) return await evaluated(target, arg);
+    return evaluated;
   }
 
   // ── Terminal actions ────────────────────────────────────────────

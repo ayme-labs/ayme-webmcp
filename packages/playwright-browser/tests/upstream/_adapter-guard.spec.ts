@@ -88,6 +88,54 @@ test("adapter locator.count works through the bridge", async ({
   expect(count).toBe(3);
 });
 
+test("adapter locator matchers use pinned InjectedScript semantics", async ({
+  page,
+  adapterPage,
+}) => {
+  await page.setContent(`
+    <p class="message">Hello <strong>adapter</strong></p>
+    <p class="message" hidden>Hidden</p>
+  `);
+
+  await expect(adapterPage.locator("p.message").first()).toHaveText(
+    "Hello adapter"
+  );
+  await expect(adapterPage.locator("p.message")).toHaveCount(2);
+  await expect(adapterPage.locator("p.message").first()).toBeVisible();
+  await expect(adapterPage.locator("p.message").last()).toBeHidden();
+
+  const execution = await page.evaluate(() => (window as any).__aymeEvidence);
+  expect(execution.entered).toContain("Locator._expect");
+});
+
+test("adapter locator callbacks serialize arguments and execute in the adapter", async ({
+  page,
+  adapterPage,
+}) => {
+  await page.setContent("<ul><li>A</li><li>B</li></ul>");
+
+  const one = await adapterPage.locator("li").first().evaluate(
+    (element, suffix) => element.textContent + suffix,
+    "!"
+  );
+  const all = await adapterPage.locator("li").evaluateAll(
+    (elements, payload) =>
+      elements.map(
+        element =>
+          payload.prefix +
+          element.textContent +
+          `:${payload.optional === undefined}:${Number.isNaN(payload.nan)}`
+      ),
+    { prefix: "item:", optional: undefined, nan: Number.NaN }
+  );
+
+  expect(one).toBe("A!");
+  expect(all).toEqual(["item:A:true:true", "item:B:true:true"]);
+  const execution = await page.evaluate(() => (window as any).__aymeEvidence);
+  expect(execution.entered).toContain("Locator.evaluate");
+  expect(execution.entered).toContain("Locator._evaluateAllExpression");
+});
+
 // ── False-green prevention: proxy does not leak to real driver ──────
 
 test("proxy page methods do not fall through to real Playwright driver", async ({
