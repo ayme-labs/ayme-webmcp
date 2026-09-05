@@ -7,14 +7,14 @@
 | Measure | Count | Composition |
 | --- | --- | --- |
 | C (content) | 18 | validated B 2 · answered Q 2 · accepted D 11 · active Discovery 3 |
-| V (uncertainty) | 0 | open Q 0 · pending B 0 · W below DoR 0 |
+| V (uncertainty) | 4 | open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 4 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 14 | 0 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 |
+| A-02 | Page Object interoperability | 14 | 4 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 4 |
 | A-03 | Consumer browser capabilities | 4 | 0 | C: validated B 1 · answered Q 0 · accepted D 1 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
@@ -36,6 +36,7 @@
 | G-11 | Enforce browser-side Playwright compatibility | count; current=4 target=4 | verified |
 | G-12 | Make the single-document Playwright adapter truthfully verifiable | count; current=4 target=4 | verified |
 | G-13 | Increase verified Playwright compatibility | count; current=3 target=3 | verified |
+| G-14 | Increase Playwright behavioral compatibility | count; current= target=4 | unverified |
 
 ## Work items
 
@@ -73,6 +74,10 @@
 | W-30 | feature | Promote reviewed compatibility evidence | G-13 | clear | ⊤ | done |  |
 | W-31 | feature | Integrate locator expectations and callbacks | G-13 | complicated | ⊤ | done |  |
 | W-32 | feature | Verify expanded compatibility evidence | G-13 | complicated | ⊤ | done |  |
+| W-33 | feature | Implement locator expectation retries | G-14 | complicated | ⊤ | ready | ★ |
+| W-34 | feature | Improve browser action semantics | G-14 | complicated | ⊤ | ready | ★ |
+| W-35 | feature | Add common locator query methods | G-14 | clear | ⊤ | ready | ★ |
+| W-36 | feature | Verify behavioral compatibility round | G-14 | complicated | ⊤ | ready | ★ |
 
 ## Decisions
 
@@ -135,6 +140,7 @@ graph TD
   G_11["G-11: Enforce browser-side Playwright compatibility"]:::goal
   G_12["G-12: Make the single-document Playwright adapter truthfully verifiable"]:::goal
   G_13["G-13: Increase verified Playwright compatibility"]:::goal
+  G_14["G-14: Increase Playwright behavioral compatibility"]:::goal
   W_01["W-01: Establish the monorepo walking skeleton"]:::done
   W_02["W-02: Preserve spike behavior through package extraction"]:::done
   W_03["W-03: Extract Vue Page Object activation composable"]:::done
@@ -167,6 +173,10 @@ graph TD
   W_30["W-30: Promote reviewed compatibility evidence"]:::done
   W_31["W-31: Integrate locator expectations and callbacks"]:::done
   W_32["W-32: Verify expanded compatibility evidence"]:::done
+  W_33["W-33: Implement locator expectation retries"]:::ready,critical
+  W_34["W-34: Improve browser action semantics"]:::ready,critical
+  W_35["W-35: Add common locator query methods"]:::ready,critical
+  W_36["W-36: Verify behavioral compatibility round"]:::ready,critical
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -246,12 +256,20 @@ graph TD
   W_30 ==>|blocks| W_31
   W_31 ==>|blocks| W_32
   W_31 -->|implements| D_15
+  W_33 ==>|blocks| W_34
+  W_33 -->|implements| D_15
+  W_34 ==>|blocks| W_35
+  W_34 -->|implements| D_15
+  W_35 ==>|blocks| W_36
+  W_35 -->|implements| D_15
+  W_36 -->|implements| D_15
   Y_02 -->|distills| D_08
   Y_03 -->|distills| D_10
   Y_03 -->|distills| D_11
   Y_03 -->|distills| D_12
   Y_04 -->|distills| D_12
   Y_04 -->|supersedes| Y_03
+  class W_33,W_34,W_35,W_36 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff
