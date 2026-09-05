@@ -305,13 +305,42 @@ function createFrameProxy(realPage: Page, chain: ChainStep[]): Frame {
 
 type ChainStep = [string, unknown[]];
 
-function createLocatorProxy(realPage: Page, chain: ChainStep[]): Locator {
+function createLocatorProxy(
+  realPage: Page,
+  chain: ChainStep[],
+  description?: string
+): Locator {
   const handler: ProxyHandler<object> = {
     get(_, prop) {
       if (typeof prop === "symbol") return undefined;
       if (prop === "__aymeAdapter") return true;
       if (prop === "_apiName") return "Locator";
       if (prop === "then") return undefined;
+
+      if (prop === "description") return () => description ?? null;
+      if (prop === "toString") {
+        return () => {
+          if (description) return description;
+          const [method, args] = chain[0] ?? [];
+          if (method === "getByRole") {
+            const [role, options] = args as [string, { name?: string }?];
+            return options?.name === undefined
+              ? `getByRole('${role}')`
+              : `getByRole('${role}', { name: '${options.name}' })`;
+          }
+          if (method === "locator") return `locator('${args[0]}')`;
+          return "locator(...)";
+        };
+      }
+
+      if (prop === "describe") {
+        return (nextDescription: string) =>
+          createLocatorProxy(
+            realPage,
+            [...chain, ["describe", [nextDescription]]],
+            nextDescription
+          );
+      }
 
       // Chain methods (including first/last): extend the chain and let
       // the actual adapter determine support/behavior.
