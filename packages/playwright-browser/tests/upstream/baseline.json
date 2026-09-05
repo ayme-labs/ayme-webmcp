@@ -14,6 +14,56 @@
       "id": "locator-query.spec.ts > should respect nth()",
       "method": "Locator.nth",
       "evidence": "Assertions count descendants of indices 1 and 2 as 2 and 3, and the first paragraph as 1."
+    },
+    {
+      "id": "locator-query.spec.ts > should throw on capture w/ nth()",
+      "method": "Locator.click",
+      "evidence": "The click rejects an out-of-range nth target with the expected selector query error."
+    },
+    {
+      "id": "page-wait-for-function.spec.ts > should fail with predicate throwing on first call",
+      "method": "Page.waitForFunction",
+      "evidence": "A predicate error on its first invocation propagates with its original message."
+    },
+    {
+      "id": "page-wait-for-function.spec.ts > should fail with predicate throwing sometimes",
+      "method": "Page.waitForFunction",
+      "evidence": "A predicate error from a later polling iteration terminates polling and propagates."
+    },
+    {
+      "id": "page-wait-for-function.spec.ts > should fail with ReferenceError on wrong page",
+      "method": "Page.waitForFunction",
+      "evidence": "A browser-context ReferenceError propagates with the missing identifier."
+    },
+    {
+      "id": "page-wait-for-function.spec.ts > should return the success value as a JSHandle",
+      "method": "Page.waitForFunction",
+      "evidence": "The returned handle preserves the predicate value through jsonValue()."
+    },
+    {
+      "id": "page-wait-for-function.spec.ts > should throw negative polling interval",
+      "method": "Page.waitForFunction",
+      "evidence": "A non-positive numeric polling interval rejects with the expected error."
+    },
+    {
+      "id": "page-wait-for-function.spec.ts > should throw on bad polling value",
+      "method": "Page.waitForFunction",
+      "evidence": "An invalid string polling option rejects and identifies polling in the error."
+    },
+    {
+      "id": "page-wait-for-function.spec.ts > should throw on polling:mutation",
+      "method": "Page.waitForFunction",
+      "evidence": "The method rejects the unsupported mutation polling strategy with the expected error."
+    },
+    {
+      "id": "page-wait-for-function.spec.ts > should work with multiline body",
+      "method": "Page.waitForFunction",
+      "evidence": "A multiline string expression resolves and its handle returns true."
+    },
+    {
+      "id": "retarget.spec.ts > should not retarget anchor into parent label",
+      "method": "Locator.click",
+      "evidence": "Clicking an anchor inside disabled label arrangements invokes the anchor in both cases."
     }
   ]
 }
