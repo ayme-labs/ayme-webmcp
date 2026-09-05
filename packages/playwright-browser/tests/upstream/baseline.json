@@ -16,9 +16,34 @@
       "evidence": "Awaiting Locator.click completes without rejection when the target element is removed in pointerup event."
     },
     {
+      "id": "locator-convenience.spec.ts > allInnerTexts should work",
+      "method": "Locator.allInnerTexts",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+    },
+    {
+      "id": "locator-convenience.spec.ts > allTextContents should work",
+      "method": "Locator.allTextContents",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+    },
+    {
+      "id": "locator-convenience.spec.ts > innerText should throw",
+      "method": "Page.innerText",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+    },
+    {
       "id": "locator-convenience.spec.ts > isChecked should work",
       "method": "Locator.isChecked",
       "evidence": "Assertions verify Locator and Page checked state before and after an adapter-routed browser mutation, plus the invalid-target error."
+    },
+    {
+      "id": "locator-convenience.spec.ts > isChecked should work for indeterminate input",
+      "method": "Locator.isChecked",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+    },
+    {
+      "id": "locator-convenience.spec.ts > isEditable should work",
+      "method": "Locator.isEditable",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
     },
     {
       "id": "locator-convenience.spec.ts > isEnabled and isDisabled should work",
@@ -26,9 +51,24 @@
       "evidence": "Assertions verify Locator and Page enabled and disabled state across ordinary and disabled elements using InjectedScript element-state semantics."
     },
     {
+      "id": "locator-is-visible.spec.ts > isVisible and isHidden should work",
+      "method": "Locator.isVisible",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+    },
+    {
       "id": "locator-is-visible.spec.ts > isVisible and isHidden should work with details",
       "method": "Locator._expect",
       "evidence": "Assertions verify visible and hidden expectation results with selector details."
+    },
+    {
+      "id": "locator-is-visible.spec.ts > isVisible inside a button",
+      "method": "Locator.isVisible",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+    },
+    {
+      "id": "locator-is-visible.spec.ts > isVisible inside a role=button",
+      "method": "Locator.isVisible",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
     },
     {
       "id": "locator-is-visible.spec.ts > isVisible should be true for element outside view",
@@ -41,9 +81,29 @@
       "evidence": "Assertions verify opacity-zero elements are visible and not hidden through locator expectations."
     },
     {
+      "id": "locator-is-visible.spec.ts > isVisible with invalid selector should throw",
+      "method": "Locator.isVisible",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+    },
+    {
       "id": "locator-list.spec.ts > locator.all should work",
       "method": "Locator.all",
       "evidence": "The unchanged test iterates the returned locator array and asserts all three browser-resolved text values in order."
+    },
+    {
+      "id": "locator-misc-1.spec.ts > should check the box",
+      "method": "Locator.check",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+    },
+    {
+      "id": "locator-misc-1.spec.ts > should check the box using setChecked",
+      "method": "Locator.setChecked",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+    },
+    {
+      "id": "locator-misc-1.spec.ts > should uncheck the box",
+      "method": "Locator.uncheck",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
     },
     {
       "id": "locator-misc-2.spec.ts > press should throw on unknown keys",
@@ -64,6 +124,11 @@
       "id": "locator-misc-2.spec.ts > should press @smoke",
       "method": "Locator.press",
       "evidence": "Assertion verifies Locator.press inserts the pressed character into the input."
+    },
+    {
+      "id": "locator-misc-2.spec.ts > should pressSequentially",
+      "method": "Locator.pressSequentially",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
     },
     {
       "id": "locator-misc-2.spec.ts > should support filter(visible)",
@@ -144,6 +209,31 @@
       "id": "locator-query.spec.ts > should respect nth()",
       "method": "Locator.nth",
       "evidence": "Assertions count descendants of indices 1 and 2 as 2 and 3, and the first paragraph as 1."
+    },
+    {
+      "id": "locator-query.spec.ts > should support has:locator",
+      "method": "Locator._expect",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+    },
+    {
+      "id": "locator-query.spec.ts > should support locator.and",
+      "method": "Locator.and",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+    },
+    {
+      "id": "locator-query.spec.ts > should support locator.filter",
+      "method": "Locator.filter",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+    },
+    {
+      "id": "locator-query.spec.ts > should support locator.locator with and/or",
+      "method": "Locator.locator",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+    },
+    {
+      "id": "locator-query.spec.ts > should support locator.or",
+      "method": "Locator.or",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
     },
     {
       "id": "locator-query.spec.ts > should throw on capture w/ nth()",
@@ -269,6 +359,11 @@
       "id": "page-aria-snapshot-ai.spec.ts > should truncate data url in link",
       "method": "Page.ariaSnapshot",
       "evidence": "Exact upstream snapshot assertions verify should truncate data url in link through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should update active element on focus",
+      "method": "Page.ariaSnapshot",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
     },
     {
       "id": "page-aria-snapshot.spec.ts > auto-waits the locator and does not include iframes",
@@ -401,6 +496,11 @@
       "evidence": "The returned handle preserves the predicate value through jsonValue()."
     },
     {
+      "id": "page-wait-for-function.spec.ts > should return the window as a success value",
+      "method": "Page.waitForFunction",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+    },
+    {
       "id": "page-wait-for-function.spec.ts > should throw negative polling interval",
       "method": "Page.waitForFunction",
       "evidence": "A non-positive numeric polling interval rejects with the expected error."
@@ -429,6 +529,26 @@
       "id": "page-wait-for-function.spec.ts > should work with multiline body",
       "method": "Page.waitForFunction",
       "evidence": "A multiline string expression resolves and its handle returns true."
+    },
+    {
+      "id": "retarget.spec.ts > check retargeting",
+      "method": "Locator.isChecked",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+    },
+    {
+      "id": "retarget.spec.ts > direct actions retargeting",
+      "method": "Locator.innerText",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+    },
+    {
+      "id": "retarget.spec.ts > element state checks should work as expected for label with zero-sized input",
+      "method": "Page.isVisible",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+    },
+    {
+      "id": "retarget.spec.ts > should check the box outside shadow dom label",
+      "method": "Page.check",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
     },
     {
       "id": "retarget.spec.ts > should not retarget anchor into parent label",
@@ -624,6 +744,11 @@
       "id": "selectors-text.spec.ts > should work with leading and trailing spaces",
       "method": "Locator._expect",
       "evidence": "Assertions verify text selectors with leading and trailing spaces remain visible."
+    },
+    {
+      "id": "selectors-text.spec.ts > should work with paired quotes in the middle of selector",
+      "method": "Locator.isVisible",
+      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
     },
     {
       "id": "selectors-text.spec.ts > text-is() should ignore comments",

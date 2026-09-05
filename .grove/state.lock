@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:f74ca0a047c22bffa75e55bbcdd689cbf2bd23ab18f0ba14411ad881c31d8e44
+# checksum: sha256:2d12ddc7ab9a1d6a50ddb817d18a9c7aa382cc673a02924e1bc4ae63153f4a0b
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -80,10 +80,10 @@ g G-16 status=verified fitness_kind=boolean t_created=2026-09-05T12:53:18Z t_upd
   area: A-02
   fitness_current: true
 
-g G-17 status=unverified fitness_kind=boolean t_created=2026-09-05T14:19:44Z t_updated=2026-09-05T14:19:44Z "Expand browser-native Page and Locator conveniences"
+g G-17 status=verified fitness_kind=boolean t_created=2026-09-05T14:19:44Z t_updated=2026-09-05T15:27:41Z "Expand browser-native Page and Locator conveniences"
   area: A-02
   fitness_target: true
-  fitness_current: false
+  fitness_current: true
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -1070,7 +1070,7 @@ w W-51 type=feature status=done cynefin=complicated t_created=2026-09-05T14:19:5
     | Pinned b25d782 Page facade and Frame visibility source inspected. Page façade delegates title, queries, and browser-feasible actions to existing selector/action primitives; default timeout priority is explicit, then navigation default for setContent or ordinary default, then built-in. pnpm --filter @ayme-dev/playwright-browser typecheck passed; focused contract suite passed (112 tests); compiled adapter guards passed (28 tests).
     | Coordinator review added default-timeout coverage for Locator.waitFor and missing check targets; focused suite still passes 112 tests and adapter guards pass 28 tests.
 
-w W-52 type=feature status=proposed cynefin=complicated t_created=2026-09-05T14:19:58Z t_updated=2026-09-05T14:20:31Z "Verify browser-native convenience wave"
+w W-52 type=feature status=done cynefin=complicated t_created=2026-09-05T14:19:58Z t_updated=2026-09-05T15:27:41Z "Verify browser-native convenience wave"
   goals: G-17
   theme: T-03
   fitness: G-17=+1
@@ -1083,6 +1083,8 @@ w W-52 type=feature status=proposed cynefin=complicated t_created=2026-09-05T14:
     | A single integrated review will measure genuine browser-native gains and expose the next decision boundary without inflating compatibility claims.
   evidence_strategy:
     | Record reviewed promotions, corpus totals and clusters, checksums, adapter guards, full workspace checks, commits, and PR state.
+  evidence:
+    | Verified pinned upstream checksum corpus, package build, and 28 adapter guards. Full unchanged 473-test corpus: 161 raw passes, 151 execution-backed candidates, 150 individually reviewed baseline entries, 312 failures, 1 skipped, 9 diagnostic-only passes, 0 regressions; declined only no-assertion page-set-content throughput candidate. pnpm check passes.
 
 d D-01 status=superseded t_created=2026-08-27T08:43:08Z t_updated=2026-08-27T11:48:35Z "Use the five-workspace monorepo layout"
   context:
@@ -1259,7 +1261,7 @@ t T-01 status=done t_created=2026-09-05T11:41:46Z t_updated=2026-09-05T12:20:11Z
 
 t T-02 status=done t_created=2026-09-05T12:53:18Z t_updated=2026-09-05T13:47:24Z "Browser-native API expansion"
 
-t T-03 status=open t_created=2026-09-05T14:19:44Z t_updated=2026-09-05T14:19:44Z "Browser-native convenience surface"
+t T-03 status=done t_created=2026-09-05T14:19:44Z t_updated=2026-09-05T15:27:41Z "Browser-native convenience surface"
 
 y Y-01 status=active t_created=2026-08-27T13:24:26Z t_updated=2026-08-27T13:25:03Z "Shared Page Object behavior"
   tags: Page Object Model (POM), Generated WebMCP Tool
