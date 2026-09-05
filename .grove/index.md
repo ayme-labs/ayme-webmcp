@@ -7,14 +7,14 @@
 | Measure | Count | Composition |
 | --- | --- | --- |
 | C (content) | 18 | validated B 2 · answered Q 2 · accepted D 11 · active Discovery 3 |
-| V (uncertainty) | 2 | open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 2 |
+| V (uncertainty) | 1 | open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 1 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 14 | 2 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 2 |
+| A-02 | Page Object interoperability | 14 | 1 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 1 |
 | A-03 | Consumer browser capabilities | 4 | 0 | C: validated B 1 · answered Q 0 · accepted D 1 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
@@ -36,7 +36,7 @@
 | G-11 | Enforce browser-side Playwright compatibility | count; current=4 target=4 | verified |
 | G-12 | Make the single-document Playwright adapter truthfully verifiable | count; current=4 target=4 | verified |
 | G-13 | Increase verified Playwright compatibility | count; current=3 target=3 | verified |
-| G-14 | Increase Playwright behavioral compatibility | count; current=2 target=4 | partial |
+| G-14 | Increase Playwright behavioral compatibility | count; current=3 target=4 | partial |
 
 ## Work items
 
@@ -76,7 +76,7 @@
 | W-32 | feature | Verify expanded compatibility evidence | G-13 | complicated | ⊤ | done |  |
 | W-33 | feature | Implement locator expectation retries | G-14 | complicated | ⊤ | done |  |
 | W-34 | feature | Improve browser action semantics | G-14 | complicated | ⊤ | done |  |
-| W-35 | feature | Add common locator query methods | G-14 | clear | ⊤ | ready | ★ |
+| W-35 | feature | Add common locator query methods | G-14 | clear | ⊤ | done |  |
 | W-36 | feature | Verify behavioral compatibility round | G-14 | complicated | ⊤ | ready | ★ |
 
 ## Decisions
@@ -175,7 +175,7 @@ graph TD
   W_32["W-32: Verify expanded compatibility evidence"]:::done
   W_33["W-33: Implement locator expectation retries"]:::done
   W_34["W-34: Improve browser action semantics"]:::done
-  W_35["W-35: Add common locator query methods"]:::ready,critical
+  W_35["W-35: Add common locator query methods"]:::done
   W_36["W-36: Verify behavioral compatibility round"]:::ready,critical
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
@@ -269,7 +269,7 @@ graph TD
   Y_03 -->|distills| D_12
   Y_04 -->|distills| D_12
   Y_04 -->|supersedes| Y_03
-  class W_35,W_36 critical
+  class W_36 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff

@@ -34,9 +34,30 @@ const DEFAULT_EXPECT_TIMEOUT = 5_000;
 const EXPECT_RETRY_BACKOFF = [20, 50, 100, 100, 500];
 const DEFAULT_ACTION_TIMEOUT = 1_000;
 const ACTION_RETRY_DELAY = 50;
+const DEFAULT_QUERY_TIMEOUT = 0;
+const QUERY_RETRY_DELAY = 50;
 
 type ActionPoint = { x: number; y: number };
 type ActionTarget = { element: Element; point: ActionPoint };
+
+export type SelectorQueryOptions = {
+  signal?: AbortSignal;
+  strict?: boolean;
+  timeout?: number;
+};
+
+export type LocatorQueryOptions = Omit<SelectorQueryOptions, "strict">;
+
+type QueryState = "enabled" | "disabled" | "checked";
+
+type QueryStateResult =
+  | { matches: boolean; received: string }
+  | { matches: false; received: "error:notconnected" };
+
+type QueryCapableInjectedScript = {
+  elementState(element: Element, state: QueryState): QueryStateResult;
+  retarget(element: Element, behavior: "follow-label"): Element | null;
+};
 
 type ExpectCapableInjectedScript = {
   expect(
@@ -182,6 +203,69 @@ export class PageImpl {
     return elements.every(
       (el) => this.elementState(el, "visible")?.matches !== true
     );
+  }
+
+  // ── Selector query operations ──────────────────────────────────
+
+  async getAttribute(
+    selector: string,
+    name: string,
+    options?: SelectorQueryOptions
+  ): Promise<string | null> {
+    return this.query(
+      selector,
+      `page.getAttribute(${JSON.stringify(selector)}, ${JSON.stringify(name)})`,
+      options,
+      false,
+      (element) => element.getAttribute(name)
+    );
+  }
+
+  async textContent(
+    selector: string,
+    options?: SelectorQueryOptions
+  ): Promise<string | null> {
+    return this.query(
+      selector,
+      `page.textContent(${JSON.stringify(selector)})`,
+      options,
+      false,
+      (element) => element.textContent
+    );
+  }
+
+  async inputValue(
+    selector: string,
+    options?: SelectorQueryOptions
+  ): Promise<string> {
+    return this.query(
+      selector,
+      `page.inputValue(${JSON.stringify(selector)})`,
+      options,
+      false,
+      (element) => this.inputValueFor(element)
+    );
+  }
+
+  async isEnabled(
+    selector: string,
+    options?: SelectorQueryOptions
+  ): Promise<boolean> {
+    return this.queryState(selector, "enabled", options, false);
+  }
+
+  async isDisabled(
+    selector: string,
+    options?: SelectorQueryOptions
+  ): Promise<boolean> {
+    return this.queryState(selector, "disabled", options, false);
+  }
+
+  async isChecked(
+    selector: string,
+    options?: SelectorQueryOptions
+  ): Promise<boolean> {
+    return this.queryState(selector, "checked", options, false);
   }
 
   /**
@@ -842,6 +926,144 @@ export class PageImpl {
     );
   }
 
+  async locatorGetAttribute(
+    selector: string,
+    label: string,
+    name: string,
+    options?: LocatorQueryOptions
+  ): Promise<string | null> {
+    return this.query(selector, label, options, true, (element) =>
+      element.getAttribute(name)
+    );
+  }
+
+  async locatorTextContent(
+    selector: string,
+    label: string,
+    options?: LocatorQueryOptions
+  ): Promise<string | null> {
+    return this.query(
+      selector,
+      label,
+      options,
+      true,
+      (element) => element.textContent
+    );
+  }
+
+  async locatorInputValue(
+    selector: string,
+    label: string,
+    options?: LocatorQueryOptions
+  ): Promise<string> {
+    return this.query(selector, label, options, true, (element) =>
+      this.inputValueFor(element)
+    );
+  }
+
+  async locatorIsEnabled(
+    selector: string,
+    label: string,
+    options?: LocatorQueryOptions
+  ): Promise<boolean> {
+    return this.queryState(selector, "enabled", options, true, label);
+  }
+
+  async locatorIsDisabled(
+    selector: string,
+    label: string,
+    options?: LocatorQueryOptions
+  ): Promise<boolean> {
+    return this.queryState(selector, "disabled", options, true, label);
+  }
+
+  async locatorIsChecked(
+    selector: string,
+    label: string,
+    options?: LocatorQueryOptions
+  ): Promise<boolean> {
+    return this.queryState(selector, "checked", options, true, label);
+  }
+
+  private async queryState(
+    selector: string,
+    state: QueryState,
+    options: SelectorQueryOptions | LocatorQueryOptions | undefined,
+    strict: boolean,
+    label = `page.is${state[0].toUpperCase()}${state.slice(1)}(${JSON.stringify(selector)})`
+  ): Promise<boolean> {
+    return this.query(selector, label, options, strict, (element) => {
+      const result = (
+        this.injected as typeof this.injected & QueryCapableInjectedScript
+      ).elementState(element, state);
+      if (result.received === "error:notconnected")
+        throw new Error("Element is not connected");
+      return result.matches;
+    });
+  }
+
+  private inputValueFor(element: Element): string {
+    const target = (
+      this.injected as typeof this.injected & QueryCapableInjectedScript
+    ).retarget(element, "follow-label");
+    if (!target) throw new Error("Element is not connected");
+    if (
+      !(target instanceof this.window.HTMLInputElement) &&
+      !(target instanceof this.window.HTMLTextAreaElement) &&
+      !(target instanceof this.window.HTMLSelectElement)
+    )
+      throw new Error("Node is not an <input>, <textarea> or <select> element");
+    return target.value;
+  }
+
+  private async query<T>(
+    selector: string,
+    label: string,
+    options: SelectorQueryOptions | LocatorQueryOptions | undefined,
+    strict: boolean,
+    evaluate: (element: Element) => T
+  ): Promise<T> {
+    assertQueryOptions(options, !strict);
+    const timeout = queryTimeout(options?.timeout);
+    const signal = options?.signal;
+    if (signal?.aborted) throw queryAborted(signal);
+    const deadline = timeout === 0 ? Infinity : Date.now() + timeout;
+
+    while (true) {
+      try {
+        const element = this.queryElement(
+          selector,
+          label,
+          strict ||
+            (options as SelectorQueryOptions | undefined)?.strict === true
+        );
+        return evaluate(element);
+      } catch (error) {
+        if (!isRetryableQueryError(error)) throw error;
+        const remaining = deadline - Date.now();
+        if (remaining <= 0)
+          throw new Error(
+            `Timeout ${timeout}ms exceeded while waiting for locator ${label}`,
+            { cause: error }
+          );
+        const delay = Math.min(QUERY_RETRY_DELAY, remaining);
+        if (!(await waitForExpectationRetry(this.window, delay, signal)))
+          throw queryAborted(signal!);
+      }
+    }
+  }
+
+  private queryElement(selector: string, label: string, strict: boolean) {
+    const elements = this.resolveAll(selector);
+    const first = elements[0];
+    if (!first) throw new Error(`No elements found for locator ${label}`);
+    if (strict && elements.length > 1)
+      throw new Error(
+        `Expected one element for locator ${label}, found ${elements.length}`
+      );
+    return first;
+  }
+
   private async ensureActionable(
     element: Element,
     states: ("visible" | "enabled" | "editable" | "stable")[]
@@ -1243,6 +1465,44 @@ function isRetryableActionError(error: unknown): boolean {
     message.startsWith("Element is not ") ||
     message.startsWith("Element does not receive pointer events")
   );
+}
+
+function queryTimeout(timeout: unknown): number {
+  if (timeout === undefined) return DEFAULT_QUERY_TIMEOUT;
+  if (typeof timeout !== "number" || timeout < 0 || !Number.isFinite(timeout))
+    throw new TypeError("Query timeout must be a non-negative finite number");
+  return timeout;
+}
+
+function assertQueryOptions(
+  options: SelectorQueryOptions | LocatorQueryOptions | undefined,
+  allowsStrict: boolean
+) {
+  if (!options) return;
+  for (const key of Object.keys(options)) {
+    if (
+      key !== "signal" &&
+      key !== "timeout" &&
+      !(allowsStrict && key === "strict")
+    )
+      throw new Error(`Unsupported query option: ${key}`);
+  }
+  if (options.signal !== undefined && !(options.signal instanceof AbortSignal))
+    throw new TypeError("Query signal must be an AbortSignal");
+  if (!allowsStrict && "strict" in options)
+    throw new Error("Locator query options do not support strict");
+}
+
+function isRetryableQueryError(error: unknown): boolean {
+  const message = asError(error).message;
+  return (
+    message.startsWith("No elements found for locator") ||
+    message === "Element is not connected"
+  );
+}
+
+function queryAborted(signal: AbortSignal): Error {
+  return new Error(`Query was aborted: ${abortReason(signal)}`);
 }
 
 type KeyDescription = {

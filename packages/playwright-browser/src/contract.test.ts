@@ -686,6 +686,111 @@ describe("Single-document adapter contract", () => {
     });
   });
 
+  // ── W-35: common locator query methods ─────────────────────────
+
+  describe("common locator queries", () => {
+    it("returns attributes, text, and values through matching Page and Locator methods", async () => {
+      document.body.innerHTML = `
+        <label id=label for=input>Input label</label>
+        <input id=input value=value />
+        <select id=select><option value=one>One</option><option value=two selected>Two</option></select>
+        <textarea id=textarea>Text area</textarea>
+        <div id=text name=value>Text content</div>
+      `;
+      const page = createPage();
+
+      expect(await page.locator("#text").getAttribute("name")).toBe("value");
+      expect(await page.getAttribute("#text", "missing")).toBeNull();
+      expect(await page.locator("#text").textContent()).toBe("Text content");
+      expect(await page.textContent("#text")).toBe("Text content");
+      expect(await page.locator("#input").inputValue()).toBe("value");
+      expect(await page.inputValue("#select")).toBe("two");
+      expect(await page.locator("#textarea").inputValue()).toBe("Text area");
+      expect(await page.locator("#label").inputValue()).toBe("value");
+    });
+
+    it("uses injected enabled, disabled, and checked state for Page and Locator", async () => {
+      document.body.innerHTML = `
+        <button id=disabled disabled>Disabled</button>
+        <button id=enabled>Enabled</button>
+        <input id=checkbox type=checkbox checked />
+        <input id=radio type=radio checked />
+        <input id=unchecked-radio type=radio />
+      `;
+      const page = createPage();
+
+      expect(await page.locator("#disabled").isDisabled()).toBe(true);
+      expect(await page.isEnabled("#disabled")).toBe(false);
+      expect(await page.locator("#enabled").isEnabled()).toBe(true);
+      expect(await page.isDisabled("#enabled")).toBe(false);
+      expect(await page.locator("#checkbox").isChecked()).toBe(true);
+      expect(await page.isChecked("#radio")).toBe(true);
+      expect(await page.locator("#unchecked-radio").isChecked()).toBe(false);
+    });
+
+    it("waits for a missing query target and honors timeout and abort", async () => {
+      document.body.innerHTML = "";
+      const page = createPage();
+      window.setTimeout(
+        () => (document.body.innerHTML = "<div id=ready>Ready</div>"),
+        25
+      );
+
+      await expect(page.locator("#ready").textContent()).resolves.toBe("Ready");
+      await expect(page.inputValue("#never", { timeout: 25 })).rejects.toThrow(
+        /Timeout 25ms exceeded/
+      );
+
+      const controller = new AbortController();
+      window.setTimeout(() => controller.abort("test abort"), 10);
+      await expect(
+        page.locator("#aborted").getAttribute("name", {
+          signal: controller.signal,
+          timeout: 100,
+        })
+      ).rejects.toThrow(/Query was aborted: test abort/);
+    });
+
+    it("waits past one second when query timeout is omitted", async () => {
+      document.body.innerHTML = "";
+      const page = createPage();
+      window.setTimeout(
+        () => (document.body.innerHTML = "<div id=late>Late</div>"),
+        1_025
+      );
+
+      await expect(page.locator("#late").textContent()).resolves.toBe("Late");
+    });
+
+    it("uses Page first-match semantics unless strict and Locator strictness always", async () => {
+      document.body.innerHTML = "<div id=first></div><div id=second></div>";
+      const page = createPage();
+
+      await expect(page.getAttribute("div", "id")).resolves.toBe("first");
+      await expect(
+        page.getAttribute("div", "id", { strict: true })
+      ).rejects.toThrow(/Expected one element/);
+      await expect(page.locator("div").getAttribute("id")).rejects.toThrow(
+        /Expected one element/
+      );
+    });
+
+    it("rejects invalid input-value and checked targets without retrying", async () => {
+      document.body.innerHTML = "<div></div><input type=text />";
+      const page = createPage();
+
+      await expect(page.locator("div").inputValue()).rejects.toThrow(
+        "Node is not an <input>, <textarea> or <select> element"
+      );
+      await expect(page.isChecked("div")).rejects.toThrow(
+        "Not a checkbox or radio button"
+      );
+      await expect(page.locator("input").isChecked()).rejects.toThrow(
+        "Not a checkbox or radio button"
+      );
+    });
+  });
+
   // ── AC5: resolveOne removed ───────────────────────────────────
 
   it("page does not expose resolveOne", () => {

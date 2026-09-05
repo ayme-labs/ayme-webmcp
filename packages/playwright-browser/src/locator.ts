@@ -1,4 +1,4 @@
-import type { PageImpl } from "./page";
+import type { LocatorQueryOptions, PageImpl } from "./page";
 import { escapeForTextSelector, getByRoleSelector } from "./selectors";
 import type { TraceEntry } from "./types";
 
@@ -171,6 +171,44 @@ export class LocatorImpl {
 
   async count() {
     return this.ownerPage.resolveAll(this.selector).length;
+  }
+
+  // ── Query and state operations ─────────────────────────────────
+
+  async getAttribute(
+    name: string,
+    options?: LocatorQueryOptions
+  ): Promise<string | null> {
+    return this.ownerPage.locatorGetAttribute(
+      this.selector,
+      this.label,
+      name,
+      options
+    );
+  }
+
+  async textContent(options?: LocatorQueryOptions): Promise<string | null> {
+    return this.ownerPage.locatorTextContent(
+      this.selector,
+      this.label,
+      options
+    );
+  }
+
+  async inputValue(options?: LocatorQueryOptions): Promise<string> {
+    return this.ownerPage.locatorInputValue(this.selector, this.label, options);
+  }
+
+  async isEnabled(options?: LocatorQueryOptions): Promise<boolean> {
+    return this.ownerPage.locatorIsEnabled(this.selector, this.label, options);
+  }
+
+  async isDisabled(options?: LocatorQueryOptions): Promise<boolean> {
+    return this.ownerPage.locatorIsDisabled(this.selector, this.label, options);
+  }
+
+  async isChecked(options?: LocatorQueryOptions): Promise<boolean> {
+    return this.ownerPage.locatorIsChecked(this.selector, this.label, options);
   }
 
   // ── Expectations and callback operations ────────────────────────

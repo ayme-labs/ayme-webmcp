@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:80da41e98edcdcf4818ff6fb67d5eabdf2dd8336582f8553fb32e864cfad9651
+# checksum: sha256:fe9e1bcfb3551c86afc281f9cd4f5583333a2cecb4b321a01b4654c7059c5df1
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -70,7 +70,7 @@ g G-13 status=verified fitness_kind=count t_created=2026-09-05T07:21:39Z t_updat
 g G-14 status=partial fitness_kind=count t_created=2026-09-05T08:31:02Z t_updated=2026-09-05T08:57:46Z "Increase Playwright behavioral compatibility"
   area: A-02
   fitness_target: 4
-  fitness_current: 2
+  fitness_current: 3
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -759,7 +759,7 @@ w W-34 type=feature status=done cynefin=complicated t_created=2026-09-05T08:31:5
     | Inspect pinned Playwright click, fill, press, actionability, and input implementations plus their upstream tests before editing.
     | Implement only behavior feasible in the accepted single-document runtime and reject unsupported option shapes explicitly.
 
-w W-35 type=feature status=ready cynefin=clear t_created=2026-09-05T08:32:07Z t_updated=2026-09-05T08:32:21Z "Add common locator query methods"
+w W-35 type=feature status=done cynefin=clear t_created=2026-09-05T08:32:07Z t_updated=2026-09-05T10:38:33Z "Add common locator query methods"
   goals: G-14
   fitness: G-14=+1
   surface: packages/playwright-browser/src/page.ts, packages/playwright-browser/src/locator.ts, packages/playwright-browser/src/contract.test.ts, packages/playwright-browser/tests/upstream
@@ -771,6 +771,11 @@ w W-35 type=feature status=ready cynefin=clear t_created=2026-09-05T08:32:07Z t_
     | Simple DOM query and state methods can expand useful POM compatibility with little new orchestration after expectations and actions settle.
   evidence_strategy:
     | Record the selected methods, run focused tests and the full corpus, and promote only individually reviewed adapter-reaching passes.
+  evidence:
+    | Implemented Locator and matching Page forms for getAttribute, textContent, inputValue, isEnabled, isDisabled, and isChecked with complete pinned public option shapes, strictness, retry, AbortSignal, and omitted timeout=0 semantics.
+    | Implementation follows pinned Playwright browser logic: selector resolution and elementState/retarget semantics from InjectedScript, plus the copied locator-convenience.spec.ts assertions; no independent accessibility or element-state implementation was added.
+    | Verified 87 package tests, 19 baseline parser tests, 25 adapter guards, lint, typecheck, build, and clean diff. Full checksum-verified corpus: 473 total, 51 raw passes, 48 adapter-evidenced candidates, 34 reviewed baseline, 14 unpromoted, 422 failures, 1 skip, 0 regressions.
+    | Individually reviewed W-35 candidates locator-convenience.spec.ts > isEnabled and isDisabled should work and > isChecked should work: both entered the intended Page and Locator browser methods, recorded no transport/dispatch failures, and assert expected results. Promotion remains centralized in W-36.
   plan:
     | Choose methods from actual failure clusters, favoring text, attribute, value, and basic state queries.
     | Read the pinned Playwright implementation and tests for every selected method before editing.
