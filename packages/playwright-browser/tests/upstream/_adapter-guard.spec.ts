@@ -152,21 +152,40 @@ test("adapter locator callbacks serialize arguments and execute in the adapter",
   expect(execution.entered).toContain("Locator.evaluateAll");
 });
 
+test("adapter locator evaluate forwards its third timeout option", async ({
+  page,
+  adapterPage,
+}) => {
+  await page.setContent("");
+  await page.evaluate(() => {
+    window.setTimeout(() => {
+      document.body.innerHTML = '<p id="ready">Ready</p>';
+    }, 25);
+  });
+
+  await expect(
+    adapterPage.locator("#ready").evaluate(
+      element => element.textContent,
+      undefined,
+      { timeout: 500 }
+    )
+  ).resolves.toBe("Ready");
+
+  const execution = await page.evaluate(() => (window as any).__aymeEvidence);
+  expect(execution.entered).toContain("Locator.evaluate");
+});
+
 // ── False-green prevention: proxy does not leak to real driver ──────
 
 test("proxy page methods do not fall through to real Playwright driver", async ({
   adapterPage,
 }) => {
   // Methods that the adapter does NOT support must throw through the proxy.
-  // setContent, evaluate, and waitForFunction are now routed through the
-  // adapter bridge (W-27), so they should succeed — only truly unsupported
-  // driver methods throw here.
+  // setContent, evaluate, waitForFunction, and waitForTimeout are routed
+  // through the adapter bridge, so they should succeed — only truly
+  // unsupported driver methods throw here.
   await expect(
     (adapterPage as any).goto("about:blank"),
-  ).rejects.toThrow();
-
-  await expect(
-    (adapterPage as any).waitForTimeout(0),
   ).rejects.toThrow();
 
   await expect(

@@ -33,6 +33,33 @@ describe("Single-document adapter contract", () => {
       expect(snapshot).toContain("listitem [ref=");
       expect(snapshot).not.toContain("Nested");
     });
+
+    it("honors aborted signals and waits for default-mode locator targets", async () => {
+      const page = createPage();
+      const aborted = new AbortController();
+      aborted.abort("stop snapshot");
+
+      await expect(
+        (page as any).ariaSnapshot({ signal: aborted.signal })
+      ).rejects.toThrow("Query was aborted: stop snapshot");
+
+      document.body.innerHTML = "";
+      window.setTimeout(
+        () => (document.body.innerHTML = "<h1 id=ready>Ready</h1>"),
+        25
+      );
+      await expect(
+        (page as any).locator("#ready").ariaSnapshot({ timeout: 100 })
+      ).resolves.toContain('heading "Ready" [level=1]');
+
+      const cancelled = new AbortController();
+      window.setTimeout(() => cancelled.abort("cancel snapshot"), 10);
+      await expect(
+        (page as any)
+          .locator("#missing")
+          .ariaSnapshot({ timeout: 100, signal: cancelled.signal })
+      ).rejects.toThrow("Query was aborted: cancel snapshot");
+    });
   });
 
   describe("browser-native callbacks", () => {
@@ -47,6 +74,9 @@ describe("Single-document adapter contract", () => {
           "!"
         )
       ).resolves.toBe("A!");
+      await expect(
+        (page as any).$eval("p", (element: Element) => element.textContent)
+      ).resolves.toBe("A");
       await expect(
         (page as any).$$eval("p", (elements: Element[]) =>
           elements.map((element) => element.textContent)
@@ -72,6 +102,39 @@ describe("Single-document adapter contract", () => {
           elements.map((element) => element.textContent)
         )
       ).resolves.toEqual(["One", "Two"]);
+    });
+
+    it("waits for a strict Locator.evaluate target and honors its options", async () => {
+      document.body.innerHTML = "";
+      const page = createPage();
+      window.setTimeout(
+        () => (document.body.innerHTML = "<p id=ready>Ready</p>"),
+        25
+      );
+
+      await expect(
+        page
+          .locator("#ready")
+          .evaluate((element) => element.textContent, undefined, {
+            timeout: 100,
+          })
+      ).resolves.toBe("Ready");
+
+      document.body.innerHTML = "<p>First</p><p>Second</p>";
+      await expect(
+        page.locator("p").evaluate((element) => element.textContent)
+      ).rejects.toThrow(/Expected one element/);
+
+      const cancelled = new AbortController();
+      window.setTimeout(() => cancelled.abort("cancel evaluate"), 10);
+      await expect(
+        page
+          .locator("#missing")
+          .evaluate((element) => element.textContent, undefined, {
+            timeout: 100,
+            signal: cancelled.signal,
+          })
+      ).rejects.toThrow("Query was aborted: cancel evaluate");
     });
   });
 

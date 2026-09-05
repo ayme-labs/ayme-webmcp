@@ -396,20 +396,25 @@ function createLocatorProxy(
       // The production Locator receives a function already in the browser
       // runtime. Reconstruct the Node callback only at this fixture boundary.
       if (prop === "evaluate" || prop === "evaluateAll") {
-        return async (pageFunction: unknown, arg?: unknown) =>
+        return async (
+          pageFunction: unknown,
+          arg?: unknown,
+          options?: unknown
+        ) =>
           realPage.evaluate(
-            ({ chain: c, method, expression, arg: a }) => {
+            ({ chain: c, method, expression, arg: a, options: o }) => {
               let current: any = (window as any).__aymeAdapterPage;
               for (const [chainMethod, chainArgs] of c)
                 current = current[chainMethod](...chainArgs);
               const callback = (0, eval)(`(${expression})`);
-              return current[method](callback, a);
+              return current[method](callback, a, o);
             },
             {
               chain,
               method: prop,
               expression: String(pageFunction),
               arg,
+              options: serializableQueryOptions(options),
             }
           );
       }
@@ -431,5 +436,14 @@ function createLocatorProxy(
 
 function serializableExpectationOptions(options: Record<string, unknown>) {
   const { signal: _signal, ...serializable } = options;
+  return serializable;
+}
+
+function serializableQueryOptions(options: unknown) {
+  if (!options || typeof options !== "object") return options;
+  const { signal: _signal, ...serializable } = options as Record<
+    string,
+    unknown
+  >;
   return serializable;
 }

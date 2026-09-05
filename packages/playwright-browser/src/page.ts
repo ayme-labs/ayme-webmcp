@@ -720,6 +720,9 @@ export class PageImpl {
    * and rendering. There is no frame traversal or protocol transport here.
    */
   async ariaSnapshot(options: AriaSnapshotOptions = {}): Promise<string> {
+    assertAriaSnapshotOptions(options);
+    if (options.signal?.aborted) throw queryAborted(options.signal);
+
     // Pinned `ariaSnapshotForFrame` resolves `body,frameset`, rather than
     // documentElement, so the document wrapper itself is not rendered.
     return this.injectedAriaSnapshot(
@@ -783,7 +786,11 @@ export class PageImpl {
     arg?: unknown
   ): Promise<T> {
     return await callback(
-      this.requireSingle(selector, `page.$eval(${JSON.stringify(selector)})`),
+      this.queryElement(
+        selector,
+        `page.$eval(${JSON.stringify(selector)})`,
+        false
+      ),
       arg
     );
   }
@@ -1104,6 +1111,43 @@ export class PageImpl {
     return this.queryState(selector, "checked", options, true, label);
   }
 
+  async locatorAriaSnapshot(
+    selector: string,
+    label: string,
+    options: AriaSnapshotOptions = {}
+  ): Promise<string> {
+    assertAriaSnapshotOptions(options);
+    if (options.signal?.aborted) throw queryAborted(options.signal);
+
+    // The pinned server only auto-waits for the default locator snapshot.
+    // AI-mode snapshots retain their immediate single-document behavior.
+    if (options.mode === "ai")
+      return this.injectedAriaSnapshot(
+        this.queryElement(selector, label, true),
+        options
+      );
+
+    return this.query(
+      selector,
+      label,
+      { signal: options.signal, timeout: options.timeout },
+      true,
+      (element) => this.injectedAriaSnapshot(element, options)
+    );
+  }
+
+  async locatorEvaluate<T>(
+    selector: string,
+    label: string,
+    pageFunction: (element: Element, arg?: unknown) => T | Promise<T>,
+    arg?: unknown,
+    options?: LocatorQueryOptions
+  ): Promise<T> {
+    return this.query(selector, label, options, true, (element) =>
+      pageFunction(element, arg)
+    );
+  }
+
   private async queryState(
     selector: string,
     state: QueryState,
@@ -1140,7 +1184,7 @@ export class PageImpl {
     label: string,
     options: SelectorQueryOptions | LocatorQueryOptions | undefined,
     strict: boolean,
-    evaluate: (element: Element) => T
+    evaluate: (element: Element) => T | Promise<T>
   ): Promise<T> {
     assertQueryOptions(options, !strict);
     const timeout = queryTimeout(options?.timeout);
@@ -1156,7 +1200,7 @@ export class PageImpl {
           strict ||
             (options as SelectorQueryOptions | undefined)?.strict === true
         );
-        return evaluate(element);
+        return await evaluate(element);
       } catch (error) {
         if (!isRetryableQueryError(error)) throw error;
         const remaining = deadline - Date.now();
@@ -1591,6 +1635,12 @@ function queryTimeout(timeout: unknown): number {
   if (typeof timeout !== "number" || timeout < 0 || !Number.isFinite(timeout))
     throw new TypeError("Query timeout must be a non-negative finite number");
   return timeout;
+}
+
+function assertAriaSnapshotOptions(options: AriaSnapshotOptions) {
+  queryTimeout(options.timeout);
+  if (options.signal !== undefined && !(options.signal instanceof AbortSignal))
+    throw new TypeError("ARIA snapshot signal must be an AbortSignal");
 }
 
 function assertQueryOptions(

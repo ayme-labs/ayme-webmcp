@@ -271,11 +271,14 @@ export class LocatorImpl {
    *
    * The compiled InjectedScript remains the only ARIA implementation. This
    * method intentionally resolves within the one controlled document and does
-   * not add frame traversal, waiting, or browser-process behavior.
+   * not add frame traversal or browser-process behavior.
    */
   async ariaSnapshot(options: AriaSnapshotOptions = {}): Promise<string> {
-    const element = this.ownerPage.requireSingle(this.selector, this.label);
-    return this.ownerPage.injectedAriaSnapshot(element, options);
+    return this.ownerPage.locatorAriaSnapshot(
+      this.selector,
+      this.label,
+      options
+    );
   }
 
   // ── Expectations and callback operations ────────────────────────
@@ -294,11 +297,17 @@ export class LocatorImpl {
   async evaluate(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     pageFunction: (element: Element, arg?: unknown) => any,
-    arg?: unknown
+    arg?: unknown,
+    options?: LocatorQueryOptions
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
-    const element = this.ownerPage.requireSingle(this.selector, this.label);
-    return await pageFunction(element, arg);
+    return this.ownerPage.locatorEvaluate(
+      this.selector,
+      this.label,
+      pageFunction,
+      arg,
+      options
+    );
   }
 
   async evaluateAll(
