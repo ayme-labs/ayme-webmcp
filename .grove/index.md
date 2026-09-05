@@ -89,7 +89,7 @@
 | W-43 | feature | Verify expanded compatibility evidence | G-15 | complicated | ⊤ | done |  |
 | W-44 | feature | Expose browser-native ARIA snapshots | G-16 | complicated | ⊤ | done |  |
 | W-45 | feature | Implement browser-native callback methods | G-16 | complicated | ⊤ | done |  |
-| W-46 | feature | Add small single-document methods | G-16 | complicated | ⊤ | ready | ★ |
+| W-46 | feature | Add small single-document methods | G-16 | complicated | ⊤ | progress | ★ |
 | W-47 | feature | Verify browser-native compatibility expansion | G-16 | complicated | ⊤ | ready | ★ |
 
 ## Decisions
@@ -210,7 +210,7 @@ graph TD
   W_43["W-43: Verify expanded compatibility evidence"]:::done
   W_44["W-44: Expose browser-native ARIA snapshots"]:::done
   W_45["W-45: Implement browser-native callback methods"]:::done
-  W_46["W-46: Add small single-document methods"]:::ready,critical
+  W_46["W-46: Add small single-document methods"]:::progress,critical
   W_47["W-47: Verify browser-native compatibility expansion"]:::ready,critical
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision

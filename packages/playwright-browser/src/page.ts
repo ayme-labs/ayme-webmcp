@@ -803,6 +803,14 @@ export class PageImpl {
     return await callback(this.resolveAll(selector), arg);
   }
 
+  url(): string {
+    return this.window.location.href;
+  }
+
+  async waitForTimeout(timeout: number): Promise<void> {
+    await this.wait(timeout);
+  }
+
   /**
    * Internal expression evaluator mirroring server/javascript.ts
    * normalizeEvaluationExpression + evaluate flow.
@@ -988,7 +996,9 @@ export class PageImpl {
   getByRole(role: string, options: ByRoleOptions = {}) {
     const roleSelector = getByRoleSelector(role, options);
     const optString =
-      options.name !== undefined ? `, ${JSON.stringify(options)}` : "";
+      options.name !== undefined
+        ? `, { name: ${JSON.stringify(options.name)} }`
+        : "";
     return new LocatorImpl(
       this,
       roleSelector,

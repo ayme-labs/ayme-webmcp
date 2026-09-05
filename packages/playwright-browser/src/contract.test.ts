@@ -75,6 +75,29 @@ describe("Single-document adapter contract", () => {
     });
   });
 
+  describe("small single-document methods", () => {
+    it("returns the current document URL and waits for a plain timeout", async () => {
+      const page = createPage();
+      expect((page as any).url()).toBe(window.location.href);
+      await expect((page as any).waitForTimeout(0)).resolves.toBeUndefined();
+    });
+
+    it("preserves locator descriptions and readable strings", () => {
+      const page = createPage();
+      const locator = page.getByRole("button", { name: "Save" });
+      expect((locator as any).description()).toBeNull();
+      expect((locator as any).toString()).toBe(
+        "getByRole('button', { name: 'Save' })"
+      );
+      expect((locator as any).describe("Save button").description()).toBe(
+        "Save button"
+      );
+      expect((locator as any).describe("Save button").toString()).toBe(
+        "Save button"
+      );
+    });
+  });
+
   // ── AC1: createPage targets only the current Window ────────────
 
   it("createPage uses the current window without an alternate-window option", () => {

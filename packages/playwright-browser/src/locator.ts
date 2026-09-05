@@ -65,7 +65,8 @@ export class LocatorImpl {
     private selector: string,
     private readonly label: string,
     private readonly onTrace?: (entry: TraceEntry) => void,
-    options?: LocatorOptions
+    options?: LocatorOptions,
+    private readonly customDescription?: string
   ) {
     // Mirrors pinned b25d782 Locator constructor option processing
     if (options?.hasText)
@@ -105,6 +106,28 @@ export class LocatorImpl {
 
   page() {
     return this.ownerPage;
+  }
+
+  describe(description: string) {
+    return new LocatorImpl(
+      this.ownerPage,
+      `${this.selector} >> internal:describe=${JSON.stringify(description)}`,
+      this.label,
+      this.onTrace,
+      undefined,
+      description
+    );
+  }
+
+  description(): string | null {
+    return this.customDescription ?? null;
+  }
+
+  toString(): string {
+    if (this.customDescription) return this.customDescription;
+    return this.label
+      .replace(/^page\./, "")
+      .replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/g, "'$1'");
   }
 
   getByRole(role: string, options: ByRoleOptions = {}) {
