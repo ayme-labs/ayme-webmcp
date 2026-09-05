@@ -47,7 +47,7 @@ export const unpluginFactory: UnpluginFactory<AymeWebMcpOptions | undefined> = (
         const registrations = manifests
           .map(
             (manifest) =>
-              `registerCompiledPom(${manifest.className}, ${JSON.stringify(manifest)}, (page) => new ${manifest.className}(page));`
+              `registerCompiledPom(${manifest.className}, ${JSON.stringify(manifest)});`
           )
           .join("\n");
 

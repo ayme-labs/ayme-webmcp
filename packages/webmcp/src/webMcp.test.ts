@@ -4,13 +4,13 @@ import { LOCATOR_BRAND } from "@ayme-dev/playwright-browser";
 import type { Page } from "@playwright/test";
 
 function brandedLocator(overrides: Record<string, unknown> = {}) {
-  const loc: Record<string | symbol, unknown> = { ...overrides };
-  loc[LOCATOR_BRAND] = Object.freeze({
+  const locator: Record<string | symbol, unknown> = { ...overrides };
+  locator[LOCATOR_BRAND] = Object.freeze({
     ownerPage: {},
     getSelector: () => "mock",
     resolveElements: () => [],
   });
-  return loc;
+  return locator;
 }
 
 type PublishedTool = { name: string };
@@ -93,39 +93,35 @@ describe("WebMCP publisher", () => {
     registry.configureAymeRuntime({} as Page);
 
     let rootCount = 1;
-    class ItemsPage {}
-    registry.registerCompiledPom(
-      ItemsPage,
-      {
-        className: "ItemsPage",
-        tools: [action("addItem")],
-        members: [
-          {
-            memberName: "items",
-            kind: "component",
-            access: "field",
-            componentClassName: "Item",
-            collection: true,
-          },
-        ],
-        components: [
-          {
-            className: "Item",
-            members: [{ memberName: "root", kind: "locator", access: "field" }],
-            tools: [action("archive")],
-          },
-        ],
-      },
-      () => ({
-        addItem: vi.fn(),
-        items: [
-          {
-            root: brandedLocator({ count: async () => rootCount }),
-            archive: vi.fn(),
-          },
-        ],
-      })
-    );
+    class ItemsPage {
+      readonly addItem = vi.fn();
+      readonly items = [
+        {
+          root: brandedLocator({ count: async () => rootCount }),
+          archive: vi.fn(),
+        },
+      ];
+    }
+    registry.registerCompiledPom(ItemsPage, {
+      className: "ItemsPage",
+      tools: [action("addItem")],
+      members: [
+        {
+          memberName: "items",
+          kind: "component",
+          access: "field",
+          componentClassName: "Item",
+          collection: true,
+        },
+      ],
+      components: [
+        {
+          className: "Item",
+          members: [{ memberName: "root", kind: "locator", access: "field" }],
+          tools: [action("archive")],
+        },
+      ],
+    });
     const pageRegistration = registry.createPageRegistration(ItemsPage);
 
     const publication = await synchronizeWebMcpTools({ registerTool });
@@ -188,17 +184,15 @@ describe("WebMCP publisher", () => {
     const { synchronizeWebMcpTools } = await import("./webMcp");
     registry.configureAymeRuntime({} as Page);
 
-    class SharedPage {}
-    registry.registerCompiledPom(
-      SharedPage,
-      {
-        className: "SharedPage",
-        tools: [action("run")],
-        members: [],
-        components: [],
-      },
-      () => ({ run: vi.fn() })
-    );
+    class SharedPage {
+      readonly run = vi.fn();
+    }
+    registry.registerCompiledPom(SharedPage, {
+      className: "SharedPage",
+      tools: [action("run")],
+      members: [],
+      components: [],
+    });
 
     const first = registry.createPageRegistration(SharedPage);
     const publication = await synchronizeWebMcpTools({ registerTool });

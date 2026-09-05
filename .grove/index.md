@@ -40,6 +40,7 @@
 | G-15 | Expand verified single-document Playwright compatibility | boolean; current=true | verified |
 | G-16 | Expand browser-native Playwright compatibility | boolean; current=true | verified |
 | G-17 | Expand browser-native Page and Locator conveniences | boolean; current=true target=true | verified |
+| G-18 | Discover annotated Page Object children | count; current=1 target=1 | verified |
 
 ## Work items
 
@@ -97,6 +98,10 @@
 | W-50 | feature | Complete Locator composition transport | G-17 | complicated | ⊤ | done |  |
 | W-51 | feature | Add small browser-native Page conveniences | G-17 | complicated | ⊤ | done |  |
 | W-52 | feature | Verify browser-native convenience wave | G-17 | complicated | ⊤ | done |  |
+| W-53 | feature | Discover annotated Page Object children | G-18 | complicated | ⊤ | done |  |
+| W-54 | bug | Correct annotated Page Object child regressions | G-18 | complicated | ⊤ | done |  |
+| W-55 | bug | Separate POM metadata registration from root activation | G-18 | complicated | ⊤ | done |  |
+| W-56 | bug | Correct annotated component type classification | G-18 | complicated | ⊤ | done |  |
 
 ## Decisions
 
@@ -173,6 +178,7 @@ graph TD
   G_15["G-15: Expand verified single-document Playwright compatibility"]:::goal
   G_16["G-16: Expand browser-native Playwright compatibility"]:::goal
   G_17["G-17: Expand browser-native Page and Locator conveniences"]:::goal
+  G_18["G-18: Discover annotated Page Object children"]:::goal
   W_01["W-01: Establish the monorepo walking skeleton"]:::done
   W_02["W-02: Preserve spike behavior through package extraction"]:::done
   W_03["W-03: Extract Vue Page Object activation composable"]:::done
@@ -225,6 +231,10 @@ graph TD
   W_50["W-50: Complete Locator composition transport"]:::done
   W_51["W-51: Add small browser-native Page conveniences"]:::done
   W_52["W-52: Verify browser-native convenience wave"]:::done
+  W_53["W-53: Discover annotated Page Object children"]:::done
+  W_54["W-54: Correct annotated Page Object child regressions"]:::done
+  W_55["W-55: Separate POM metadata registration from root activation"]:::done
+  W_56["W-56: Correct annotated component type classification"]:::done
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision

@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:2d12ddc7ab9a1d6a50ddb817d18a9c7aa382cc673a02924e1bc4ae63153f4a0b
+# checksum: sha256:d407e6cc907a1e554246b787914855f55b4e118547b6452107c2272708e3d060
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -84,6 +84,11 @@ g G-17 status=verified fitness_kind=boolean t_created=2026-09-05T14:19:44Z t_upd
   area: A-02
   fitness_target: true
   fitness_current: true
+
+g G-18 status=verified fitness_kind=count t_created=2026-09-03T15:49:53Z t_updated=2026-09-05T15:38:55Z "Discover annotated Page Object children"
+  area: A-02
+  fitness_target: 1
+  fitness_current: 1
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -1085,6 +1090,90 @@ w W-52 type=feature status=done cynefin=complicated t_created=2026-09-05T14:19:5
     | Record reviewed promotions, corpus totals and clusters, checksums, adapter guards, full workspace checks, commits, and PR state.
   evidence:
     | Verified pinned upstream checksum corpus, package build, and 28 adapter guards. Full unchanged 473-test corpus: 161 raw passes, 151 execution-backed candidates, 150 individually reviewed baseline entries, 312 failures, 1 skipped, 9 diagnostic-only passes, 0 regressions; declined only no-assertion page-set-content throughput candidate. pnpm check passes.
+
+w W-53 type=feature status=done cynefin=complicated t_created=2026-09-03T15:49:53Z t_updated=2026-09-05T15:39:01Z "Discover annotated Page Object children"
+  goals: G-18
+  fitness: G-18=+1
+  surface: packages/unplugin-webmcp
+  ac:
+    | Public synchronous fields and getters whose represented concrete class is directly decorated with @WebMCP are singular Page Object Children, including factory-produced intersections with phantom selector metadata.
+    | Annotated component classes need not declare their own constructor; ordinary methods, Promise-returning getters, and subclasses whose base alone is annotated are not singular children.
+    | A public parameterless method returning Promise<AnnotatedComponent[]> is a component collection, while parameterized methods, synchronous component arrays, Maps, Sets, and generic iterables are not.
+    | Existing Locator and BrowserLocator fields and getters remain singular children regardless of match cardinality.
+    | WebMCP consumes the consumer-created collection array without instantiating members or calling locator.all(), and collection indexing is limited to the current returned array without stable identity.
+  hypothesis:
+    | Separating member eligibility from static value classification and recognizing only direct annotated classes plus the explicit Promise-array shape will derive the required manifests without constructor-shape inference or arbitrary wrapper unwrapping.
+  evidence_strategy:
+    | Focused manifest-derivation tests assert observable manifests for positive and negative field, getter, method, factory-intersection, locator, and collection cases; package typecheck and the full repository test suite provide regression evidence.
+  evidence:
+    | focused manifest derivation suite: 17 tests passed; commit df449e0f.
+    | package build, typecheck, lint, and repository unit suite passed; the full unit suite reported 166 passing tests.
+    | format check, boundary check, and Grove check passed.
+    | browser validation: webmcp 1 test passed; example-vue 2 passed and 7 failed because existing undecorated constructor-shaped POM components no longer match the approved direct-annotation contract; app files were outside the mutation boundary.
+
+w W-54 type=bug status=done cynefin=complicated t_created=2026-09-03T16:09:18Z t_updated=2026-09-05T15:43:49Z "Correct annotated Page Object child regressions"
+  goals: G-18
+  fitness: G-18=+0
+  surface: packages/unplugin-webmcp, packages/webmcp, apps/example-vue/playwright/pom, apps/example-vue/tests
+  ac:
+    | The example-vue end-to-end suite passes with ListItem and ArchiveDialog directly decorated with @WebMCP, and only directly affected manifest expectations or snapshots change.
+    | A public-seam registry test proves a method collection member is backed by a parameterless method returning a newly produced Promise component array, and resolution awaits the method and uses the current returned array and index.
+    | Compiler manifest tests prove Promise<AnnotatedComponent[]> and Promise<readonly AnnotatedComponent[]> or Promise<ReadonlyArray<AnnotatedComponent>> collections while tuples, Maps, Sets, and generic iterables remain excluded.
+    | Focused compiler and runtime tests, relevant typechecks, the full repository test and end-to-end suites, format, lint, boundaries, and Grove checks pass.
+  hypothesis:
+    | The approved direct-annotation semantics are correct, so annotating the example child classes and adding seam coverage for method collections and readonly arrays will close the regression without production runtime changes unless the new contract test proves one necessary.
+  repro:
+    | At baseline 04f093b1, the example-vue browser suite reports seven failures because ListItem and ArchiveDialog are not directly decorated with @WebMCP, so their child manifests and dependent behavior do not match the approved direct-annotation contract.
+  evidence_strategy:
+    | Run the baseline browser reproducer, add each failing compiler or runtime test before its correction, run each test green after the correction, then run focused checks and the complete repository validation commands with commit SHAs recorded.
+  evidence:
+    | baseline 04f093b1: pnpm build passed; example-vue browser suite reproduced 7 failures in 9 tests, with ListItem and ArchiveDialog missing from the direct-annotation manifest.
+    | red-to-green example correction: adding direct @WebMCP annotations to ListItem and ArchiveDialog made pnpm --filter @ayme-dev/example-vue test:e2e pass 9 tests; no snapshots changed.
+    | public registry seam: pnpm --filter @ayme-dev/webmcp test -- src/registry.test.ts passed 34 tests, including method-backed collection invocation, Promise awaiting, current-array replacement, and index resolution.
+    | compiler contract: pnpm --filter @ayme-dev/unplugin-webmcp test -- src/derivePomManifests.test.ts passed 17 tests covering mutable and readonly Promise arrays plus tuple exclusion; no compiler production change was required.
+    | typechecks passed for unplugin-webmcp, webmcp, and example-vue; pnpm test completed 9 successful tasks; pnpm test:e2e completed 5 successful tasks with 1 Chromium and 9 example-vue tests passing.
+    | format check, lint, boundaries, and Grove check passed.
+  why:
+    | This follows W-53 because its browser evidence recorded seven example-vue failures outside that work item's mutation boundary.
+
+w W-55 type=bug status=done cynefin=complicated t_created=2026-09-05T07:23:24Z t_updated=2026-09-05T15:39:01Z "Separate POM metadata registration from root activation"
+  goals: G-18
+  fitness: G-18=+0
+  surface: packages/unplugin-webmcp, packages/webmcp, packages/webmcp-vue
+  ac:
+    | Compiler transforms register every decorated class with class and manifest metadata only; no generated root-construction factory remains.
+    | usePageObject accepts and returns a class constructible from Playwright Page, while a component with additional required constructor arguments is rejected by TypeScript.
+    | Root activation constructs the selected class from the configured page; before the Playwright adapter replacement, the BrowserPage-to-Page assumption is isolated behind one internal cast.
+    | No custom activation factory overload, root/component decorator split, or packaged declaration metadata is added.
+  hypothesis:
+    | Moving construction from compiler registration to activation removes invalid child factories while preserving parent-owned component instances and the existing root activation flow.
+  repro:
+    | At PR head 9cb1df32, the transform emits (page) => new Class(page) for ListItem and ArchiveDialog even though those decorated children are not constructible from one page argument.
+  evidence_strategy:
+    | Assert two-argument transformed registrations, runtime Page construction, Vue return typing and compile-time rejection of a complex component constructor; then run affected package and full repository checks.
+  evidence:
+    | Compiler output now registers class plus manifest only; usePageObject is typed to new (page: Page) and activation constructs once behind the single temporary BrowserPage-to-Page cast.
+    | Verified full unit tests, typecheck, lint, boundaries, build, and all 9 example-vue end-to-end tests.
+    | GitHub CI exposed a stale lockfile importer entry: moved @playwright/test from playwright-browser to webmcp and verified pnpm install --frozen-lockfile.
+
+w W-56 type=bug status=done cynefin=complicated t_created=2026-09-05T07:23:24Z t_updated=2026-09-05T15:39:01Z "Correct annotated component type classification"
+  goals: G-18
+  fitness: G-18=+0
+  surface: packages/unplugin-webmcp
+  ac:
+    | Direct and generic aliases around Promise<AnnotatedComponent[]> are recognized as the existing narrow asynchronous component collection shape.
+    | Promise-returning getters, PromiseLike values, arbitrary thenables, tuples, Maps, Sets, generic iterables, and synchronous arrays remain excluded.
+    | An intersection with one decorated component plus metadata remains supported; two distinct decorated component classes produce a build diagnostic instead of order-dependent selection.
+    | Compiler tests use a bounded timeout that tolerates normal CI contention.
+  hypothesis:
+    | Inspecting the underlying Promise target instead of preferring its alias symbol, and collecting distinct decorated intersection declarations before choosing, corrects both review defects without general wrapper unwrapping.
+  repro:
+    | At PR head 9cb1df32, an outer Promise alias is omitted because aliasSymbol masks Promise, and componentDeclaration returns the first decorated intersection constituent. GitHub CI also timed out an existing compiler test at 5026ms against a 5000ms limit.
+  evidence_strategy:
+    | Add manifest tests for direct and generic outer aliases, retained negative shapes, and ambiguous intersections; rerun the focused compiler suite repeatedly plus package typecheck and repository checks.
+  evidence:
+    | Compiler tests cover direct and generic Promise array aliases, excluded shapes, one decorated intersection, and a diagnostic for two distinct decorated classes.
+    | Verified the compiler suite within the 15-second bound plus full unit tests, typecheck, lint, boundaries, build, and browser tests.
 
 d D-01 status=superseded t_created=2026-08-27T08:43:08Z t_updated=2026-08-27T11:48:35Z "Use the five-workspace monorepo layout"
   context:

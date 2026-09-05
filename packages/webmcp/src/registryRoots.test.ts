@@ -25,51 +25,47 @@ describe("registered Page Object roots", () => {
     const page = createPage();
     configureAymeRuntime(page);
 
-    class ExamplePage {}
-    registerCompiledPom(
-      ExamplePage,
-      {
-        className: "ExamplePage",
-        tools: [],
-        members: [
-          { memberName: "ignored", kind: "locator", access: "field" },
-          {
-            memberName: "zero",
-            kind: "component",
-            access: "field",
-            componentClassName: "Root",
-            collection: false,
-          },
-          {
-            memberName: "one",
-            kind: "component",
-            access: "field",
-            componentClassName: "Root",
-            collection: false,
-          },
-          {
-            memberName: "many",
-            kind: "component",
-            access: "field",
-            componentClassName: "Root",
-            collection: false,
-          },
-        ],
-        components: [
-          {
-            className: "Root",
-            members: [{ memberName: "root", kind: "locator", access: "field" }],
-            tools: [],
-          },
-        ],
-      },
-      () => ({
-        ignored: page.locator("body"),
-        zero: { root: page.locator(".zero") },
-        one: { root: page.locator(".one") },
-        many: { root: page.locator(".many") },
-      })
-    );
+    class ExamplePage {
+      readonly ignored = page.locator("body");
+      readonly zero = { root: page.locator(".zero") };
+      readonly one = { root: page.locator(".one") };
+      readonly many = { root: page.locator(".many") };
+    }
+    registerCompiledPom(ExamplePage, {
+      className: "ExamplePage",
+      tools: [],
+      members: [
+        { memberName: "ignored", kind: "locator", access: "field" },
+        {
+          memberName: "zero",
+          kind: "component",
+          access: "field",
+          componentClassName: "Root",
+          collection: false,
+        },
+        {
+          memberName: "one",
+          kind: "component",
+          access: "field",
+          componentClassName: "Root",
+          collection: false,
+        },
+        {
+          memberName: "many",
+          kind: "component",
+          access: "field",
+          componentClassName: "Root",
+          collection: false,
+        },
+      ],
+      components: [
+        {
+          className: "Root",
+          members: [{ memberName: "root", kind: "locator", access: "field" }],
+          tools: [],
+        },
+      ],
+    });
     const registration = createPageRegistration(ExamplePage);
 
     await expect(listRegisteredPomRoots()).resolves.toEqual([

@@ -10,6 +10,12 @@ class FakePageObject {
   }
 }
 
+class ComplexPageObject {
+  constructor(...args: [object, object]) {
+    void args;
+  }
+}
+
 const dispose = vi.fn();
 
 vi.mock("@ayme-dev/webmcp/internal", () => ({
@@ -42,6 +48,12 @@ describe("usePageObject", () => {
     expect(createPageRegistration).toHaveBeenCalledWith(FakePageObject);
 
     scope.stop();
+  });
+
+  it("rejects constructors with multiple required arguments", () => {
+    expectTypeOf(ComplexPageObject).not.toMatchTypeOf<
+      Parameters<typeof usePageObject>[0]
+    >();
   });
 
   it("disposes the registration exactly once when the scope ends", () => {
