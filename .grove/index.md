@@ -7,14 +7,14 @@
 | Measure | Count | Composition |
 | --- | --- | --- |
 | C (content) | 17 | validated B 2 · answered Q 2 · accepted D 10 · active Discovery 3 |
-| V (uncertainty) | 2 | open Q 0 · pending B 0 · W below DoR 2 |
+| V (uncertainty) | 0 | open Q 0 · pending B 0 · W below DoR 0 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 13 | 2 | C: validated B 1 · answered Q 2 · accepted D 7 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 2 |
+| A-02 | Page Object interoperability | 13 | 0 | C: validated B 1 · answered Q 2 · accepted D 7 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 |
 | A-03 | Consumer browser capabilities | 4 | 0 | C: validated B 1 · answered Q 0 · accepted D 1 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
@@ -62,8 +62,8 @@
 | W-21 | bug | Preserve ref identity through temporary removal | G-10 | clear | ⊤ | done |  |
 | W-22 | feature | Discover annotated Page Object children | G-11 | complicated | ⊤ | done |  |
 | W-23 | bug | Correct annotated Page Object child regressions | G-11 | complicated | ⊤ | done |  |
-| W-24 | bug | Separate POM metadata registration from root activation | G-11 | complicated | ⊥ | ready | ★ |
-| W-25 | bug | Correct annotated component type classification | G-11 | complicated | ⊥ | ready |  |
+| W-24 | bug | Separate POM metadata registration from root activation | G-11 | complicated | ⊤ | done |  |
+| W-25 | bug | Correct annotated component type classification | G-11 | complicated | ⊤ | done |  |
 
 ## Decisions
 
@@ -144,8 +144,8 @@ graph TD
   W_21["W-21: Preserve ref identity through temporary removal"]:::done
   W_22["W-22: Discover annotated Page Object children"]:::done
   W_23["W-23: Correct annotated Page Object child regressions"]:::done
-  W_24["W-24: Separate POM metadata registration from root activation"]:::ready,critical
-  W_25["W-25: Correct annotated component type classification"]:::ready
+  W_24["W-24: Separate POM metadata registration from root activation"]:::done
+  W_25["W-25: Correct annotated component type classification"]:::done
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -212,7 +212,6 @@ graph TD
   Y_03 -->|distills| D_12
   Y_04 -->|distills| D_12
   Y_04 -->|supersedes| Y_03
-  class W_24 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff
