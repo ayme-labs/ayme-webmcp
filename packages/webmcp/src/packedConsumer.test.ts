@@ -73,6 +73,19 @@ it(
       const packedPkgPath = path.join(extractDir, "package", "package.json");
       const packedPkg = JSON.parse(fs.readFileSync(packedPkgPath, "utf-8"));
       const distDir = path.join(extractDir, "package", "dist");
+      const notices = fs.readFileSync(
+        path.join(distDir, "THIRD_PARTY_NOTICES.txt"),
+        "utf8"
+      );
+      expect(notices).toBe(
+        fs.readFileSync(
+          path.join(webmcpRoot, "THIRD_PARTY_NOTICES.txt"),
+          "utf8"
+        )
+      );
+      expect(notices).toContain("Apache License");
+      expect(notices).toContain("Version 2.0, January 2004");
+      expect(notices).toContain("Microsoft");
 
       // ── Assert: manifest has no private deps ────────────────────────
       const depSections = [

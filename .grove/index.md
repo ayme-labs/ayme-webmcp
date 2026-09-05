@@ -34,7 +34,7 @@
 | G-09 | POM barrel imports remain browser-loadable | count; current=1 target=1 | verified |
 | G-10 | Consumers can use Structural Refs in browser capabilities | count; current=5 target=3 | verified |
 | G-11 | Enforce browser-side Playwright compatibility | count; current=4 target=4 | verified |
-| G-12 | Make the single-document Playwright adapter truthfully verifiable | count; current=3 target=4 | partial |
+| G-12 | Make the single-document Playwright adapter truthfully verifiable | count; current=4 target=4 | verified |
 
 ## Work items
 
@@ -68,7 +68,7 @@
 | W-26 | bug | Correct the single-document adapter contract | G-12 | complicated | ⊤ | done |  |
 | W-27 | feature | Implement browser-native setup and callback operations | G-12 | complicated | ⊤ | done |  |
 | W-28 | bug | Make upstream compatibility evidence truthful | G-12 | complicated | ⊤ | done |  |
-| W-29 | bug | Close distribution compliance and report the new baseline | G-12 | clear | ⊤ | progress | ★ |
+| W-29 | bug | Close distribution compliance and report the new baseline | G-12 | clear | ⊤ | done |  |
 
 ## Decisions
 
@@ -158,7 +158,7 @@ graph TD
   W_26["W-26: Correct the single-document adapter contract"]:::done
   W_27["W-27: Implement browser-native setup and callback operations"]:::done
   W_28["W-28: Make upstream compatibility evidence truthful"]:::done
-  W_29["W-29: Close distribution compliance and report the new baseline"]:::progress,critical
+  W_29["W-29: Close distribution compliance and report the new baseline"]:::done
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -241,7 +241,6 @@ graph TD
   Y_03 -->|distills| D_12
   Y_04 -->|distills| D_12
   Y_04 -->|supersedes| Y_03
-  class W_29 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff

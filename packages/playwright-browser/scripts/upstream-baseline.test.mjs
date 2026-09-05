@@ -6,9 +6,44 @@ import {
   validateCompleteness,
   validateReportErrors,
   reviewedPromotion,
+  failurePhase,
 } from "./upstream-baseline.mjs";
 
 // ── parseReport ─────────────────────────────────────────────────────
+
+it("reports observed failure phases without claiming subject execution", () => {
+  assert.equal(
+    failurePhase({ status: "failed", error: "Cannot serialize function" }),
+    "argument transport"
+  );
+  assert.equal(
+    failurePhase({ status: "failed", error: "goto is not a function" }),
+    "missing member or reference"
+  );
+  assert.equal(
+    failurePhase({
+      status: "failed",
+      error: "toHaveText can be only used with Locator object",
+    }),
+    "matcher integration"
+  );
+  assert.equal(
+    failurePhase({
+      status: "failed",
+      error: "expect(received).toBe(expected)",
+    }),
+    "assertion"
+  );
+  assert.equal(failurePhase({ status: "timedOut" }), "timeout");
+  assert.equal(
+    failurePhase({
+      status: "failed",
+      execution: { entered: ["Page.setContent"] },
+    }),
+    "after adapter entry"
+  );
+  assert.equal(failurePhase({ status: "failed" }), "before adapter entry");
+});
 
 describe("reviewed promotion", () => {
   it("treats a raw pass without the reviewed operation as a regression", () => {

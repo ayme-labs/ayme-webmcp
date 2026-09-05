@@ -191,6 +191,25 @@ export function reviewedPromotion(entries, id, method, evidence) {
 
 // ── Clustering ──────────────────────────────────────────────────────
 
+// Diagnostic categories describe the observed failure, not whether a call
+// was setup or the test subject. That distinction still requires test review.
+export function failurePhase(entry) {
+  const error = entry.error ?? "";
+  if (entry.status === "passed" || entry.status === "skipped")
+    return entry.status;
+  if (/serializ/i.test(error)) return "argument transport";
+  if (/is not a function|is not defined/.test(error))
+    return "missing member or reference";
+  if (/can be only used with Locator object/.test(error))
+    return "matcher integration";
+  if (/expect\(/.test(error)) return "assertion";
+  if (entry.status === "timedOut" || /timeout|timed out/i.test(error))
+    return "timeout";
+  return entry.execution?.entered?.length
+    ? "after adapter entry"
+    : "before adapter entry";
+}
+
 function clusterFailures(entries, corpusSpecs) {
   const failures = entries.filter(
     (e) =>
@@ -198,7 +217,8 @@ function clusterFailures(entries, corpusSpecs) {
   );
   const byFile = new Map();
   for (const e of failures) {
-    byFile.set(e.file, (byFile.get(e.file) ?? 0) + 1);
+    const phase = failurePhase(e);
+    byFile.set(phase, (byFile.get(phase) ?? 0) + 1);
   }
   return [...byFile.entries()]
     .sort((a, b) => b[1] - a[1])
@@ -289,6 +309,14 @@ function runCorpus() {
   }
 
   const report = loadAndValidateReport(REPORT_PATH, 2);
+  writeFileSync(
+    resolve(PKG_ROOT, "test-results/compatibility.json"),
+    JSON.stringify(
+      report.entries.map((entry) => ({ ...entry, phase: failurePhase(entry) })),
+      null,
+      2
+    ) + "\n"
+  );
 
   console.log(
     `Corpus: ${report.specCount} specs, ${report.testCount} tests (Playwright exit ${exitCode})`
