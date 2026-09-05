@@ -30,44 +30,41 @@ describe("registered Page Object roots", () => {
       readonly one = { root: page.locator(".one") };
       readonly many = { root: page.locator(".many") };
     }
-    registerCompiledPom(
-      ExamplePage,
-      {
-        className: "ExamplePage",
-        tools: [],
-        members: [
-          { memberName: "ignored", kind: "locator", access: "field" },
-          {
-            memberName: "zero",
-            kind: "component",
-            access: "field",
-            componentClassName: "Root",
-            collection: false,
-          },
-          {
-            memberName: "one",
-            kind: "component",
-            access: "field",
-            componentClassName: "Root",
-            collection: false,
-          },
-          {
-            memberName: "many",
-            kind: "component",
-            access: "field",
-            componentClassName: "Root",
-            collection: false,
-          },
-        ],
-        components: [
-          {
-            className: "Root",
-            members: [{ memberName: "root", kind: "locator", access: "field" }],
-            tools: [],
-          },
-        ],
-      }
-    );
+    registerCompiledPom(ExamplePage, {
+      className: "ExamplePage",
+      tools: [],
+      members: [
+        { memberName: "ignored", kind: "locator", access: "field" },
+        {
+          memberName: "zero",
+          kind: "component",
+          access: "field",
+          componentClassName: "Root",
+          collection: false,
+        },
+        {
+          memberName: "one",
+          kind: "component",
+          access: "field",
+          componentClassName: "Root",
+          collection: false,
+        },
+        {
+          memberName: "many",
+          kind: "component",
+          access: "field",
+          componentClassName: "Root",
+          collection: false,
+        },
+      ],
+      components: [
+        {
+          className: "Root",
+          members: [{ memberName: "root", kind: "locator", access: "field" }],
+          tools: [],
+        },
+      ],
+    });
     const registration = createPageRegistration(ExamplePage);
 
     await expect(listRegisteredPomRoots()).resolves.toEqual([

@@ -91,29 +91,26 @@ describe("WebMCP publisher", () => {
         },
       ];
     }
-    registry.registerCompiledPom(
-      ItemsPage,
-      {
-        className: "ItemsPage",
-        tools: [action("addItem")],
-        members: [
-          {
-            memberName: "items",
-            kind: "component",
-            access: "field",
-            componentClassName: "Item",
-            collection: true,
-          },
-        ],
-        components: [
-          {
-            className: "Item",
-            members: [{ memberName: "root", kind: "locator", access: "field" }],
-            tools: [action("archive")],
-          },
-        ],
-      }
-    );
+    registry.registerCompiledPom(ItemsPage, {
+      className: "ItemsPage",
+      tools: [action("addItem")],
+      members: [
+        {
+          memberName: "items",
+          kind: "component",
+          access: "field",
+          componentClassName: "Item",
+          collection: true,
+        },
+      ],
+      components: [
+        {
+          className: "Item",
+          members: [{ memberName: "root", kind: "locator", access: "field" }],
+          tools: [action("archive")],
+        },
+      ],
+    });
     const pageRegistration = registry.createPageRegistration(ItemsPage);
 
     const publication = await synchronizeWebMcpTools({ registerTool });
@@ -179,15 +176,12 @@ describe("WebMCP publisher", () => {
     class SharedPage {
       readonly run = vi.fn();
     }
-    registry.registerCompiledPom(
-      SharedPage,
-      {
-        className: "SharedPage",
-        tools: [action("run")],
-        members: [],
-        components: [],
-      }
-    );
+    registry.registerCompiledPom(SharedPage, {
+      className: "SharedPage",
+      tools: [action("run")],
+      members: [],
+      components: [],
+    });
 
     const first = registry.createPageRegistration(SharedPage);
     const publication = await synchronizeWebMcpTools({ registerTool });

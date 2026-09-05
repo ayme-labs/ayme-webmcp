@@ -63,14 +63,8 @@ describe("live Page Object registry", () => {
     class SecondPage {
       constructor(readonly page: unknown) {}
     }
-    registry.registerCompiledPom(
-      FirstPage,
-      emptyManifest("FirstPage")
-    );
-    registry.registerCompiledPom(
-      SecondPage,
-      emptyManifest("SecondPage")
-    );
+    registry.registerCompiledPom(FirstPage, emptyManifest("FirstPage"));
+    registry.registerCompiledPom(SecondPage, emptyManifest("SecondPage"));
 
     const first = registry.createPageRegistration(FirstPage);
     const second = registry.createPageRegistration(SecondPage);
@@ -111,13 +105,10 @@ describe("live Page Object registry", () => {
     class PageWithLocator {
       readonly item = { count };
     }
-    registry.registerCompiledPom(
-      PageWithLocator,
-      {
-        ...emptyManifest("PageWithLocator"),
-        members: [{ memberName: "item", kind: "locator", access: "field" }],
-      }
-    );
+    registry.registerCompiledPom(PageWithLocator, {
+      ...emptyManifest("PageWithLocator"),
+      members: [{ memberName: "item", kind: "locator", access: "field" }],
+    });
     const registration = registry.createPageRegistration(PageWithLocator);
     const subscriber = vi.fn();
     registry.subscribeToRegisteredPoms(subscriber);
@@ -144,10 +135,7 @@ describe("live Page Object registry", () => {
     registry.configureAymeRuntime({} as BrowserPage);
 
     class FirstPage {}
-    registry.registerCompiledPom(
-      FirstPage,
-      emptyManifest("FirstPage")
-    );
+    registry.registerCompiledPom(FirstPage, emptyManifest("FirstPage"));
     const first = registry.createPageRegistration(FirstPage);
     await vi.runOnlyPendingTimersAsync();
 
@@ -155,13 +143,10 @@ describe("live Page Object registry", () => {
     class LaterPage {
       readonly item = { count };
     }
-    registry.registerCompiledPom(
-      LaterPage,
-      {
-        ...emptyManifest("LaterPage"),
-        members: [{ memberName: "item", kind: "locator", access: "field" }],
-      }
-    );
+    registry.registerCompiledPom(LaterPage, {
+      ...emptyManifest("LaterPage"),
+      members: [{ memberName: "item", kind: "locator", access: "field" }],
+    });
     const later = registry.createPageRegistration(LaterPage);
 
     expect(vi.getTimerCount()).toBe(1);
@@ -177,10 +162,7 @@ describe("live Page Object registry", () => {
     registry.configureAymeRuntime({} as BrowserPage);
 
     class ReusedPage {}
-    registry.registerCompiledPom(
-      ReusedPage,
-      emptyManifest("ReusedPage")
-    );
+    registry.registerCompiledPom(ReusedPage, emptyManifest("ReusedPage"));
 
     const first = registry.createPageRegistration(ReusedPage);
     const second = registry.createPageRegistration(ReusedPage);
@@ -214,38 +196,35 @@ describe("live Page Object registry", () => {
         open: vi.fn(),
       };
     }
-    registry.registerCompiledPom(
-      RecursivePage,
-      {
-        className: "RecursivePage",
-        tools: [],
-        members: [
-          {
-            memberName: "node",
-            kind: "component",
-            access: "field",
-            componentClassName: "Node",
-            collection: false,
-          },
-        ],
-        components: [
-          {
-            className: "Node",
-            members: [
-              { memberName: "root", kind: "locator", access: "field" },
-              {
-                memberName: "child",
-                kind: "component",
-                access: "field",
-                componentClassName: "Node",
-                collection: false,
-              },
-            ],
-            tools: [action("open")],
-          },
-        ],
-      }
-    );
+    registry.registerCompiledPom(RecursivePage, {
+      className: "RecursivePage",
+      tools: [],
+      members: [
+        {
+          memberName: "node",
+          kind: "component",
+          access: "field",
+          componentClassName: "Node",
+          collection: false,
+        },
+      ],
+      components: [
+        {
+          className: "Node",
+          members: [
+            { memberName: "root", kind: "locator", access: "field" },
+            {
+              memberName: "child",
+              kind: "component",
+              access: "field",
+              componentClassName: "Node",
+              collection: false,
+            },
+          ],
+          tools: [action("open")],
+        },
+      ],
+    });
 
     const registration = registry.createPageRegistration(RecursivePage);
     await vi.runOnlyPendingTimersAsync();
@@ -275,43 +254,40 @@ describe("live Page Object registry", () => {
         },
       };
     }
-    registry.registerCompiledPom(
-      NestedPage,
-      {
-        className: "NestedPage",
-        tools: [],
-        members: [
-          {
-            memberName: "dialog",
-            kind: "component",
-            access: "field",
-            componentClassName: "Dialog",
-            collection: false,
-          },
-        ],
-        components: [
-          {
-            className: "Dialog",
-            members: [
-              { memberName: "root", kind: "locator", access: "field" },
-              {
-                memberName: "panel",
-                kind: "component",
-                access: "field",
-                componentClassName: "Panel",
-                collection: false,
-              },
-            ],
-            tools: [action("confirm")],
-          },
-          {
-            className: "Panel",
-            members: [{ memberName: "root", kind: "locator", access: "field" }],
-            tools: [action("save")],
-          },
-        ],
-      }
-    );
+    registry.registerCompiledPom(NestedPage, {
+      className: "NestedPage",
+      tools: [],
+      members: [
+        {
+          memberName: "dialog",
+          kind: "component",
+          access: "field",
+          componentClassName: "Dialog",
+          collection: false,
+        },
+      ],
+      components: [
+        {
+          className: "Dialog",
+          members: [
+            { memberName: "root", kind: "locator", access: "field" },
+            {
+              memberName: "panel",
+              kind: "component",
+              access: "field",
+              componentClassName: "Panel",
+              collection: false,
+            },
+          ],
+          tools: [action("confirm")],
+        },
+        {
+          className: "Panel",
+          members: [{ memberName: "root", kind: "locator", access: "field" }],
+          tools: [action("save")],
+        },
+      ],
+    });
     const registration = registry.createPageRegistration(NestedPage);
 
     await vi.runOnlyPendingTimersAsync();
@@ -359,43 +335,40 @@ describe("live Page Object registry", () => {
         },
       ];
     }
-    registry.registerCompiledPom(
-      ItemsPage,
-      {
-        className: "ItemsPage",
-        tools: [action("addItem")],
-        members: [
-          {
-            memberName: "items",
-            kind: "component",
-            access: "field",
-            componentClassName: "Item",
-            collection: true,
-          },
-        ],
-        components: [
-          {
-            className: "Item",
-            members: [
-              { memberName: "root", kind: "locator", access: "field" },
-              {
-                memberName: "child",
-                kind: "component",
-                access: "field",
-                componentClassName: "Child",
-                collection: false,
-              },
-            ],
-            tools: [action("archive")],
-          },
-          {
-            className: "Child",
-            members: [{ memberName: "root", kind: "locator", access: "field" }],
-            tools: [],
-          },
-        ],
-      }
-    );
+    registry.registerCompiledPom(ItemsPage, {
+      className: "ItemsPage",
+      tools: [action("addItem")],
+      members: [
+        {
+          memberName: "items",
+          kind: "component",
+          access: "field",
+          componentClassName: "Item",
+          collection: true,
+        },
+      ],
+      components: [
+        {
+          className: "Item",
+          members: [
+            { memberName: "root", kind: "locator", access: "field" },
+            {
+              memberName: "child",
+              kind: "component",
+              access: "field",
+              componentClassName: "Child",
+              collection: false,
+            },
+          ],
+          tools: [action("archive")],
+        },
+        {
+          className: "Child",
+          members: [{ memberName: "root", kind: "locator", access: "field" }],
+          tools: [],
+        },
+      ],
+    });
     const registration = registry.createPageRegistration(ItemsPage);
 
     expect(registry.listRegisteredTools().map(({ name }) => name)).toEqual([
@@ -450,29 +423,26 @@ describe("live Page Object registry", () => {
       readonly items = getItems;
     }
 
-    registry.registerCompiledPom(
-      ItemsPage,
-      {
-        className: "ItemsPage",
-        tools: [],
-        members: [
-          {
-            memberName: "items",
-            kind: "component",
-            access: "method",
-            componentClassName: "Item",
-            collection: true,
-          },
-        ],
-        components: [
-          {
-            className: "Item",
-            members: [{ memberName: "root", kind: "locator", access: "field" }],
-            tools: [action("archive")],
-          },
-        ],
-      }
-    );
+    registry.registerCompiledPom(ItemsPage, {
+      className: "ItemsPage",
+      tools: [],
+      members: [
+        {
+          memberName: "items",
+          kind: "component",
+          access: "method",
+          componentClassName: "Item",
+          collection: true,
+        },
+      ],
+      components: [
+        {
+          className: "Item",
+          members: [{ memberName: "root", kind: "locator", access: "field" }],
+          tools: [action("archive")],
+        },
+      ],
+    });
     const registration = registry.createPageRegistration(ItemsPage);
 
     await vi.runOnlyPendingTimersAsync();
