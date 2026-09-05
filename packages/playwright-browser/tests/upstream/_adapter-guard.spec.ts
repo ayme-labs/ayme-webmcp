@@ -108,6 +108,22 @@ test("adapter locator matchers use pinned InjectedScript semantics", async ({
   expect(execution.entered).toContain("Locator._expect");
 });
 
+test("adapter locator matchers retry through the browser adapter", async ({
+  page,
+  adapterPage,
+}) => {
+  await page.setContent('<p id="message">before</p>');
+  await page.evaluate(() => {
+    window.setTimeout(() => {
+      document.getElementById("message")!.textContent = "after";
+    }, 25);
+  });
+
+  await expect(adapterPage.locator("#message")).toHaveText("after", {
+    timeout: 1_000,
+  });
+});
+
 test("adapter locator callbacks serialize arguments and execute in the adapter", async ({
   page,
   adapterPage,

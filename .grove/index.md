@@ -7,14 +7,14 @@
 | Measure | Count | Composition |
 | --- | --- | --- |
 | C (content) | 18 | validated B 2 · answered Q 2 · accepted D 11 · active Discovery 3 |
-| V (uncertainty) | 4 | open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 4 |
+| V (uncertainty) | 3 | open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 3 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 14 | 4 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 4 |
+| A-02 | Page Object interoperability | 14 | 3 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 3 |
 | A-03 | Consumer browser capabilities | 4 | 0 | C: validated B 1 · answered Q 0 · accepted D 1 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
@@ -36,7 +36,7 @@
 | G-11 | Enforce browser-side Playwright compatibility | count; current=4 target=4 | verified |
 | G-12 | Make the single-document Playwright adapter truthfully verifiable | count; current=4 target=4 | verified |
 | G-13 | Increase verified Playwright compatibility | count; current=3 target=3 | verified |
-| G-14 | Increase Playwright behavioral compatibility | count; current= target=4 | unverified |
+| G-14 | Increase Playwright behavioral compatibility | count; current=1 target=4 | partial |
 
 ## Work items
 
@@ -74,7 +74,7 @@
 | W-30 | feature | Promote reviewed compatibility evidence | G-13 | clear | ⊤ | done |  |
 | W-31 | feature | Integrate locator expectations and callbacks | G-13 | complicated | ⊤ | done |  |
 | W-32 | feature | Verify expanded compatibility evidence | G-13 | complicated | ⊤ | done |  |
-| W-33 | feature | Implement locator expectation retries | G-14 | complicated | ⊤ | ready | ★ |
+| W-33 | feature | Implement locator expectation retries | G-14 | complicated | ⊤ | done |  |
 | W-34 | feature | Improve browser action semantics | G-14 | complicated | ⊤ | ready | ★ |
 | W-35 | feature | Add common locator query methods | G-14 | clear | ⊤ | ready | ★ |
 | W-36 | feature | Verify behavioral compatibility round | G-14 | complicated | ⊤ | ready | ★ |
@@ -173,7 +173,7 @@ graph TD
   W_30["W-30: Promote reviewed compatibility evidence"]:::done
   W_31["W-31: Integrate locator expectations and callbacks"]:::done
   W_32["W-32: Verify expanded compatibility evidence"]:::done
-  W_33["W-33: Implement locator expectation retries"]:::ready,critical
+  W_33["W-33: Implement locator expectation retries"]:::done
   W_34["W-34: Improve browser action semantics"]:::ready,critical
   W_35["W-35: Add common locator query methods"]:::ready,critical
   W_36["W-36: Verify behavioral compatibility round"]:::ready,critical
@@ -269,7 +269,7 @@ graph TD
   Y_03 -->|distills| D_12
   Y_04 -->|distills| D_12
   Y_04 -->|supersedes| Y_03
-  class W_33,W_34,W_35,W_36 critical
+  class W_34,W_35,W_36 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff

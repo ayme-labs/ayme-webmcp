@@ -478,6 +478,81 @@ describe("Single-document adapter contract", () => {
     });
   });
 
+  // ── W-33: locator expectation orchestration ───────────────────
+
+  describe("locator expectations", () => {
+    const expectedText = (value: string) => [
+      { string: value, normalizeWhiteSpace: true },
+    ];
+
+    it("retries InjectedScript checks until the expectation succeeds", async () => {
+      document.body.innerHTML = '<div id="target">before</div>';
+      const page = createPage();
+      window.setTimeout(() => {
+        document.getElementById("target")!.textContent = "after";
+      }, 25);
+
+      const result = await (page.locator("#target") as any)._expect(
+        "to.have.text",
+        { expectedText: expectedText("after"), timeout: 200 }
+      );
+
+      expect(result.matches).toBe(true);
+      expect(result.timedOut).toBeUndefined();
+    });
+
+    it("reports a positive missing-element expectation as a timeout", async () => {
+      const page = createPage();
+
+      const result = await (page.locator("#missing") as any)._expect(
+        "to.have.text",
+        { expectedText: expectedText("expected"), timeout: 40 }
+      );
+
+      expect(result).toMatchObject({
+        matches: false,
+        timedOut: true,
+        errorMessage: "Error: element(s) not found",
+      });
+      expect(result.log).toEqual(['waiting for locator("#missing")']);
+    });
+
+    it("allows a missing locator to satisfy a negated visible expectation", async () => {
+      const page = createPage();
+
+      const result = await (page.locator("#missing") as any)._expect(
+        "to.be.visible",
+        { isNot: true, timeout: 1 }
+      );
+
+      // Client matchers compare this with !isNot, so false is a successful
+      // `expect(locator).not.toBeVisible()` result.
+      expect(result).toMatchObject({ matches: false });
+      expect(result.timedOut).toBeUndefined();
+    });
+
+    it("aborts a pending expectation without reporting a timeout", async () => {
+      const page = createPage();
+      const controller = new AbortController();
+      window.setTimeout(() => controller.abort(new Error("stop it")), 10);
+
+      const result = await (page.locator("#missing") as any)._expect(
+        "to.have.text",
+        {
+          expectedText: expectedText("expected"),
+          timeout: 200,
+          signal: controller.signal,
+        }
+      );
+
+      expect(result).toMatchObject({
+        matches: false,
+        errorMessage: "Error: The assertion was aborted: stop it",
+      });
+      expect(result.timedOut).toBeUndefined();
+    });
+  });
+
   // ── W-27: evaluate ───────────────────────────────────────────
 
   describe("evaluate", () => {

@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:bac385a6ecadf6284032007b548c8a3ac5149c9a081185b9ccf715b0e5580427
+# checksum: sha256:501eda6c37c6efe575b734e0ad1e3f267cc85127200e51ef8affbecc2d8a858b
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -67,9 +67,10 @@ g G-13 status=verified fitness_kind=count t_created=2026-09-05T07:21:39Z t_updat
   fitness_target: 3
   fitness_current: 3
 
-g G-14 status=unverified fitness_kind=count t_created=2026-09-05T08:31:02Z t_updated=2026-09-05T08:31:02Z "Increase Playwright behavioral compatibility"
+g G-14 status=partial fitness_kind=count t_created=2026-09-05T08:31:02Z t_updated=2026-09-05T08:57:46Z "Increase Playwright behavioral compatibility"
   area: A-02
   fitness_target: 4
+  fitness_current: 1
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -717,7 +718,7 @@ w W-32 type=feature status=done cynefin=complicated t_created=2026-09-05T07:22:1
   evidence:
     | Independent verification: all 22 copied upstream specs match checksums; 24/24 adapter guard tests pass; package tests pass (67 Vitest + 19 baseline-script tests); typecheck and lint pass. The unchanged 473-test corpus reports 45 raw passes, 428 failures, and 1 skip. Execution evidence identifies 42 adapter-reaching candidates. The reviewed baseline now contains 34 individual tests (12 existing + 22 promoted after assertion-level review), with 0 regressions. Eight weak or incidental raw passes remain visible but deliberately unreviewed. Current Locator._expect delegates a single evaluation to pinned InjectedScript; Playwright-style matcher auto-wait and missing-element retry semantics remain follow-up work.
 
-w W-33 type=feature status=ready cynefin=complicated t_created=2026-09-05T08:31:13Z t_updated=2026-09-05T08:31:59Z "Implement locator expectation retries"
+w W-33 type=feature status=done cynefin=complicated t_created=2026-09-05T08:31:13Z t_updated=2026-09-05T08:57:46Z "Implement locator expectation retries"
   goals: G-14
   fitness: G-14=+1
   surface: packages/playwright-browser/src/page.ts, packages/playwright-browser/src/locator.ts, packages/playwright-browser/src/contract.test.ts, packages/playwright-browser/tests/upstream
@@ -729,6 +730,10 @@ w W-33 type=feature status=ready cynefin=complicated t_created=2026-09-05T08:31:
     | A browser-side retry loop around InjectedScript.expect can reproduce Playwright locator expectation orchestration without browser-process support.
   evidence_strategy:
     | Run focused contract tests, adapter guards, type checking, and the complete upstream compatibility check; inspect every new raw pass before promotion.
+  evidence:
+    | Pinned source review: enekesabel/playwright@b25d782 Frame.expect and Frame._expectInternal match the implemented immediate check, bounded retry, strict non-array resolution, and missing-element polarity rules.
+    | Independent verification: package tests 71/71; adapter guards 25/25; typecheck, lint, build, grove check, and git diff check pass. The unchanged 473-test corpus reports 46 raw passes, 43 adapter-reaching candidates, 34 reviewed baseline passes, 427 failures, 1 skip, and 0 regressions.
+    | One genuine new candidate, locator-query.spec.ts should filter by regex with a single quote, executes Page.locator, Page.getByRole, Locator.locator, and Locator._expect without transport failures; promotion is retained for W-36 so baseline mutation stays centralized.
   plan:
     | Read the pinned Playwright expectation implementation and corresponding upstream tests before editing.
     | Keep InjectedScript as the owner of matcher evaluation and add only page-side orchestration.

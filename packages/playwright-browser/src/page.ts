@@ -10,6 +10,29 @@ type InjectedExpectation = {
   received?: { value?: unknown; ariaSnapshot?: string };
 };
 
+type LocatorExpectationResult = {
+  matches: boolean;
+  received?: { value?: unknown; ariaSnapshot?: string };
+  timedOut?: boolean;
+  errorMessage?: string;
+  log?: string[];
+};
+
+type LocatorExpectationOptions = Record<string, unknown> & {
+  isNot?: boolean;
+  signal?: AbortSignal;
+  timeout?: number;
+};
+
+type LocatorExpectationAttempt = {
+  matches: boolean;
+  received?: { value?: unknown; ariaSnapshot?: string };
+  missing: boolean;
+};
+
+const DEFAULT_EXPECT_TIMEOUT = 5_000;
+const EXPECT_RETRY_BACKOFF = [20, 50, 100, 100, 500];
+
 type ExpectCapableInjectedScript = {
   expect(
     element: Element | undefined,
@@ -135,16 +158,80 @@ export class PageImpl {
 
   /**
    * Adapts the client Locator._expect protocol to InjectedScript.expect.
-   * InjectedScript evaluates the un-negated matcher; this method returns the
-   * same polarity that Playwright's client matcher layer expects.
+   *
+   * Pinned b25d782 `Frame.expect` performs one check and then retries with
+   * bounded backoff. InjectedScript remains responsible for each matcher
+   * evaluation. This method only supplies the client/server orchestration that
+   * is feasible within the controlled document.
    */
   async expect(
     selector: string,
     expression: string,
     options: Record<string, unknown>
-  ) {
+  ): Promise<LocatorExpectationResult> {
+    const expectOptions = options as LocatorExpectationOptions;
+    const isNot = !!expectOptions.isNot;
+    const timeout = expectationTimeout(expectOptions.timeout);
+    const signal = expectOptions.signal;
+
+    if (signal?.aborted) return abortedExpectationResult(isNot, signal);
+
+    const deadline = Date.now() + timeout;
+
+    // The pinned server performs an immediate check before entering its retry
+    // loop. It lets already-matching assertions succeed even with tiny timeouts.
+    const firstAttempt = await this.expectOnce(selector, expression, options);
+    if (firstAttempt.matches !== isNot) return { matches: !isNot };
+
+    let lastAttempt = firstAttempt;
+    let retryIndex = 0;
+
+    while (Date.now() < deadline) {
+      const backoff = expectationBackoff(timeout, retryIndex++);
+      const delay = Math.min(backoff, Math.max(0, deadline - Date.now()));
+      if (
+        delay > 0 &&
+        !(await waitForExpectationRetry(this.window, delay, signal))
+      )
+        return abortedExpectationResult(isNot, signal!);
+
+      if (signal?.aborted) return abortedExpectationResult(isNot, signal);
+
+      lastAttempt = await this.expectOnce(selector, expression, options);
+      if (lastAttempt.matches !== isNot) return { matches: !isNot };
+    }
+
+    return {
+      matches: isNot,
+      received: lastAttempt.received,
+      timedOut: true,
+      errorMessage: lastAttempt.missing
+        ? "Error: element(s) not found"
+        : undefined,
+      log: [`waiting for locator(${JSON.stringify(selector)})`],
+    };
+  }
+
+  private async expectOnce(
+    selector: string,
+    expression: string,
+    options: Record<string, unknown>
+  ): Promise<LocatorExpectationAttempt> {
+    const expectOptions = options as LocatorExpectationOptions;
+    const isArray =
+      expression === "to.have.count" || expression.endsWith(".array");
     const elements = this.resolveAll(selector);
-    const expectOptions = Object.fromEntries(
+
+    if (!elements.length)
+      return missingExpectationAttempt(expression, expectOptions);
+
+    // Pinned Frame._expectInternal resolves non-array assertions strictly.
+    if (!isArray && elements.length > 1)
+      throw new Error(
+        `strict mode violation: locator ${JSON.stringify(selector)} resolved to ${elements.length} elements`
+      );
+
+    const injectedOptions = Object.fromEntries(
       Object.entries(options).filter(
         ([key]) => key !== "timeout" && key !== "signal"
       )
@@ -153,13 +240,14 @@ export class PageImpl {
       ExpectCapableInjectedScript;
     const result = await injected.expect(
       elements[0],
-      { expression, ...expectOptions },
+      { expression, ...injectedOptions },
       elements
     );
-    const isNot = !!options.isNot;
-    const passes = result.matches !== isNot;
-    if (passes) return { matches: !isNot };
-    return { matches: isNot, received: result.received };
+    return {
+      matches: result.matches,
+      received: result.received,
+      missing: false,
+    };
   }
 
   async evaluateLocatorExpression<T extends Element | Element[]>(
@@ -720,6 +808,93 @@ export class PageImpl {
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
+
+function expectationTimeout(timeout: unknown): number {
+  if (typeof timeout !== "number") return DEFAULT_EXPECT_TIMEOUT;
+  return Math.max(0, timeout);
+}
+
+function expectationBackoff(timeout: number, retryIndex: number): number {
+  const backoff =
+    EXPECT_RETRY_BACKOFF[Math.min(retryIndex, EXPECT_RETRY_BACKOFF.length - 1)];
+  return Math.min(backoff, Math.max(1, timeout / 5));
+}
+
+function missingExpectationAttempt(
+  expression: string,
+  options: LocatorExpectationOptions
+): LocatorExpectationAttempt {
+  const isNot = !!options.isNot;
+
+  if (expression === "to.have.count") {
+    return {
+      matches: options.expectedNumber === 0,
+      received: { value: 0 },
+      missing: false,
+    };
+  }
+
+  if (expression.endsWith(".array")) {
+    const expectedText = options.expectedText;
+    return {
+      matches: !Array.isArray(expectedText) || expectedText.length === 0,
+      received: { value: [] },
+      missing: false,
+    };
+  }
+
+  if (
+    (!isNot &&
+      (expression === "to.be.hidden" || expression === "to.be.detached")) ||
+    (isNot &&
+      (expression === "to.be.visible" ||
+        expression === "to.be.attached" ||
+        expression === "to.be.in.viewport"))
+  ) {
+    return { matches: !isNot, missing: false };
+  }
+
+  return { matches: isNot, missing: true };
+}
+
+function abortedExpectationResult(
+  isNot: boolean,
+  signal: AbortSignal
+): LocatorExpectationResult {
+  return {
+    matches: isNot,
+    errorMessage: `Error: The assertion was aborted: ${abortReason(signal)}`,
+    log: ["operation was aborted"],
+  };
+}
+
+function abortReason(signal: AbortSignal): string {
+  const reason = signal.reason;
+  if (reason instanceof Error) return reason.message;
+  return reason === undefined ? "This operation was aborted" : String(reason);
+}
+
+function waitForExpectationRetry(
+  browserWindow: Window & typeof globalThis,
+  delay: number,
+  signal?: AbortSignal
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    const finish = (completed: boolean) => {
+      browserWindow.clearTimeout(timeoutId);
+      signal?.removeEventListener("abort", onAbort);
+      resolve(completed);
+    };
+    const onAbort = () => finish(false);
+    const timeoutId = browserWindow.setTimeout(() => finish(true), delay);
+
+    if (signal?.aborted) {
+      finish(false);
+      return;
+    }
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
 
 function dispatchKeyboardEvent(
   target: Element,
