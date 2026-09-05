@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:4b32cdf63456bec95d83c51e95f883dbcdd8663695dbc484fc18efd399d6de17
+# checksum: sha256:ebfa240b908bb299f1f8a9bc0f49ca7cbb8ea965d0bb5a84ddf509085d063f9e
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -76,9 +76,9 @@ g G-15 status=verified fitness_kind=boolean t_created=2026-09-05T11:41:46Z t_upd
   area: A-02
   fitness_current: true
 
-g G-16 status=unverified fitness_kind=boolean t_created=2026-09-05T12:53:18Z t_updated=2026-09-05T12:53:18Z "Expand browser-native Playwright compatibility"
+g G-16 status=verified fitness_kind=boolean t_created=2026-09-05T12:53:18Z t_updated=2026-09-05T13:47:24Z "Expand browser-native Playwright compatibility"
   area: A-02
-  fitness_current: false
+  fitness_current: true
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -983,7 +983,7 @@ w W-46 type=feature status=done cynefin=complicated t_created=2026-09-05T12:53:2
   plan:
     | Add timeout configuration only when it affects an already implemented operation with a meaningful assertion.
 
-w W-47 type=feature status=ready cynefin=complicated t_created=2026-09-05T12:53:29Z t_updated=2026-09-05T12:54:13Z "Verify browser-native compatibility expansion"
+w W-47 type=feature status=done cynefin=complicated t_created=2026-09-05T12:53:29Z t_updated=2026-09-05T13:47:24Z "Verify browser-native compatibility expansion"
   goals: G-16
   theme: T-02
   fitness: G-16=+1
@@ -996,6 +996,11 @@ w W-47 type=feature status=ready cynefin=complicated t_created=2026-09-05T12:53:
     | An integrated end-of-wave review will separate genuine compatibility gains from incidental harness passes and reveal the next highest-value boundary decision.
   evidence_strategy:
     | Record reviewed promotions, corpus totals and clusters, checksum verification, package and workspace checks, integrated coordinator review findings, commits, and PR state.
+  evidence:
+    | Integrated review corrected Page.$eval first-match behavior, Locator.evaluate timeout/abort handling, and Locator.ariaSnapshot default-mode waiting in commit 67e481b1.
+    | Reviewed and promoted 55 meaningful new upstream passes; baseline now contains 125 individually reviewed tests. The no-assertion setContent speed pass and truthiness-only waitForFunction window pass remain deliberately unpromoted.
+    | Verified the unchanged 22-spec, 473-test corpus and copied-spec checksums: 127 evidence-bearing candidates, 125 reviewed, 336 failures, 9 diagnostic-only passes, 1 skip, 0 regressions.
+    | Full pnpm check passed, including builds, lint, typecheck, unit/contract tests, 27 adapter guards, upstream baseline gate, formatting, and package boundaries.
   plan:
     | Stop after reporting the new corpus; do not implement real Playwright setup routing.
 
@@ -1172,7 +1177,7 @@ b B-02 status=validated cynefin=complicated t_created=2026-09-02T13:55:47Z t_upd
 
 t T-01 status=done t_created=2026-09-05T11:41:46Z t_updated=2026-09-05T12:20:11Z "Browser-native compatibility expansion"
 
-t T-02 status=open t_created=2026-09-05T12:53:18Z t_updated=2026-09-05T12:53:18Z "Browser-native API expansion"
+t T-02 status=done t_created=2026-09-05T12:53:18Z t_updated=2026-09-05T13:47:24Z "Browser-native API expansion"
 
 y Y-01 status=active t_created=2026-08-27T13:24:26Z t_updated=2026-08-27T13:25:03Z "Shared Page Object behavior"
   tags: Page Object Model (POM), Generated WebMCP Tool

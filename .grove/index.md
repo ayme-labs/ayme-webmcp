@@ -7,14 +7,14 @@
 | Measure | Count | Composition |
 | --- | --- | --- |
 | C (content) | 18 | validated B 2 · answered Q 2 · accepted D 11 · active Discovery 3 |
-| V (uncertainty) | 3 | open Q 2 · pending B 0 · W below DoR 0 · uncovered surface 1 |
+| V (uncertainty) | 2 | open Q 2 · pending B 0 · W below DoR 0 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 14 | 1 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 1 |
+| A-02 | Page Object interoperability | 14 | 0 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 |
 | A-03 | Consumer browser capabilities | 4 | 0 | C: validated B 1 · answered Q 0 · accepted D 1 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
@@ -38,7 +38,7 @@
 | G-13 | Increase verified Playwright compatibility | count; current=3 target=3 | verified |
 | G-14 | Increase Playwright behavioral compatibility | count; current=4 target=4 | verified |
 | G-15 | Expand verified single-document Playwright compatibility | boolean; current=true | verified |
-| G-16 | Expand browser-native Playwright compatibility | boolean; current=false | unverified |
+| G-16 | Expand browser-native Playwright compatibility | boolean; current=true | verified |
 
 ## Work items
 
@@ -90,7 +90,7 @@
 | W-44 | feature | Expose browser-native ARIA snapshots | G-16 | complicated | ⊤ | done |  |
 | W-45 | feature | Implement browser-native callback methods | G-16 | complicated | ⊤ | done |  |
 | W-46 | feature | Add small single-document methods | G-16 | complicated | ⊤ | done |  |
-| W-47 | feature | Verify browser-native compatibility expansion | G-16 | complicated | ⊤ | ready | ★ |
+| W-47 | feature | Verify browser-native compatibility expansion | G-16 | complicated | ⊤ | done |  |
 
 ## Decisions
 
@@ -134,7 +134,7 @@
 | ID | Title | Status | Causes work | Themed work |
 | --- | --- | --- | --- | --- |
 | T-01 | Browser-native compatibility expansion | done | – | W-37, W-38, W-39, W-40, W-41, W-42, W-43 |
-| T-02 | Browser-native API expansion | open | – | W-44, W-45, W-46, W-47 |
+| T-02 | Browser-native API expansion | done | – | W-44, W-45, W-46, W-47 |
 
 ## Discoveries
 
@@ -211,7 +211,7 @@ graph TD
   W_44["W-44: Expose browser-native ARIA snapshots"]:::done
   W_45["W-45: Implement browser-native callback methods"]:::done
   W_46["W-46: Add small single-document methods"]:::done
-  W_47["W-47: Verify browser-native compatibility expansion"]:::ready,critical
+  W_47["W-47: Verify browser-native compatibility expansion"]:::done
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -322,7 +322,6 @@ graph TD
   Y_03 -->|distills| D_12
   Y_04 -->|distills| D_12
   Y_04 -->|supersedes| Y_03
-  class W_47 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff

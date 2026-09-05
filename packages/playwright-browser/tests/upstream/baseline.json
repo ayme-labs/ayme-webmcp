@@ -6,6 +6,16 @@
   "selectedTestCount": 473,
   "reviewed": [
     {
+      "id": "locator-click.spec.ts > should click if the target element is removed in pointerdown event",
+      "method": "Locator.click",
+      "evidence": "Awaiting Locator.click completes without rejection when the target element is removed in pointerdown event."
+    },
+    {
+      "id": "locator-click.spec.ts > should click if the target element is removed in pointerup event",
+      "method": "Locator.click",
+      "evidence": "Awaiting Locator.click completes without rejection when the target element is removed in pointerup event."
+    },
+    {
       "id": "locator-convenience.spec.ts > isChecked should work",
       "method": "Locator.isChecked",
       "evidence": "Assertions verify Locator and Page checked state before and after an adapter-routed browser mutation, plus the invalid-target error."
@@ -51,9 +61,24 @@
       "evidence": "The test enables a textarea, fills it through the locator, and asserts the resulting value."
     },
     {
+      "id": "locator-misc-2.spec.ts > should press @smoke",
+      "method": "Locator.press",
+      "evidence": "Assertion verifies Locator.press inserts the pressed character into the input."
+    },
+    {
       "id": "locator-misc-2.spec.ts > should support filter(visible)",
       "method": "Locator.filter",
       "evidence": "Assertions verify visible and hidden filters, nth composition, and getByText chaining against the expected elements."
+    },
+    {
+      "id": "locator-misc-2.spec.ts > should waitFor",
+      "method": "Locator.waitFor",
+      "evidence": "Assertions and awaited completion verify Locator.waitFor behavior: should waitFor."
+    },
+    {
+      "id": "locator-misc-2.spec.ts > should waitFor hidden",
+      "method": "Locator.waitFor",
+      "evidence": "Assertions and awaited completion verify Locator.waitFor behavior: should waitFor hidden."
     },
     {
       "id": "locator-query.spec.ts > alias methods coverage",
@@ -126,6 +151,166 @@
       "evidence": "The click rejects an out-of-range nth target with the expected selector query error."
     },
     {
+      "id": "page-aria-snapshot-ai.spec.ts > emit generic roles for nodes w/o roles",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify emit generic roles for nodes w/o roles through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should collapse generic nodes",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should collapse generic nodes through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should collapse inline generic nodes",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should collapse inline generic nodes through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should generate refs",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should generate refs through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should include active element information",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should include active element information through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should include cursor pointer hint",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should include cursor pointer hint through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should inline a deeply nested generic",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should inline a deeply nested generic through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should inline single leaf generic child into parent generic",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should inline single leaf generic child into parent generic through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should keep icon-only clickable elements",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should keep icon-only clickable elements through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should keep names not derived from printed nodes",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should keep names not derived from printed nodes through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should keep the name when the contributing wrapper collapses into repeating text",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should keep the name when the contributing wrapper collapses into repeating text through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should limit depth",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should limit depth through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should not generate refs for elements with pointer-events:none",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should not generate refs for elements with pointer-events:none through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should not nest cursor pointer hints",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should not nest cursor pointer hints through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should not remove generic nodes with title",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should not remove generic nodes with title through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should omit a nameless image nested inside a link",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should omit a nameless image nested inside a link through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should omit images without an accessible name",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should omit images without an accessible name through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should omit leaf generic whose text is already in an ancestor name",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should omit leaf generic whose text is already in an ancestor name through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should omit name-repeating generic behind a wrapper",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should omit name-repeating generic behind a wrapper through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should omit names that just repeat printed descendant nodes",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should omit names that just repeat printed descendant nodes through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should omit redundant name when a contributing wrapper is collapsed",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should omit redundant name when a contributing wrapper is collapsed through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should omit redundant name when a contributor is a skipped leaf generic",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should omit redundant name when a contributor is a skipped leaf generic through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should resolve refs of distilled-away nodes",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should resolve refs of distilled-away nodes through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should truncate data url in link",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should truncate data url in link through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot.spec.ts > auto-waits the locator and does not include iframes",
+      "method": "Locator.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify auto-waits the locator and does not include iframes through Locator.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot.spec.ts > should limit depth",
+      "method": "Locator.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should limit depth through Locator.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot.spec.ts > should not include box when option is omitted",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should not include box when option is omitted through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot.spec.ts > should not show unhidden children of aria-hidden elements",
+      "method": "Locator.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should not show unhidden children of aria-hidden elements through Locator.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot.spec.ts > should not show visible children of hidden elements",
+      "method": "Locator.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should not show visible children of hidden elements through Locator.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot.spec.ts > should snapshot placeholder when different from the name",
+      "method": "Locator.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should snapshot placeholder when different from the name through Locator.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot.spec.ts > should snapshot with box from locator",
+      "method": "Locator.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should snapshot with box from locator through Locator.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot.spec.ts > should snapshot with box from page",
+      "method": "Page.ariaSnapshot",
+      "evidence": "Exact upstream snapshot assertions verify should snapshot with box from page through Page.ariaSnapshot."
+    },
+    {
       "id": "page-basic.spec.ts > has navigator.webdriver set to true",
       "method": "Page.evaluate",
       "evidence": "Assertion verifies an adapter-routed browser callback returns the expected boolean; it does not claim ownership of navigator.webdriver semantics."
@@ -139,6 +324,11 @@
       "id": "page-set-content.spec.ts > should work @smoke",
       "method": "Page.content",
       "evidence": "The assertion verifies setContent followed by content returns the complete normalized HTML document."
+    },
+    {
+      "id": "page-set-content.spec.ts > should work with accents",
+      "method": "Page.setContent",
+      "evidence": "Assertions read the resulting document and verify Page.setContent work with accents."
     },
     {
       "id": "page-set-content.spec.ts > should work with commit",
@@ -156,9 +346,24 @@
       "evidence": "The assertion verifies domcontentloaded is accepted and the resulting complete document content is correct."
     },
     {
+      "id": "page-set-content.spec.ts > should work with emojis",
+      "method": "Page.setContent",
+      "evidence": "Assertions read the resulting document and verify Page.setContent work with emojis."
+    },
+    {
       "id": "page-set-content.spec.ts > should work with HTML 4 doctype",
       "method": "Page.content",
       "evidence": "The assertion verifies Page.content preserves a public HTML 4 doctype and serializes the complete document."
+    },
+    {
+      "id": "page-set-content.spec.ts > should work with newline",
+      "method": "Page.setContent",
+      "evidence": "Assertions read the resulting document and verify Page.setContent work with newline."
+    },
+    {
+      "id": "page-set-content.spec.ts > should work with tricky content",
+      "method": "Page.setContent",
+      "evidence": "Assertions read the resulting document and verify Page.setContent work with tricky content."
     },
     {
       "id": "page-wait-for-function.spec.ts > should accept a string",
@@ -211,6 +416,11 @@
       "evidence": "The method rejects the unsupported mutation polling strategy with the expected error."
     },
     {
+      "id": "page-wait-for-function.spec.ts > should timeout",
+      "method": "Page.waitForTimeout",
+      "evidence": "Elapsed-time assertion verifies Page.waitForTimeout waits for at least half the requested interval."
+    },
+    {
       "id": "page-wait-for-function.spec.ts > should wait for predicate with arguments",
       "method": "Page.waitForFunction",
       "evidence": "The predicate resolves only when the serialized argument object reaches the browser callback with both expected values."
@@ -224,6 +434,11 @@
       "id": "retarget.spec.ts > should not retarget anchor into parent label",
       "method": "Locator.click",
       "evidence": "Clicking an anchor inside disabled label arrangements invokes the anchor in both cases."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getBy escaping",
+      "method": "Page.getByText",
+      "evidence": "Assertions verify escaping across the browser adapter's getBy locator factories."
     },
     {
       "id": "selectors-get-by.spec.ts > getByAltText should work",
@@ -336,9 +551,39 @@
       "evidence": "Assertions verify case-insensitive, exact, and regex matching plus page, mainFrame, and nested locator forms."
     },
     {
+      "id": "selectors-misc.spec.ts > chaining should work with large DOM @smoke",
+      "method": "Page.$$eval",
+      "evidence": "Upstream assertions verify chaining should work with large DOM @smoke through browser-side Page.$$eval selector evaluation."
+    },
+    {
+      "id": "selectors-misc.spec.ts > should escape the scope with >>",
+      "method": "Page.$eval",
+      "evidence": "Upstream assertions verify should escape the scope with >> through browser-side Page.$eval selector evaluation."
+    },
+    {
       "id": "selectors-misc.spec.ts > should work with >> visible=false",
       "method": "Locator._expect",
       "evidence": "Assertions verify hidden matching before and after an adapter-routed locator callback mutation."
+    },
+    {
+      "id": "selectors-misc.spec.ts > should work with internal:and=",
+      "method": "Page.$$eval",
+      "evidence": "Upstream assertions verify should work with internal:and= through browser-side Page.$$eval selector evaluation."
+    },
+    {
+      "id": "selectors-misc.spec.ts > should work with internal:chain=",
+      "method": "Page.$$eval",
+      "evidence": "Upstream assertions verify should work with internal:chain= through browser-side Page.$$eval selector evaluation."
+    },
+    {
+      "id": "selectors-misc.spec.ts > should work with internal:has-not=",
+      "method": "Page.$$eval",
+      "evidence": "Upstream assertions verify should work with internal:has-not= through browser-side Page.$$eval selector evaluation."
+    },
+    {
+      "id": "selectors-misc.spec.ts > should work with internal:or=",
+      "method": "Page.$$eval",
+      "evidence": "Upstream assertions verify should work with internal:or= through browser-side Page.$$eval selector evaluation."
     },
     {
       "id": "selectors-misc.spec.ts > should work with strict mode and chaining",
@@ -351,9 +596,39 @@
       "evidence": "Assertions verify strict getByText and hasText selectors use full normalized node text across nested elements."
     },
     {
+      "id": "selectors-text.spec.ts > should match input[type=button|submit|reset]",
+      "method": "Page.$eval",
+      "evidence": "Upstream assertions verify should match input[type=button|submit|reset] through browser-side Page.$eval selector evaluation."
+    },
+    {
+      "id": "selectors-text.spec.ts > should match root after >> with *",
+      "method": "Page.$$eval",
+      "evidence": "Upstream assertions verify should match root after >> with * through browser-side Page.$$eval selector evaluation."
+    },
+    {
+      "id": "selectors-text.spec.ts > should prioritize light dom over shadow dom in the same parent",
+      "method": "Page.$eval",
+      "evidence": "Upstream assertions verify should prioritize light dom over shadow dom in the same parent through browser-side Page.$eval selector evaluation."
+    },
+    {
+      "id": "selectors-text.spec.ts > should support empty string",
+      "method": "Page.$eval",
+      "evidence": "Upstream assertions verify should support empty string through browser-side Page.$eval selector evaluation."
+    },
+    {
+      "id": "selectors-text.spec.ts > should work with large DOM",
+      "method": "Page.$$eval",
+      "evidence": "Upstream assertions verify should work with large DOM through browser-side Page.$$eval selector evaluation."
+    },
+    {
       "id": "selectors-text.spec.ts > should work with leading and trailing spaces",
       "method": "Locator._expect",
       "evidence": "Assertions verify text selectors with leading and trailing spaces remain visible."
+    },
+    {
+      "id": "selectors-text.spec.ts > text-is() should ignore comments",
+      "method": "Page.$eval",
+      "evidence": "Upstream assertions verify text-is() should ignore comments through browser-side Page.$eval selector evaluation."
     }
   ]
 }
