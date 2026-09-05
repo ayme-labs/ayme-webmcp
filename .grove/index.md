@@ -7,14 +7,14 @@
 | Measure | Count | Composition |
 | --- | --- | --- |
 | C (content) | 18 | validated B 2 · answered Q 2 · accepted D 11 · active Discovery 3 |
-| V (uncertainty) | 5 | open Q 2 · pending B 0 · W below DoR 0 · uncovered surface 3 |
+| V (uncertainty) | 4 | open Q 2 · pending B 0 · W below DoR 0 · uncovered surface 2 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 14 | 3 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 3 |
+| A-02 | Page Object interoperability | 14 | 2 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 2 |
 | A-03 | Consumer browser capabilities | 4 | 0 | C: validated B 1 · answered Q 0 · accepted D 1 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
@@ -94,7 +94,7 @@
 | W-47 | feature | Verify browser-native compatibility expansion | G-16 | complicated | ⊤ | done |  |
 | W-48 | feature | Add browser-native Locator observations | G-17 | complicated | ⊤ | done |  |
 | W-49 | feature | Add browser-native Locator conveniences | G-17 | complicated | ⊤ | done |  |
-| W-50 | feature | Complete Locator composition transport | G-17 | complicated | ⊤ | proposed | ★ |
+| W-50 | feature | Complete Locator composition transport | G-17 | complicated | ⊤ | done |  |
 | W-51 | feature | Add small browser-native Page conveniences | G-17 | complicated | ⊤ | proposed | ★ |
 | W-52 | feature | Verify browser-native convenience wave | G-17 | complicated | ⊤ | proposed | ★ |
 
@@ -222,7 +222,7 @@ graph TD
   W_47["W-47: Verify browser-native compatibility expansion"]:::done
   W_48["W-48: Add browser-native Locator observations"]:::done
   W_49["W-49: Add browser-native Locator conveniences"]:::done
-  W_50["W-50: Complete Locator composition transport"]:::feature,critical
+  W_50["W-50: Complete Locator composition transport"]:::done
   W_51["W-51: Add small browser-native Page conveniences"]:::feature,critical
   W_52["W-52: Verify browser-native convenience wave"]:::feature,critical
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
@@ -340,7 +340,7 @@ graph TD
   Y_03 -->|distills| D_12
   Y_04 -->|distills| D_12
   Y_04 -->|supersedes| Y_03
-  class W_50,W_51,W_52 critical
+  class W_51,W_52 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff

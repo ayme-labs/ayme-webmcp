@@ -201,6 +201,32 @@ export class LocatorImpl {
     );
   }
 
+  /** Mirrors pinned b25d782 Locator.and selector serialization. */
+  and(locator: LocatorImpl) {
+    const brand = requireBrand(locator, "locator");
+    if (brand.ownerPage !== this.ownerPage)
+      throw new Error(`Locators must belong to the same frame.`);
+    return new LocatorImpl(
+      this.ownerPage,
+      this.selector + ` >> internal:and=` + JSON.stringify(brand.getSelector()),
+      `${this.label}.and(locator)`,
+      this.onTrace
+    );
+  }
+
+  /** Mirrors pinned b25d782 Locator.or selector serialization. */
+  or(locator: LocatorImpl) {
+    const brand = requireBrand(locator, "locator");
+    if (brand.ownerPage !== this.ownerPage)
+      throw new Error(`Locators must belong to the same frame.`);
+    return new LocatorImpl(
+      this.ownerPage,
+      this.selector + ` >> internal:or=` + JSON.stringify(brand.getSelector()),
+      `${this.label}.or(locator)`,
+      this.onTrace
+    );
+  }
+
   nth(index: number) {
     return new LocatorImpl(
       this.ownerPage,

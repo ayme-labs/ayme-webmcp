@@ -231,6 +231,37 @@ describe("Single-document adapter contract", () => {
     });
   });
 
+  describe("Locator.and and Locator.or", () => {
+    it("intersects and unions selectors using pinned serialization", async () => {
+      document.body.innerHTML = `
+        <button class=primary>Save</button>
+        <button class=secondary>Cancel</button>
+        <a class=primary>Save link</a>
+      `;
+      const page = createPage();
+      const buttons = page.getByRole("button");
+      const primary = page.locator(".primary");
+
+      expect(await buttons.and(primary).allTextContents()).toEqual(["Save"]);
+      expect(await buttons.or(primary).allTextContents()).toEqual([
+        "Save",
+        "Cancel",
+        "Save link",
+      ]);
+    });
+
+    it("rejects locators from another page", () => {
+      const first = createPage();
+      const second = createPage();
+      expect(() => first.locator("div").and(second.locator("div"))).toThrow(
+        /same frame/
+      );
+      expect(() => first.locator("div").or(second.locator("div"))).toThrow(
+        /same frame/
+      );
+    });
+  });
+
   // ── AC2 extension: locator(selector, options) ─────────────────
 
   describe("locator with options", () => {

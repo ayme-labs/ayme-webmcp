@@ -13,6 +13,14 @@ import type { Frame, Locator, Page } from "@playwright/test";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ADAPTER_DIST_PATH = resolve(__dirname, "../../dist/index.mjs");
+const LOCATOR_CHAIN_PAYLOAD = "__aymeLocatorChain";
+
+type ChainStep = [string, unknown[]];
+
+// Kept exclusively in the Node fixture. Browser Locator objects never need a
+// serialization format in production; this only gets proxy chains across the
+// fixture's realPage.evaluate boundary.
+const locatorProxyChains = new WeakMap<object, ChainStep[]>();
 
 // Locator-creating page methods: return a proxy locator chain.
 const LOCATOR_CREATING_METHODS = new Set([
@@ -44,6 +52,39 @@ const LOCATOR_CHAIN_METHODS = new Set([
   "and",
   "or",
 ]);
+
+function encodeBridgeValue(
+  value: unknown,
+  seen = new WeakMap<object, unknown>()
+): unknown {
+  if (!value || typeof value !== "object") return value;
+
+  const locatorChain = locatorProxyChains.get(value);
+  if (locatorChain)
+    return { [LOCATOR_CHAIN_PAYLOAD]: encodeBridgeValue(locatorChain, seen) };
+
+  const previous = seen.get(value);
+  if (previous !== undefined) return previous;
+
+  if (Array.isArray(value)) {
+    const encoded: unknown[] = [];
+    seen.set(value, encoded);
+    for (const item of value) encoded.push(encodeBridgeValue(item, seen));
+    return encoded;
+  }
+
+  if (!isPlainObject(value)) return value;
+  const encoded: Record<string, unknown> = {};
+  seen.set(value, encoded);
+  for (const [key, item] of Object.entries(value))
+    encoded[key] = encodeBridgeValue(item, seen);
+  return encoded;
+}
+
+function isPlainObject(value: object): value is Record<string, unknown> {
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
 
 // ── Adapter bundle ──────────────────────────────────────────────────
 
@@ -85,6 +126,22 @@ export async function createAdapterPage(realPage: Page): Promise<Page> {
   await realPage.evaluate(() => {
     const host = window as any;
     host.__aymeEvidence = { entered: [], failures: [] };
+    host.__aymeDecodeBridgeValue = function decode(value: any): any {
+      if (!value || typeof value !== "object") return value;
+      if (Array.isArray(value)) return value.map(decode);
+      if (Array.isArray(value.__aymeLocatorChain))
+        return host.__aymeReplayAdapterChain(value.__aymeLocatorChain);
+      if (Object.getPrototypeOf(value) !== Object.prototype) return value;
+      return Object.fromEntries(
+        Object.entries(value).map(([key, item]) => [key, decode(item)])
+      );
+    };
+    host.__aymeReplayAdapterChain = function replay(chain: any[]): any {
+      let current: any = host.__aymeAdapterPage;
+      for (const [method, args] of chain)
+        current = current[method](...host.__aymeDecodeBridgeValue(args));
+      return current;
+    };
     const wrapped = new WeakSet<object>();
     const instrument = (object: any, kind: string): any => {
       if (!object || typeof object !== "object" || wrapped.has(object))
@@ -175,12 +232,16 @@ function createPageProxy(realPage: Page): Page {
           realPage.evaluate(
             ({ expression, isFunction, arg: a }) => {
               const p = (window as any).__aymeAdapterPage;
-              return p._evaluateExpression(expression, isFunction, a);
+              return p._evaluateExpression(
+                expression,
+                isFunction,
+                (window as any).__aymeDecodeBridgeValue(a)
+              );
             },
             {
               expression: String(pageFunction),
               isFunction: typeof pageFunction === "function",
-              arg,
+              arg: encodeBridgeValue(arg),
             }
           );
       }
@@ -199,14 +260,19 @@ function createPageProxy(realPage: Page): Page {
             ({ expression, isFunction, arg: a, options: opts }) => {
               const p = (window as any).__aymeAdapterPage;
               return p
-                ._waitForFunctionExpression(expression, isFunction, a, opts)
+                ._waitForFunctionExpression(
+                  expression,
+                  isFunction,
+                  (window as any).__aymeDecodeBridgeValue(a),
+                  (window as any).__aymeDecodeBridgeValue(opts)
+                )
                 .then((h: any) => h.jsonValue());
             },
             {
               expression: String(pageFunction),
               isFunction: typeof pageFunction === "function",
-              arg,
-              options: options as Record<string, unknown>,
+              arg: encodeBridgeValue(arg),
+              options: encodeBridgeValue(options) as Record<string, unknown>,
             }
           );
           return {
@@ -222,9 +288,12 @@ function createPageProxy(realPage: Page): Page {
           realPage.evaluate(
             ({ html: h, options: o }: { html: string; options: unknown }) => {
               const p = (window as any).__aymeAdapterPage;
-              return p.setContent(h, o);
+              return p.setContent(
+                h,
+                (window as any).__aymeDecodeBridgeValue(o)
+              );
             },
-            { html, options }
+            { html, options: encodeBridgeValue(options) }
           );
       }
 
@@ -237,13 +306,17 @@ function createPageProxy(realPage: Page): Page {
             ({ method, selector: s, expression, arg: a }) => {
               const p = (window as any).__aymeAdapterPage;
               const callback = (0, eval)(`(${expression})`);
-              return p[method](s, callback, a);
+              return p[method](
+                s,
+                callback,
+                (window as any).__aymeDecodeBridgeValue(a)
+              );
             },
             {
               method: prop,
               selector,
               expression: String(pageFunction),
-              arg,
+              arg: encodeBridgeValue(arg),
             }
           );
       }
@@ -257,13 +330,14 @@ function createPageProxy(realPage: Page): Page {
           ({ member, args: a }) => {
             const p = (window as any).__aymeAdapterPage;
             const v = p[member];
-            if (typeof v === "function") return v.call(p, ...a);
+            const args = (window as any).__aymeDecodeBridgeValue(a);
+            if (typeof v === "function") return v.call(p, ...args);
             if (a.length === 0 && v !== undefined) return v;
             throw new TypeError(
               `__aymeAdapterPage.${member} is not a function`
             );
           },
-          { member: prop, args: args as any[] }
+          { member: prop, args: encodeBridgeValue(args) as any[] }
         );
     },
   }) as Page;
@@ -286,15 +360,20 @@ function createFrameProxy(realPage: Page, chain: ChainStep[]): Frame {
         return (...args: unknown[]) =>
           realPage.evaluate(
             ({ chain: c, member, args: a }) => {
-              let current: any = (window as any).__aymeAdapterPage;
-              for (const [method, methodArgs] of c)
-                current = current[method](...methodArgs);
+              const host = window as any;
+              const current: any = host.__aymeReplayAdapterChain(c);
               const value = current[member];
-              if (typeof value === "function") return value.call(current, ...a);
+              const args = host.__aymeDecodeBridgeValue(a);
+              if (typeof value === "function")
+                return value.call(current, ...args);
               if (a.length === 0 && value !== undefined) return value;
               throw new TypeError(`${member} is not a function`);
             },
-            { chain, member: prop as string, args: args as any[] }
+            {
+              chain: encodeBridgeValue(chain),
+              member: prop as string,
+              args: encodeBridgeValue(args) as any[],
+            }
           );
       },
     }
@@ -302,8 +381,6 @@ function createFrameProxy(realPage: Page, chain: ChainStep[]): Frame {
 }
 
 // ── Locator proxy ───────────────────────────────────────────────────
-
-type ChainStep = [string, unknown[]];
 
 function createLocatorProxy(
   realPage: Page,
@@ -354,11 +431,10 @@ function createLocatorProxy(
         return async () => {
           const count: number = await realPage.evaluate(
             async ({ chain: c }) => {
-              let current: any = (window as any).__aymeAdapterPage;
-              for (const [m, a] of c) current = current[m](...a);
+              const current: any = (window as any).__aymeReplayAdapterChain(c);
               return (await current.all()).length;
             },
-            { chain }
+            { chain: encodeBridgeValue(chain) }
           );
           return Array.from({ length: count }, (_, i) =>
             createLocatorProxy(realPage, [...chain, ["nth", [i]]])
@@ -379,16 +455,17 @@ function createLocatorProxy(
         return async (expression: string, options: Record<string, unknown>) =>
           realPage.evaluate(
             ({ chain: c, expression: e, options: o }) => {
-              let current: any = (window as any).__aymeAdapterPage;
-              for (const [method, args] of c)
-                current = current[method](...args);
-              return current._expect(e, o);
+              const host = window as any;
+              const current: any = host.__aymeReplayAdapterChain(c);
+              return current._expect(e, host.__aymeDecodeBridgeValue(o));
             },
             {
-              chain,
+              chain: encodeBridgeValue(chain),
               expression,
               // AbortSignal is a client-side control object, not serializable.
-              options: serializableExpectationOptions(options),
+              options: serializableExpectationOptions(
+                encodeBridgeValue(options) as Record<string, unknown>
+              ),
             }
           );
       }
@@ -403,18 +480,21 @@ function createLocatorProxy(
         ) =>
           realPage.evaluate(
             ({ chain: c, method, expression, arg: a, options: o }) => {
-              let current: any = (window as any).__aymeAdapterPage;
-              for (const [chainMethod, chainArgs] of c)
-                current = current[chainMethod](...chainArgs);
+              const host = window as any;
+              const current: any = host.__aymeReplayAdapterChain(c);
               const callback = (0, eval)(`(${expression})`);
-              return current[method](callback, a, o);
+              return current[method](
+                callback,
+                host.__aymeDecodeBridgeValue(a),
+                host.__aymeDecodeBridgeValue(o)
+              );
             },
             {
-              chain,
+              chain: encodeBridgeValue(chain),
               method: prop,
               expression: String(pageFunction),
-              arg,
-              options: serializableQueryOptions(options),
+              arg: encodeBridgeValue(arg),
+              options: serializableQueryOptions(encodeBridgeValue(options)),
             }
           );
       }
@@ -423,15 +503,21 @@ function createLocatorProxy(
       return async (...args: unknown[]) =>
         realPage.evaluate(
           ({ chain: c, method, args: a }) => {
-            let current: any = (window as any).__aymeAdapterPage;
-            for (const [m, ma] of c) current = current[m](...ma);
-            return current[method](...a);
+            const host = window as any;
+            const current: any = host.__aymeReplayAdapterChain(c);
+            return current[method](...host.__aymeDecodeBridgeValue(a));
           },
-          { chain, method: prop as string, args: args as any[] }
+          {
+            chain: encodeBridgeValue(chain),
+            method: prop as string,
+            args: encodeBridgeValue(args) as any[],
+          }
         );
     },
   };
-  return new Proxy({}, handler) as unknown as Locator;
+  const proxy = new Proxy({}, handler);
+  locatorProxyChains.set(proxy, chain);
+  return proxy as unknown as Locator;
 }
 
 function serializableExpectationOptions(options: Record<string, unknown>) {

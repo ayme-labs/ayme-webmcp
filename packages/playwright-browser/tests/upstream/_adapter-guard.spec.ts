@@ -88,6 +88,45 @@ test("adapter locator.count works through the bridge", async ({
   expect(count).toBe(3);
 });
 
+test("adapter locator composition reconstructs nested proxy locators", async ({
+  page,
+  adapterPage,
+}) => {
+  await page.setContent(`
+    <button class=primary>Save</button>
+    <button>Cancel</button>
+    <a class=primary>Save link</a>
+  `);
+  const buttons = adapterPage.getByRole("button");
+  const primary = adapterPage.locator(".primary");
+
+  await expect(buttons.and(primary).allTextContents()).resolves.toEqual([
+    "Save",
+  ]);
+  await expect(buttons.or(primary).allTextContents()).resolves.toEqual([
+    "Save",
+    "Cancel",
+    "Save link",
+  ]);
+  await expect(
+    adapterPage.locator("button").filter({ has: primary }).count()
+  ).resolves.toBe(0);
+
+  // Fixture-only coverage for the recursive codec. Production evaluation runs
+  // in one browser realm and needs no Locator serializer.
+  await expect(
+    (adapterPage as any).evaluate(
+      (value: { locators: Array<{ count(): Promise<number> }> }) =>
+        Promise.all(value.locators.map((locator) => locator.count())),
+      { locators: [buttons] }
+    )
+  ).resolves.toEqual([2]);
+
+  const execution = await page.evaluate(() => (window as any).__aymeEvidence);
+  expect(execution.entered).toContain("Locator.and");
+  expect(execution.entered).toContain("Locator.or");
+});
+
 test("adapter locator matchers use pinned InjectedScript semantics", async ({
   page,
   adapterPage,
