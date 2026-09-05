@@ -1,7 +1,15 @@
 import { injectedScriptFor } from "./injected";
 import type { ByRoleOptions, LocatorOptions } from "./locator";
 import { LocatorImpl } from "./locator";
-import { getByRoleSelector } from "./selectors";
+import {
+  getByAltTextSelector,
+  getByLabelSelector,
+  getByPlaceholderSelector,
+  getByRoleSelector,
+  getByTestIdSelector,
+  getByTextSelector,
+  getByTitleSelector,
+} from "./selectors";
 
 import type { BrowserInteractionPacing, TraceEntry } from "./types";
 
@@ -588,6 +596,25 @@ export class PageImpl {
   // ── Setup operations ─────────────────────────────────────────────
 
   /**
+   * Serializes the controlled document.
+   *
+   * Mirrors pinned b25d782 `server/frames.ts` Frame._content: serialize the
+   * document type separately, then append documentElement.outerHTML. This is
+   * intentionally a browser-native observation, rather than a reconstruction
+   * of the markup supplied to setContent, so DOM mutations remain visible.
+   */
+  async content(): Promise<string> {
+    let content = "";
+    if (this.document.doctype)
+      content = new this.window.XMLSerializer().serializeToString(
+        this.document.doctype
+      );
+    if (this.document.documentElement)
+      content += this.document.documentElement.outerHTML;
+    return content;
+  }
+
+  /**
    * Replaces the controlled document's content.
    *
    * Mirrors pinned b25d782 server/frames.ts:962-987:
@@ -905,6 +932,25 @@ export class PageImpl {
       `page.getByRole(${JSON.stringify(role)}${optString})`,
       this.onTrace
     );
+  }
+
+  getByText(text: string | RegExp, options: { exact?: boolean } = {}) {
+    return this.locator(getByTextSelector(text, options.exact));
+  }
+  getByLabel(text: string | RegExp, options: { exact?: boolean } = {}) {
+    return this.locator(getByLabelSelector(text, options.exact));
+  }
+  getByTestId(testId: string | RegExp) {
+    return this.locator(getByTestIdSelector(testId));
+  }
+  getByPlaceholder(text: string | RegExp, options: { exact?: boolean } = {}) {
+    return this.locator(getByPlaceholderSelector(text, options.exact));
+  }
+  getByAltText(text: string | RegExp, options: { exact?: boolean } = {}) {
+    return this.locator(getByAltTextSelector(text, options.exact));
+  }
+  getByTitle(text: string | RegExp, options: { exact?: boolean } = {}) {
+    return this.locator(getByTitleSelector(text, options.exact));
   }
 
   locator(selector: string, options?: LocatorOptions) {

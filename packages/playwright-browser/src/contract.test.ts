@@ -895,6 +895,22 @@ describe("Single-document adapter contract", () => {
       );
     });
 
+    it("serializes the current document content", async () => {
+      setupDedicatedPage();
+      await dedicatedPage.setContent("<div>hello</div>");
+      expect(await dedicatedPage.content()).toBe(
+        "<html><head></head><body><div>hello</div></body></html>"
+      );
+    });
+
+    it("preserves the document doctype while serializing content", async () => {
+      setupDedicatedPage();
+      await dedicatedPage.setContent("<!DOCTYPE html><div>hello</div>");
+      expect(await dedicatedPage.content()).toBe(
+        "<!DOCTYPE html><html><head></head><body><div>hello</div></body></html>"
+      );
+    });
+
     it("clears previous content", async () => {
       setupDedicatedPage();
       dedicatedPage.document.body.innerHTML = "<div id='old'>old</div>";

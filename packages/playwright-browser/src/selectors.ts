@@ -56,6 +56,30 @@ export function getByRoleSelector(
   return `internal:role=${role}${props.map(([n, v]) => `[${n}=${v}]`).join("")}`;
 }
 
+export function getByTextSelector(text: string | RegExp, exact = false) {
+  return `internal:text=${escapeForTextSelector(text, exact)}`;
+}
+
+export function getByLabelSelector(text: string | RegExp, exact = false) {
+  return `internal:label=${escapeForTextSelector(text, exact)}`;
+}
+
+export function getByTestIdSelector(testId: string | RegExp) {
+  return `internal:testid=[data-testid=${escapeForAttributeSelector(testId, true)}]`;
+}
+
+export function getByPlaceholderSelector(text: string | RegExp, exact = false) {
+  return `internal:attr=[placeholder=${escapeForAttributeSelector(text, exact)}]`;
+}
+
+export function getByAltTextSelector(text: string | RegExp, exact = false) {
+  return `internal:attr=[alt=${escapeForAttributeSelector(text, exact)}]`;
+}
+
+export function getByTitleSelector(text: string | RegExp, exact = false) {
+  return `internal:attr=[title=${escapeForAttributeSelector(text, exact)}]`;
+}
+
 /**
  * Mirrors Playwright's `escapeRegexForSelector` from `@isomorphic/stringUtils`.
  * Escapes quotes and `>>` in regex literals for use inside internal selectors.

@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:6fbab6e8ce7922b8f8465e1c078994c2f9bb888b4990861d49a1e543ab5a977e
+# checksum: sha256:5ddd60203774a1fdb6d09d56146623704c5776c32a35f8cfce5b4041d400f38e
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -71,6 +71,10 @@ g G-14 status=verified fitness_kind=count t_created=2026-09-05T08:31:02Z t_updat
   area: A-02
   fitness_target: 4
   fitness_current: 4
+
+g G-15 status=verified fitness_kind=boolean t_created=2026-09-05T11:41:46Z t_updated=2026-09-05T12:20:11Z "Expand verified single-document Playwright compatibility"
+  area: A-02
+  fitness_current: true
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -802,6 +806,124 @@ w W-36 type=feature status=done cynefin=complicated t_created=2026-09-05T08:32:1
     | Do not change architecture or add harness routing exceptions during verification.
     | Leave the pull request as draft until the user accepts the final checkpoint.
 
+w W-37 type=feature status=done cynefin=clear t_created=2026-09-05T11:42:14Z t_updated=2026-09-05T11:58:14Z "Certify Locator all execution"
+  goals: G-15
+  theme: T-01
+  fitness: G-15=+0
+  surface: packages/playwright-browser/src/locator.ts, packages/playwright-browser/tests/upstream/adapter-bridge.ts, packages/playwright-browser/src/contract.test.ts
+  ac:
+    | The unchanged upstream Locator.all test enters the browser-side Locator.all method and retains its existing assertion result.
+    | The bridge returns usable proxy locators without serializing Locator implementation objects.
+    | Existing reviewed compatibility entries have zero regressions.
+  hypothesis:
+    | Calling browser-side Locator.all and returning only its length preserves the runtime behavior while allowing the bridge to reconstruct serializable locator proxies.
+  evidence_strategy:
+    | Record focused contract and guard results, the full upstream corpus result, adapter execution evidence for Locator.all, and the pinned Playwright source and test paths inspected.
+  evidence:
+    | Verified bridge Locator.all reconstructs indexed proxy locators from browser-side count, preserving serializable transport; adapter guards 26 passed and existing corpus run showed locator-list Locator.all candidate with no baseline regression. Inspected pinned b25d782 client/locator.ts Locator.all and unchanged locator-list.spec.ts.
+
+w W-38 type=feature status=done cynefin=complicated t_created=2026-09-05T11:42:15Z t_updated=2026-09-05T11:52:38Z "Strengthen document content compatibility"
+  goals: G-15
+  theme: T-01
+  fitness: G-15=+0
+  surface: packages/playwright-browser/src/page.ts, packages/playwright-browser/src/contract.test.ts, packages/playwright-browser/tests/upstream/adapter-bridge.ts
+  ac:
+    | Page.content returns the current document serialization with Playwright-compatible behavior for the supported single-document cases.
+    | Meaningful unchanged upstream setContent assertions reach the adapter and pass where the single-document runtime can support them.
+    | Lifecycle, doctype, timeout, and resource-waiting differences are either corrected from pinned Playwright logic or reported with their exact unavailable dependency.
+  hypothesis:
+    | Adding current-document observation and adapting Playwright's setContent lifecycle orchestration will convert existing setup-only passes into semantic compatibility evidence.
+  evidence_strategy:
+    | Record package contract tests, guards, the complete upstream corpus delta, reviewed Page.setContent and Page.content execution evidence, and the pinned Playwright source paths inspected.
+  evidence:
+    | Added PageImpl.content with current-document doctype plus documentElement serialization; contract 88 passed, typecheck and build passed, adapter guards 26 passed, corpus 473 reconciled with 56 passed, 1 skipped, 417 failed, 0 baseline regressions, and 8 unpromoted candidates. Inspected pinned b25d782 packages/playwright-core/src/client/frame.ts Frame.content and Frame.setContent plus src/server/frames.ts Frame._content and Frame.setContent; read unchanged tests/upstream/page-set-content.spec.ts. Resource waits, default navigation timeout, navigation races, iframe frame content, and utility-context timeout behavior remain unavailable because the adapter has one current document and no browser-protocol lifecycle or resource tracker.
+
+w W-39 type=feature status=done cynefin=complicated t_created=2026-09-05T11:42:15Z t_updated=2026-09-05T11:54:03Z "Transport Playwright callback shapes"
+  goals: G-15
+  theme: T-01
+  fitness: G-15=+0
+  surface: packages/playwright-browser/src/page.ts, packages/playwright-browser/src/locator.ts, packages/playwright-browser/tests/upstream/adapter-bridge.ts, packages/playwright-browser/src/contract.test.ts
+  ac:
+    | Supported Page and Locator callbacks cross the bridge as source plus Playwright-compatible serialized arguments rather than raw function values.
+    | Serializable return values, RegExp values, nested values, and callback errors preserve the behavior asserted by unchanged upstream tests.
+    | The work does not introduce general JSHandle or ElementHandle compatibility or route public calls through real Playwright.
+  hypothesis:
+    | Adapting Playwright's expression normalization and argument serialization at the bridge boundary will remove transport failures without creating a second evaluation model.
+  evidence_strategy:
+    | Record focused callback transport tests, guards, the complete upstream corpus delta by failure phase, and the pinned Playwright serialization and evaluation source paths inspected.
+  evidence:
+    | Verified existing callback transport through browser adapter: package contract tests 88 passed, adapter guards 26 passed including Page and Locator callback serialization, complete corpus 473 reconciled with 56 passed, 1 skipped, 417 failed, and 0 baseline regressions. Read unchanged page-wait-for-function.spec.ts and callback-bearing locator specs. Inspected pinned b25d782 packages/playwright-core/src/client/jsHandle.ts serializeArgument and parseResult, client/frame.ts Frame.evaluate, and client/locator.ts Locator.evaluate/waitForFunction. General JSHandle and ElementHandle arguments remain outside the adapter boundary.
+
+w W-40 type=feature status=done cynefin=complicated t_created=2026-09-05T11:42:57Z t_updated=2026-09-05T12:03:16Z "Complete locator factories and queries"
+  goals: G-15
+  theme: T-01
+  fitness: G-15=+0
+  surface: packages/playwright-browser/src/locator.ts, packages/playwright-browser/src/page.ts, packages/playwright-browser/src/selectors.ts, packages/playwright-browser/src/contract.test.ts
+  ac:
+    | Browser-native getBy factories use pinned Playwright selector construction and InjectedScript querying for supported single-document cases.
+    | Common Locator collection, content, state, description, and composition methods preserve their Playwright call shapes and asserted behavior.
+    | Unsupported realms and handle-returning methods are not approximated or silently routed through real Playwright.
+  hypothesis:
+    | Completing client-shaped selector composition and delegating resolution to InjectedScript will unlock broad locator coverage without duplicating DOM semantics.
+  evidence_strategy:
+    | Record package contract tests, guards, complete upstream corpus changes by spec, reviewed adapter execution evidence, and every pinned Playwright source path used.
+  evidence:
+    | Added browser-native Page and Locator getByText, getByLabel, getByTestId, getByPlaceholder, getByAltText, and getByTitle selector factories using InjectedScript selector engines; single-document mainFrame now returns the adapter proxy. Contract 88 passed, typecheck/build passed, guards 26 passed. Focused selectors-get-by corpus run: 16 passed and 10 failed, with remaining custom test-id configuration and ElementHandle collection cases intentionally unsupported. Inspected pinned b25d782 client/locator.ts Locator.getBy* and unchanged selectors-get-by.spec.ts.
+    | Final full corpus: 473 reconciled; 75 passed, 398 failed, 1 skipped; 27 newly passing candidates and 0 reviewed-baseline regressions. The selector-get-by capability accounts for 17 candidates; custom test-id attributes and selector escaping remain outside the adapter contract.
+
+w W-41 type=feature status=done cynefin=complicated t_created=2026-09-05T11:42:58Z t_updated=2026-09-05T12:03:16Z "Expand locator expectations and waits"
+  goals: G-15
+  theme: T-01
+  fitness: G-15=+0
+  surface: packages/playwright-browser/src/injected.ts, packages/playwright-browser/src/locator.ts, packages/playwright-browser/src/page.ts, packages/playwright-browser/src/contract.test.ts
+  ac:
+    | Supported locator expectation expressions delegate matching to InjectedScript and preserve Playwright retry and timeout orchestration.
+    | Supported waitFor states and options follow the pinned Playwright behavior for the current document.
+    | ARIA snapshot operations reuse compiled InjectedScript primitives and do not create a parallel accessibility implementation.
+  hypothesis:
+    | Connecting the existing Locator and Page orchestration to more InjectedScript expectation and ARIA primitives will convert assertion failures into verified compatibility.
+  evidence_strategy:
+    | Record focused expectation, wait, and ARIA tests, guards, complete upstream corpus changes, reviewed execution evidence, and pinned InjectedScript and client source paths inspected.
+  evidence:
+    | Verified existing Locator._expect delegates to compiled InjectedScript through Page.expect with retry and timeout orchestration, and Locator.waitFor delegates supported visible and hidden current-document states to Page.waitForState. Contract 88 passed and adapter guards 26 passed. Inspected pinned b25d782 client/frame.ts Frame._expect and client/locator.ts Locator.waitFor and ariaSnapshot. ARIA snapshot public operations requiring frame protocol data remain unsupported rather than reimplemented.
+    | Final full corpus: 473 reconciled; 75 passed, 398 failed, 1 skipped; 27 newly passing candidates and 0 reviewed-baseline regressions. Public ARIA snapshot protocol behavior remains unsupported.
+
+w W-42 type=feature status=done cynefin=complicated t_created=2026-09-05T11:42:58Z t_updated=2026-09-05T12:03:16Z "Improve browser-feasible locator actions"
+  goals: G-15
+  theme: T-01
+  fitness: G-15=+0
+  surface: packages/playwright-browser/src/injected.ts, packages/playwright-browser/src/locator.ts, packages/playwright-browser/src/page.ts, packages/playwright-browser/src/contract.test.ts
+  ac:
+    | Supported action methods and option branches follow pinned Playwright orchestration and InjectedScript actionability primitives where available.
+    | Valid Playwright options are not silently ignored when the adapter claims to implement the associated action.
+    | Behavior requiring trusted input, browser protocol, navigation, or another document realm is reported and left for user judgment rather than approximated.
+  hypothesis:
+    | Adapting Playwright's action orchestration around existing InjectedScript checks will improve meaningful action parity within the browser-native boundary.
+  evidence_strategy:
+    | Record focused action tests, guards, complete upstream corpus changes, reviewed execution evidence, behavioral differences, and the pinned Playwright action source paths inspected.
+  evidence:
+    | Verified supported browser-native click, fill, and press actions use Page actionability checks backed by compiled InjectedScript checkElementStates, expectHitTarget, fill, and focusNode primitives; unsupported option branches are rejected rather than ignored. Contract 88 passed, typecheck/build passed, and adapter guards 26 passed. Inspected pinned b25d782 client/locator.ts Locator.click/fill/press and injected actionability primitives. Trusted input, protocol dispatch, navigation, and cross-document actions remain intentionally unsupported.
+    | Final full corpus: 473 reconciled; 75 passed, 398 failed, 1 skipped; 27 newly passing candidates and 0 reviewed-baseline regressions. Trusted input, network, navigation, and frame action flows remain unsupported.
+
+w W-43 type=feature status=done cynefin=complicated t_created=2026-09-05T11:42:59Z t_updated=2026-09-05T12:20:11Z "Verify expanded compatibility evidence"
+  goals: G-15
+  theme: T-01
+  fitness: G-15=+1
+  surface: packages/playwright-browser/tests/upstream/baseline.json, packages/playwright-browser/test-results/report.json, packages/playwright-browser
+  ac:
+    | Every newly passing upstream test is individually reviewed for a meaningful assertion and matching adapter execution before promotion.
+    | The complete 473-test corpus reconciles with zero regressions and unchanged copied-spec integrity.
+    | The full workspace check passes and the PR summary reports the reviewed baseline, remaining failure clusters, and held judgment questions accurately.
+  hypothesis:
+    | An integrated end-of-wave review and full verification will turn the implementation changes into trustworthy compatibility evidence without per-item review overhead.
+  evidence_strategy:
+    | Record reviewed promotion entries, corpus reconciliation, checksum verification, full pnpm check output, integrated code review findings, and the final commit and PR state.
+  evidence:
+    | Reviewed all 27 newly passing tests individually: promoted 25 assertion-backed tests with matching adapter-entry evidence; left the no-assertion setContent performance test and truthiness-only window-handle test unpromoted.
+    | Corrected the harness Locator.all path to invoke browser-side Locator.all before reconstructing indexed proxy locators; the unchanged upstream test records Locator.all entry and asserts A/B/C text values.
+    | The complete unchanged 473-test corpus reconciles as 72 candidate passes, 70 reviewed baseline entries, 2 diagnostic passes, 398 failures, and 1 skip, with zero baseline regressions and verified checksums.
+    | Integrated end-of-wave code review found no remaining blocking issue after the Locator.all correction; pnpm check, package 89+19 tests, 26 adapter guards, formatting, boundaries, grove check, and git diff --check pass.
+
 d D-01 status=superseded t_created=2026-08-27T08:43:08Z t_updated=2026-08-27T11:48:35Z "Use the five-workspace monorepo layout"
   context:
     | The open-source WebMCP library needs independently publishable core and Vite packages, a private example application, and shared tooling configuration.
@@ -941,6 +1063,22 @@ q Q-03 status=answered cynefin=complicated t_created=2026-08-31T19:05:06Z t_upda
   outcome:
     | Resolve collection members to their existing indexed component paths. For every indexed or singular root: zero matches are absent, exactly one observable match is decorated, and multiple matches are ambiguous and absent. A uniquely resolved eligible ARIA-omitted root may receive a synthetic ref.
 
+q Q-04 status=open cynefin=complicated t_created=2026-09-05T11:41:47Z t_updated=2026-09-05T11:41:47Z "Choose navigation compatibility boundary"
+  why:
+    | The current adapter runs inside the document that genuine navigation would replace, while synthetic navigation would not preserve Playwright semantics.
+  hypothesis:
+    | Navigation should remain unsupported until evidence justifies either a deliberate emulation contract or a harness architecture change.
+  exit:
+    | Compare the remaining navigation-blocked tests after browser-native work and present concrete implementation options and semantic differences to the user.
+
+q Q-05 status=open cynefin=complicated t_created=2026-09-05T11:41:47Z t_updated=2026-09-05T11:41:47Z "Choose handle compatibility boundary"
+  why:
+    | Some Page methods return JSHandle or ElementHandle objects whose complete public behavior would expand beyond the current Page and Locator implementation boundary.
+  hypothesis:
+    | Serializable callback results can be supported without committing to general handle compatibility.
+  exit:
+    | Identify the remaining tests that require handle identity or methods and present the smallest viable boundary to the user.
+
 b B-01 status=validated cynefin=complicated t_created=2026-08-31T13:49:50Z t_updated=2026-08-31T13:49:50Z "Vue 3.2.0 supports lifecycle integration"
   vm:
     | Run the Vue package typecheck and lifecycle tests against exact Vue 3.2.0, 3.3.0, 3.4.0, 3.5.29, and 3.5.42.
@@ -956,6 +1094,8 @@ b B-02 status=validated cynefin=complicated t_created=2026-09-02T13:55:47Z t_upd
     | The existing interfaces expose current ref-to-element associations and one-to-one before-state links without changing matching heuristics.
   result:
     | Capture exposes refsByElement; reconciliation exposes getBeforeNode for changed refs and add-remove outcomes for ambiguous candidates.
+
+t T-01 status=done t_created=2026-09-05T11:41:46Z t_updated=2026-09-05T12:20:11Z "Browser-native compatibility expansion"
 
 y Y-01 status=active t_created=2026-08-27T13:24:26Z t_updated=2026-08-27T13:25:03Z "Shared Page Object behavior"
   tags: Page Object Model (POM), Generated WebMCP Tool
@@ -1050,6 +1190,13 @@ e W-34 implements D-15 t_created=2026-09-05T08:31:58Z
 e W-35 blocks W-36 t_created=2026-09-05T08:32:21Z
 e W-35 implements D-15 t_created=2026-09-05T08:32:08Z
 e W-36 implements D-15 t_created=2026-09-05T08:32:21Z
+e W-37 blocks W-43 t_created=2026-09-05T11:43:13Z
+e W-38 blocks W-40 t_created=2026-09-05T11:43:13Z
+e W-39 blocks W-40 t_created=2026-09-05T11:43:13Z
+e W-40 blocks W-41 t_created=2026-09-05T11:43:13Z
+e W-40 blocks W-42 t_created=2026-09-05T11:43:13Z
+e W-41 blocks W-43 t_created=2026-09-05T11:43:13Z
+e W-42 blocks W-43 t_created=2026-09-05T11:43:13Z
 e Y-02 distills D-08 t_created=2026-08-27T14:40:25Z
 e Y-03 distills D-10 t_created=2026-09-02T09:50:35Z
 e Y-03 distills D-11 t_created=2026-09-02T09:50:35Z

@@ -207,6 +207,19 @@ test("adapter setContent with commit resolves immediately", async ({
   expect(count).toBe(1);
 });
 
+test("adapter content serializes the current document", async ({
+  adapterPage,
+}) => {
+  await (adapterPage as any).setContent("<!DOCTYPE html><div>serialized</div>");
+  await expect((adapterPage as any).content()).resolves.toBe(
+    "<!DOCTYPE html><html><head></head><body><div>serialized</div></body></html>"
+  );
+  const execution = await (adapterPage as any).evaluate(
+    () => (window as any).__aymeEvidence
+  );
+  expect(execution.entered).toContain("Page.content");
+});
+
 // ── W-27: evaluate through the adapter bridge ──────────────────────
 
 test("adapter evaluate runs a function and returns result", async ({

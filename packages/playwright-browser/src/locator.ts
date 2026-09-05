@@ -1,5 +1,14 @@
 import type { LocatorQueryOptions, PageImpl } from "./page";
-import { escapeForTextSelector, getByRoleSelector } from "./selectors";
+import {
+  escapeForTextSelector,
+  getByAltTextSelector,
+  getByLabelSelector,
+  getByPlaceholderSelector,
+  getByRoleSelector,
+  getByTestIdSelector,
+  getByTextSelector,
+  getByTitleSelector,
+} from "./selectors";
 import type { TraceEntry } from "./types";
 
 /**
@@ -102,6 +111,25 @@ export class LocatorImpl {
       `${this.label}.getByRole(${JSON.stringify(role)}, ${JSON.stringify(options)})`,
       this.onTrace
     );
+  }
+
+  getByText(text: string | RegExp, options: { exact?: boolean } = {}) {
+    return this.locator(getByTextSelector(text, options.exact));
+  }
+  getByLabel(text: string | RegExp, options: { exact?: boolean } = {}) {
+    return this.locator(getByLabelSelector(text, options.exact));
+  }
+  getByTestId(testId: string | RegExp) {
+    return this.locator(getByTestIdSelector(testId));
+  }
+  getByPlaceholder(text: string | RegExp, options: { exact?: boolean } = {}) {
+    return this.locator(getByPlaceholderSelector(text, options.exact));
+  }
+  getByAltText(text: string | RegExp, options: { exact?: boolean } = {}) {
+    return this.locator(getByAltTextSelector(text, options.exact));
+  }
+  getByTitle(text: string | RegExp, options: { exact?: boolean } = {}) {
+    return this.locator(getByTitleSelector(text, options.exact));
   }
 
   /**

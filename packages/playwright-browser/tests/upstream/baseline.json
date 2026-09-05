@@ -31,6 +31,11 @@
       "evidence": "Assertions verify opacity-zero elements are visible and not hidden through locator expectations."
     },
     {
+      "id": "locator-list.spec.ts > locator.all should work",
+      "method": "Locator.all",
+      "evidence": "The unchanged test iterates the returned locator array and asserts all three browser-resolved text values in order."
+    },
+    {
       "id": "locator-misc-2.spec.ts > press should throw on unknown keys",
       "method": "Locator.press",
       "evidence": "Three assertions verify unsupported key names reject through the adapter with the expected Playwright-compatible error."
@@ -44,6 +49,16 @@
       "id": "locator-misc-2.spec.ts > should fill programmatically enabled textarea",
       "method": "Locator.fill",
       "evidence": "The test enables a textarea, fills it through the locator, and asserts the resulting value."
+    },
+    {
+      "id": "locator-misc-2.spec.ts > should support filter(visible)",
+      "method": "Locator.filter",
+      "evidence": "Assertions verify visible and hidden filters, nth composition, and getByText chaining against the expected elements."
+    },
+    {
+      "id": "locator-query.spec.ts > alias methods coverage",
+      "method": "Locator.getByRole",
+      "evidence": "Four count assertions verify page, nested locator, role locator, and single-document mainFrame locator aliases."
     },
     {
       "id": "locator-query.spec.ts > should filter by case-insensitive regex in a child",
@@ -121,6 +136,31 @@
       "evidence": "Assertions verify adapter-routed browser callback and string return transport while validating the browser-provided user-agent shape."
     },
     {
+      "id": "page-set-content.spec.ts > should work @smoke",
+      "method": "Page.content",
+      "evidence": "The assertion verifies setContent followed by content returns the complete normalized HTML document."
+    },
+    {
+      "id": "page-set-content.spec.ts > should work with commit",
+      "method": "Page.content",
+      "evidence": "The assertion verifies commit is accepted and the resulting complete document content is correct."
+    },
+    {
+      "id": "page-set-content.spec.ts > should work with doctype",
+      "method": "Page.content",
+      "evidence": "The assertion verifies Page.content preserves an HTML5 doctype and serializes the complete document."
+    },
+    {
+      "id": "page-set-content.spec.ts > should work with domcontentloaded",
+      "method": "Page.content",
+      "evidence": "The assertion verifies domcontentloaded is accepted and the resulting complete document content is correct."
+    },
+    {
+      "id": "page-set-content.spec.ts > should work with HTML 4 doctype",
+      "method": "Page.content",
+      "evidence": "The assertion verifies Page.content preserves a public HTML 4 doctype and serializes the complete document."
+    },
+    {
       "id": "page-wait-for-function.spec.ts > should accept a string",
       "method": "Page.waitForFunction",
       "evidence": "The string predicate remains pending until adapter evaluate changes its observed value, then resolves."
@@ -186,6 +226,61 @@
       "evidence": "Clicking an anchor inside disabled label arrangements invokes the anchor in both cases."
     },
     {
+      "id": "selectors-get-by.spec.ts > getByAltText should work",
+      "method": "Page.getByAltText",
+      "evidence": "Assertions verify case-insensitive, exact, and regex matching plus page, mainFrame, and nested locator forms."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByLabel should ignore empty aria-label",
+      "method": "Page.getByLabel",
+      "evidence": "The assertion verifies an empty aria-label does not mask the native label."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByLabel should prioritize aria-labelledby over aria-label",
+      "method": "Page.getByLabel",
+      "evidence": "The assertion verifies aria-labelledby takes precedence over aria-label."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByLabel should prioritize aria-labelledby over native label",
+      "method": "Page.getByLabel",
+      "evidence": "The assertion verifies aria-labelledby takes precedence over an ancestor native label."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByLabel should work",
+      "method": "Page.getByLabel",
+      "evidence": "Assertions distinguish text from label-target resolution and verify page, mainFrame, and nested locator forms."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByLabel should work with ancestor label and for",
+      "method": "Page.getByLabel",
+      "evidence": "The assertion verifies an explicit for association takes precedence over a nested control."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByLabel should work with ancestor label and multiple controls",
+      "method": "Page.getByLabel",
+      "evidence": "The assertion verifies ancestor-label resolution selects the first labelable control."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByLabel should work with aria-label",
+      "method": "Page.getByLabel",
+      "evidence": "The assertion verifies aria-label resolves the expected input."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByLabel should work with aria-labelledby",
+      "method": "Page.getByLabel",
+      "evidence": "The assertion verifies aria-labelledby resolves the labelled control."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByLabel should work with multiply-labelled input",
+      "method": "Page.getByLabel",
+      "evidence": "Assertions verify either associated label resolves the same input."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByPlaceholder should work",
+      "method": "Page.getByPlaceholder",
+      "evidence": "Assertions verify case-insensitive, exact, and regex matching plus page, mainFrame, and nested locator forms."
+    },
+    {
       "id": "selectors-get-by.spec.ts > getByRole escaping",
       "method": "Page.getByRole",
       "evidence": "Assertions verify role selector escaping returns the exact expected elements."
@@ -216,6 +311,31 @@
       "evidence": "Assertions verify accessible-description whitespace normalization."
     },
     {
+      "id": "selectors-get-by.spec.ts > getByTestId should escape id",
+      "method": "Page.getByTestId",
+      "evidence": "The assertion verifies a quoted test id is escaped and resolves the expected element."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByTestId should work",
+      "method": "Page.getByTestId",
+      "evidence": "Assertions verify page, single-document mainFrame, and nested locator factories resolve the expected test-id element."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByTestId should work for regex",
+      "method": "Page.getByTestId",
+      "evidence": "Assertions verify regex test-id matching and page, mainFrame, and nested locator factory behavior."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByText should work",
+      "method": "Page.getByText",
+      "evidence": "Assertions verify string and regex text matching, whitespace normalization, exact matching, and first composition."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByTitle should work",
+      "method": "Page.getByTitle",
+      "evidence": "Assertions verify case-insensitive, exact, and regex matching plus page, mainFrame, and nested locator forms."
+    },
+    {
       "id": "selectors-misc.spec.ts > should work with >> visible=false",
       "method": "Locator._expect",
       "evidence": "Assertions verify hidden matching before and after an adapter-routed locator callback mutation."
@@ -224,6 +344,11 @@
       "id": "selectors-misc.spec.ts > should work with strict mode and chaining",
       "method": "Locator.textContent",
       "evidence": "Assertion verifies a uniquely resolving chained selector returns the expected text through Locator.textContent; it does not claim strict-violation coverage."
+    },
+    {
+      "id": "selectors-text.spec.ts > hasText and internal:text should match full node text in strict mode",
+      "method": "Page.getByText",
+      "evidence": "Assertions verify strict getByText and hasText selectors use full normalized node text across nested elements."
     },
     {
       "id": "selectors-text.spec.ts > should work with leading and trailing spaces",

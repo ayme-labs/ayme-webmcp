@@ -149,6 +149,11 @@ function createPageProxy(realPage: Page): Page {
       if (prop === "__aymeAdapter") return true;
       if (prop === "then") return undefined;
 
+      // The adapter has exactly one current document, so its main frame is
+      // the adapter page itself. This preserves Frame's locator factories
+      // without exposing a real Playwright Frame.
+      if (prop === "mainFrame") return () => createPageProxy(realPage);
+
       // Locator-creating: return proxy locator.
       if (LOCATOR_CREATING_METHODS.has(prop)) {
         return (...args: unknown[]) =>
@@ -266,10 +271,10 @@ function createLocatorProxy(realPage: Page, chain: ChainStep[]): Locator {
       if (prop === "all") {
         return async () => {
           const count: number = await realPage.evaluate(
-            ({ chain: c }) => {
+            async ({ chain: c }) => {
               let current: any = (window as any).__aymeAdapterPage;
               for (const [m, a] of c) current = current[m](...a);
-              return current.count();
+              return (await current.all()).length;
             },
             { chain }
           );

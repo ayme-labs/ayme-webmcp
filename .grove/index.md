@@ -7,7 +7,7 @@
 | Measure | Count | Composition |
 | --- | --- | --- |
 | C (content) | 18 | validated B 2 · answered Q 2 · accepted D 11 · active Discovery 3 |
-| V (uncertainty) | 0 | open Q 0 · pending B 0 · W below DoR 0 |
+| V (uncertainty) | 2 | open Q 2 · pending B 0 · W below DoR 0 |
 
 ## Areas
 
@@ -37,6 +37,7 @@
 | G-12 | Make the single-document Playwright adapter truthfully verifiable | count; current=4 target=4 | verified |
 | G-13 | Increase verified Playwright compatibility | count; current=3 target=3 | verified |
 | G-14 | Increase Playwright behavioral compatibility | count; current=4 target=4 | verified |
+| G-15 | Expand verified single-document Playwright compatibility | boolean; current=true | verified |
 
 ## Work items
 
@@ -78,6 +79,13 @@
 | W-34 | feature | Improve browser action semantics | G-14 | complicated | ⊤ | done |  |
 | W-35 | feature | Add common locator query methods | G-14 | clear | ⊤ | done |  |
 | W-36 | feature | Verify behavioral compatibility round | G-14 | complicated | ⊤ | done |  |
+| W-37 | feature | Certify Locator all execution | G-15 | clear | ⊤ | done |  |
+| W-38 | feature | Strengthen document content compatibility | G-15 | complicated | ⊤ | done |  |
+| W-39 | feature | Transport Playwright callback shapes | G-15 | complicated | ⊤ | done |  |
+| W-40 | feature | Complete locator factories and queries | G-15 | complicated | ⊤ | done |  |
+| W-41 | feature | Expand locator expectations and waits | G-15 | complicated | ⊤ | done |  |
+| W-42 | feature | Improve browser-feasible locator actions | G-15 | complicated | ⊤ | done |  |
+| W-43 | feature | Verify expanded compatibility evidence | G-15 | complicated | ⊤ | done |  |
 
 ## Decisions
 
@@ -106,6 +114,8 @@
 | Q-01 | Choose the public activation interface | complicated | D-06, W-03 | deferred |
 | Q-02 | Choose the compact structural output contract | complicated | W-10 | answered |
 | Q-03 | Choose multiple POM root match behavior | complicated | W-10 | answered |
+| Q-04 | Choose navigation compatibility boundary | complicated |  | open |
+| Q-05 | Choose handle compatibility boundary | complicated |  | open |
 
 ## Assumptions
 
@@ -113,6 +123,12 @@
 | --- | --- | --- | --- | --- |
 | B-01 | Vue 3.2.0 supports lifecycle integration |  | W-05 | validated |
 | B-02 | Existing capture and reconciliation seams support session continuity |  | W-16 | validated |
+
+## Themes
+
+| ID | Title | Status | Causes work | Themed work |
+| --- | --- | --- | --- | --- |
+| T-01 | Browser-native compatibility expansion | done | – | W-37, W-38, W-39, W-40, W-41, W-42, W-43 |
 
 ## Discoveries
 
@@ -141,6 +157,7 @@ graph TD
   G_12["G-12: Make the single-document Playwright adapter truthfully verifiable"]:::goal
   G_13["G-13: Increase verified Playwright compatibility"]:::goal
   G_14["G-14: Increase Playwright behavioral compatibility"]:::goal
+  G_15["G-15: Expand verified single-document Playwright compatibility"]:::goal
   W_01["W-01: Establish the monorepo walking skeleton"]:::done
   W_02["W-02: Preserve spike behavior through package extraction"]:::done
   W_03["W-03: Extract Vue Page Object activation composable"]:::done
@@ -177,6 +194,13 @@ graph TD
   W_34["W-34: Improve browser action semantics"]:::done
   W_35["W-35: Add common locator query methods"]:::done
   W_36["W-36: Verify behavioral compatibility round"]:::done
+  W_37["W-37: Certify Locator all execution"]:::done
+  W_38["W-38: Strengthen document content compatibility"]:::done
+  W_39["W-39: Transport Playwright callback shapes"]:::done
+  W_40["W-40: Complete locator factories and queries"]:::done
+  W_41["W-41: Expand locator expectations and waits"]:::done
+  W_42["W-42: Improve browser-feasible locator actions"]:::done
+  W_43["W-43: Verify expanded compatibility evidence"]:::done
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -195,8 +219,11 @@ graph TD
   Q_01["Q-01: Choose the public activation interface"]:::question
   Q_02["Q-02: Choose the compact structural output contract"]:::question
   Q_03["Q-03: Choose multiple POM root match behavior"]:::question
+  Q_04["Q-04: Choose navigation compatibility boundary"]:::question
+  Q_05["Q-05: Choose handle compatibility boundary"]:::question
   B_01["B-01: Vue 3.2.0 supports lifecycle integration"]:::assumption
   B_02["B-02: Existing capture and reconciliation seams support session continuity"]:::assumption
+  T_01["T-01: Browser-native compatibility expansion"]:::theme
   Y_01["Y-01: Shared Page Object behavior"]:::discovery
   Y_02["Y-02: Framework lifecycle owns Page Object disposal"]:::discovery
   Y_03["Y-03: Synthetic roots are observation-only"]:::discovery
@@ -263,6 +290,13 @@ graph TD
   W_35 ==>|blocks| W_36
   W_35 -->|implements| D_15
   W_36 -->|implements| D_15
+  W_37 ==>|blocks| W_43
+  W_38 ==>|blocks| W_40
+  W_39 ==>|blocks| W_40
+  W_40 ==>|blocks| W_41
+  W_40 ==>|blocks| W_42
+  W_41 ==>|blocks| W_43
+  W_42 ==>|blocks| W_43
   Y_02 -->|distills| D_08
   Y_03 -->|distills| D_10
   Y_03 -->|distills| D_11
