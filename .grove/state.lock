@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:d407e6cc907a1e554246b787914855f55b4e118547b6452107c2272708e3d060
+# checksum: sha256:d4d5e635be056fa00370d991efda25fedfa983daa8b42ddef5adfff5cd98b972
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -89,6 +89,10 @@ g G-18 status=verified fitness_kind=count t_created=2026-09-03T15:49:53Z t_updat
   area: A-02
   fitness_target: 1
   fitness_current: 1
+
+g G-19 status=unverified fitness_kind=count t_created=2026-09-05T16:41:59Z t_updated=2026-09-05T16:41:59Z "Deepen verified single-document Playwright semantics"
+  area: A-02
+  fitness_target: 4
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -1175,6 +1179,57 @@ w W-56 type=bug status=done cynefin=complicated t_created=2026-09-05T07:23:24Z t
     | Compiler tests cover direct and generic Promise array aliases, excluded shapes, one decorated intersection, and a diagnostic for two distinct decorated classes.
     | Verified the compiler suite within the 15-second bound plus full unit tests, typecheck, lint, boundaries, build, and browser tests.
 
+w W-57 type=bug status=progress cynefin=complicated session=host:75cd936167237b83 session_at=2026-09-05T16:42:13Z t_created=2026-09-05T16:41:59Z t_updated=2026-09-05T16:42:13Z "Correct upstream ARIA fixture normalization"
+  goals: G-19
+  fitness: G-19=+1
+  surface: packages/playwright-browser/tests/config/utils.ts, packages/playwright-browser/tests/upstream/page-aria-snapshot.spec.ts, packages/playwright-browser/tests/upstream/page-aria-snapshot-ai.spec.ts
+  ac:
+    | The local test helper matches the pinned Playwright whitespace-normalization behavior used by the unchanged ARIA snapshot specs.
+    | The copied upstream specs remain byte-for-byte unchanged, and focused ARIA runs proceed past helper normalization.
+  repro:
+    | The local unshift helper mutates arrays, while the pinned ARIA specs call unshift with a snapshot string and fail before meaningful comparison.
+  evidence_strategy:
+    | Compare the helper with the pinned Playwright source, verify copied-spec checksums, and run both focused ARIA snapshot specs.
+
+w W-58 type=bug status=progress cynefin=complicated session=host:75cd936167237b83 session_at=2026-09-05T16:42:13Z t_created=2026-09-05T16:42:00Z t_updated=2026-09-05T16:42:13Z "Align remaining single-document semantics"
+  goals: G-19
+  fitness: G-19=+1
+  surface: packages/playwright-browser/src/locator.ts, packages/playwright-browser/src/page.ts, packages/playwright-browser/src/errors.ts, packages/playwright-browser/src/contract.test.ts
+  ac:
+    | Strictness, zero-size bounding boxes, native scrolling, locator timeout logs, XPath error presentation, and setContent lifecycle follow the pinned Playwright behavior for the supported single-document surface.
+    | Runtime timeouts carry a stable adapter-owned identity and Playwright-compatible messages without depending on Node Playwright classes.
+    | Implementation follows the pinned Playwright source and reuses InjectedScript primitives where available.
+  repro:
+    | The reviewed upstream corpus contains eleven assertion-phase failures caused by these in-scope semantic mismatches.
+  evidence_strategy:
+    | Add focused package tests derived from pinned Playwright cases, run package checks, and record the pinned source paths followed.
+
+w W-59 type=bug status=ready cynefin=complicated t_created=2026-09-05T16:42:01Z t_updated=2026-09-05T16:42:03Z "Keep callback and timeout transport test-only"
+  goals: G-19
+  fitness: G-19=+1
+  surface: packages/playwright-browser/tests/upstream/adapter-bridge.ts, packages/playwright-browser/tests/upstream/_adapter-guard.spec.ts, packages/playwright-browser/scripts/upstream-baseline.mjs, packages/playwright-browser/scripts/upstream-baseline.test.ts
+  ac:
+    | The upstream bridge reconstructs only the callback shapes required by selected tests and invokes public browser-adapter methods.
+    | Production Page and Locator code continues to execute browser callbacks directly and contains no bridge serializer.
+    | Confirmed adapter timeout errors are rehydrated as Playwright TimeoutError instances in the Node test harness, with guard coverage preventing fallback.
+  repro:
+    | Generic bridge evaluation currently rejects or misclassifies function arguments before supported browser-native callback methods run, and adapter timeout identity is lost across the evaluation boundary.
+  evidence_strategy:
+    | Run focused callback and timeout upstream specs, adapter guards, package tests, and inspect the production bundle for bridge-only transport code.
+
+w W-60 type=feature status=ready cynefin=complicated t_created=2026-09-05T16:42:02Z t_updated=2026-09-05T16:42:04Z "Verify single-document compatibility corrections"
+  goals: G-19
+  fitness: G-19=+1
+  surface: packages/playwright-browser/tests/upstream/baseline.json, packages/playwright-browser/test-results, packages/playwright-browser
+  ac:
+    | The unchanged 473-test corpus runs after checksum verification with zero reviewed-baseline regressions.
+    | Every newly passing test is reviewed for a meaningful assertion and confirmed adapter execution before baseline promotion.
+    | The final report separates genuine semantic failures from unsupported browser-process, frame, handle, event, and network capabilities.
+  hypothesis:
+    | Correcting the harness fixture and the known single-document mismatches will increase truthful compatibility without hybrid routing or fallback.
+  evidence_strategy:
+    | Record checksum, guard, corpus, promotion review, package, workspace, and PR results.
+
 d D-01 status=superseded t_created=2026-08-27T08:43:08Z t_updated=2026-08-27T11:48:35Z "Use the five-workspace monorepo layout"
   context:
     | The open-source WebMCP library needs independently publishable core and Vite packages, a private example application, and shared tooling configuration.
@@ -1284,7 +1339,7 @@ d D-14 status=superseded t_created=2026-09-03T14:15:40Z t_updated=2026-09-03T15:
   decision:
     | See ADR-0014: docs/adr/0014-use-a-compiled-playwright-compatible-browser-adapter.md.
 
-d D-15 status=accepted t_created=2026-09-03T15:51:54Z t_updated=2026-09-05T12:54:13Z "Use a compiled Playwright-compatible single-document adapter"
+d D-15 status=accepted t_created=2026-09-03T15:51:54Z t_updated=2026-09-05T16:42:03Z "Use a compiled Playwright-compatible single-document adapter"
   decision:
     | See ADR-0015: docs/adr/0015-use-a-compiled-playwright-compatible-single-document-adapter.md.
 
@@ -1463,6 +1518,13 @@ e W-48 blocks W-49 t_created=2026-09-05T14:20:30Z
 e W-49 blocks W-50 t_created=2026-09-05T14:20:30Z
 e W-50 blocks W-51 t_created=2026-09-05T14:20:31Z
 e W-51 blocks W-52 t_created=2026-09-05T14:20:31Z
+e W-57 blocks W-60 t_created=2026-09-05T16:42:03Z
+e W-57 implements D-15 t_created=2026-09-05T16:42:00Z
+e W-58 blocks W-59 t_created=2026-09-05T16:42:02Z
+e W-58 implements D-15 t_created=2026-09-05T16:42:01Z
+e W-59 blocks W-60 t_created=2026-09-05T16:42:03Z
+e W-59 implements D-15 t_created=2026-09-05T16:42:02Z
+e W-60 implements D-15 t_created=2026-09-05T16:42:03Z
 e Y-02 distills D-08 t_created=2026-08-27T14:40:25Z
 e Y-03 distills D-10 t_created=2026-09-02T09:50:35Z
 e Y-03 distills D-11 t_created=2026-09-02T09:50:35Z
