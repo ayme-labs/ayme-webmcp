@@ -64,7 +64,7 @@ export type AriaSnapshotOptions = {
   timeout?: number;
 };
 
-type QueryState = "enabled" | "disabled" | "checked";
+type QueryState = "enabled" | "disabled" | "editable" | "checked";
 
 type QueryStateResult =
   | { matches: boolean; received: string }
@@ -1077,6 +1077,44 @@ export class PageImpl {
     );
   }
 
+  async locatorInnerText(
+    selector: string,
+    label: string,
+    options?: LocatorQueryOptions
+  ): Promise<string> {
+    return this.query(selector, label, options, true, (element) => {
+      if (element.namespaceURI !== "http://www.w3.org/1999/xhtml")
+        throw new Error("Node is not an HTMLElement");
+      return (element as HTMLElement).innerText;
+    });
+  }
+
+  async locatorInnerHTML(
+    selector: string,
+    label: string,
+    options?: LocatorQueryOptions
+  ): Promise<string> {
+    return this.query(
+      selector,
+      label,
+      options,
+      true,
+      (element) => element.innerHTML
+    );
+  }
+
+  locatorAllInnerTexts(selector: string): string[] {
+    return this.resolveAll(selector).map(
+      (element) => (element as HTMLElement).innerText
+    );
+  }
+
+  locatorAllTextContents(selector: string): string[] {
+    return this.resolveAll(selector).map(
+      (element) => element.textContent ?? ""
+    );
+  }
+
   async locatorInputValue(
     selector: string,
     label: string,
@@ -1109,6 +1147,49 @@ export class PageImpl {
     options?: LocatorQueryOptions
   ): Promise<boolean> {
     return this.queryState(selector, "checked", options, true, label);
+  }
+
+  async locatorIsEditable(
+    selector: string,
+    label: string,
+    options?: LocatorQueryOptions
+  ): Promise<boolean> {
+    return this.queryState(selector, "editable", options, true, label);
+  }
+
+  locatorIsVisible(
+    selector: string,
+    label: string,
+    options?: LocatorQueryOptions
+  ): boolean {
+    assertQueryOptions(options, false);
+    queryTimeout(options?.timeout);
+    if (options?.signal?.aborted) throw queryAborted(options.signal);
+
+    const elements = this.resolveAll(selector);
+    if (elements.length === 0) return false;
+    if (elements.length > 1)
+      throw new Error(
+        `Expected one element for locator ${label}, found ${elements.length}`
+      );
+    return this.elementState(elements[0], "visible").matches;
+  }
+
+  async locatorBoundingBox(
+    selector: string,
+    label: string,
+    options?: LocatorQueryOptions
+  ): Promise<{ x: number; y: number; width: number; height: number } | null> {
+    return this.query(selector, label, options, true, (element) => {
+      if (!this.elementState(element, "visible").matches) return null;
+      const rect = element.getBoundingClientRect();
+      return {
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+      };
+    });
   }
 
   async locatorAriaSnapshot(

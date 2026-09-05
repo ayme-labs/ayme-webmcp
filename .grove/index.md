@@ -7,14 +7,14 @@
 | Measure | Count | Composition |
 | --- | --- | --- |
 | C (content) | 18 | validated B 2 · answered Q 2 · accepted D 11 · active Discovery 3 |
-| V (uncertainty) | 2 | open Q 2 · pending B 0 · W below DoR 0 |
+| V (uncertainty) | 6 | open Q 2 · pending B 0 · W below DoR 0 · uncovered surface 4 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 14 | 0 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 |
+| A-02 | Page Object interoperability | 14 | 4 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 4 |
 | A-03 | Consumer browser capabilities | 4 | 0 | C: validated B 1 · answered Q 0 · accepted D 1 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
@@ -39,6 +39,7 @@
 | G-14 | Increase Playwright behavioral compatibility | count; current=4 target=4 | verified |
 | G-15 | Expand verified single-document Playwright compatibility | boolean; current=true | verified |
 | G-16 | Expand browser-native Playwright compatibility | boolean; current=true | verified |
+| G-17 | Expand browser-native Page and Locator conveniences | boolean; current=false target=true | unverified |
 
 ## Work items
 
@@ -91,6 +92,11 @@
 | W-45 | feature | Implement browser-native callback methods | G-16 | complicated | ⊤ | done |  |
 | W-46 | feature | Add small single-document methods | G-16 | complicated | ⊤ | done |  |
 | W-47 | feature | Verify browser-native compatibility expansion | G-16 | complicated | ⊤ | done |  |
+| W-48 | feature | Add browser-native Locator observations | G-17 | complicated | ⊤ | done |  |
+| W-49 | feature | Add browser-native Locator conveniences | G-17 | complicated | ⊤ | proposed | ★ |
+| W-50 | feature | Complete Locator composition transport | G-17 | complicated | ⊤ | proposed | ★ |
+| W-51 | feature | Add small browser-native Page conveniences | G-17 | complicated | ⊤ | proposed | ★ |
+| W-52 | feature | Verify browser-native convenience wave | G-17 | complicated | ⊤ | proposed | ★ |
 
 ## Decisions
 
@@ -135,6 +141,7 @@
 | --- | --- | --- | --- | --- |
 | T-01 | Browser-native compatibility expansion | done | – | W-37, W-38, W-39, W-40, W-41, W-42, W-43 |
 | T-02 | Browser-native API expansion | done | – | W-44, W-45, W-46, W-47 |
+| T-03 | Browser-native convenience surface | open | – | W-48, W-49, W-50, W-51, W-52 |
 
 ## Discoveries
 
@@ -165,6 +172,7 @@ graph TD
   G_14["G-14: Increase Playwright behavioral compatibility"]:::goal
   G_15["G-15: Expand verified single-document Playwright compatibility"]:::goal
   G_16["G-16: Expand browser-native Playwright compatibility"]:::goal
+  G_17["G-17: Expand browser-native Page and Locator conveniences"]:::goal
   W_01["W-01: Establish the monorepo walking skeleton"]:::done
   W_02["W-02: Preserve spike behavior through package extraction"]:::done
   W_03["W-03: Extract Vue Page Object activation composable"]:::done
@@ -212,6 +220,11 @@ graph TD
   W_45["W-45: Implement browser-native callback methods"]:::done
   W_46["W-46: Add small single-document methods"]:::done
   W_47["W-47: Verify browser-native compatibility expansion"]:::done
+  W_48["W-48: Add browser-native Locator observations"]:::done
+  W_49["W-49: Add browser-native Locator conveniences"]:::feature,critical
+  W_50["W-50: Complete Locator composition transport"]:::feature,critical
+  W_51["W-51: Add small browser-native Page conveniences"]:::feature,critical
+  W_52["W-52: Verify browser-native convenience wave"]:::feature,critical
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -236,6 +249,7 @@ graph TD
   B_02["B-02: Existing capture and reconciliation seams support session continuity"]:::assumption
   T_01["T-01: Browser-native compatibility expansion"]:::theme
   T_02["T-02: Browser-native API expansion"]:::theme
+  T_03["T-03: Browser-native convenience surface"]:::theme
   Y_01["Y-01: Shared Page Object behavior"]:::discovery
   Y_02["Y-02: Framework lifecycle owns Page Object disposal"]:::discovery
   Y_03["Y-03: Synthetic roots are observation-only"]:::discovery
@@ -316,12 +330,17 @@ graph TD
   W_46 ==>|blocks| W_47
   W_46 -->|implements| D_15
   W_47 -->|implements| D_15
+  W_48 ==>|blocks| W_49
+  W_49 ==>|blocks| W_50
+  W_50 ==>|blocks| W_51
+  W_51 ==>|blocks| W_52
   Y_02 -->|distills| D_08
   Y_03 -->|distills| D_10
   Y_03 -->|distills| D_11
   Y_03 -->|distills| D_12
   Y_04 -->|distills| D_12
   Y_04 -->|supersedes| Y_03
+  class W_49,W_50,W_51,W_52 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff

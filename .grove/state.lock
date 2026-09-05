@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:ebfa240b908bb299f1f8a9bc0f49ca7cbb8ea965d0bb5a84ddf509085d063f9e
+# checksum: sha256:2c34a6e314e5fa9a7ae7bb77f01c172651fa399b92930cc02ed0b687ac8a1fff
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -79,6 +79,11 @@ g G-15 status=verified fitness_kind=boolean t_created=2026-09-05T11:41:46Z t_upd
 g G-16 status=verified fitness_kind=boolean t_created=2026-09-05T12:53:18Z t_updated=2026-09-05T13:47:24Z "Expand browser-native Playwright compatibility"
   area: A-02
   fitness_current: true
+
+g G-17 status=unverified fitness_kind=boolean t_created=2026-09-05T14:19:44Z t_updated=2026-09-05T14:19:44Z "Expand browser-native Page and Locator conveniences"
+  area: A-02
+  fitness_target: true
+  fitness_current: false
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -1004,6 +1009,74 @@ w W-47 type=feature status=done cynefin=complicated t_created=2026-09-05T12:53:2
   plan:
     | Stop after reporting the new corpus; do not implement real Playwright setup routing.
 
+w W-48 type=feature status=done cynefin=complicated t_created=2026-09-05T14:19:57Z t_updated=2026-09-05T14:24:54Z "Add browser-native Locator observations"
+  goals: G-17
+  theme: T-03
+  fitness: G-17=+0
+  surface: packages/playwright-browser/src/locator.ts, packages/playwright-browser/src/page.ts, packages/playwright-browser/src/contract.test.ts
+  ac:
+    | Implement innerText, innerHTML, allTextContents, allInnerTexts, isVisible, isHidden, isEditable, and current-document boundingBox with Playwright-compatible signatures and defaults where browser-feasible.
+    | Use pinned Playwright source and InjectedScript behavior rather than bespoke selector, visibility, or state logic; do not introduce handles, frames, or navigation.
+  hypothesis:
+    | These observations are native to the controlled document and can substantially match Playwright without a browser-process dependency.
+  evidence_strategy:
+    | Add package contract tests derived from pinned Playwright cases, run package checks, and cite the pinned implementation followed.
+  evidence:
+    | Pinned Playwright client/server locator implementations inspected at b25d782; added innerText, innerHTML, allTextContents, allInnerTexts, isVisible, isHidden, isEditable, and current-document boundingBox using the shared resolver and InjectedScript state semantics. pnpm --filter @ayme-dev/playwright-browser typecheck and test pass (101 package tests plus 19 baseline-script tests).
+
+w W-49 type=feature status=proposed cynefin=complicated t_created=2026-09-05T14:19:58Z t_updated=2026-09-05T14:20:30Z "Add browser-native Locator conveniences"
+  goals: G-17
+  theme: T-03
+  fitness: G-17=+0
+  surface: packages/playwright-browser/src/locator.ts, packages/playwright-browser/src/page.ts, packages/playwright-browser/src/contract.test.ts
+  ac:
+    | Implement focus, blur, clear, check, uncheck, setChecked, selectOption, selectText, scrollIntoViewIfNeeded, type or pressSequentially, and hover where browser-feasible.
+    | Reuse existing actionability and InjectedScript primitives; honor supported Playwright options and reject unsupported semantics instead of silently changing them.
+  hypothesis:
+    | Common POM actions can provide useful best-effort browser behavior while preserving Playwright method shapes and explicit limitations.
+  evidence_strategy:
+    | Add pinned-source-derived contract tests for successful actions, strictness, states, events, options, and unsupported cases; run package checks.
+
+w W-50 type=feature status=proposed cynefin=complicated t_created=2026-09-05T14:19:58Z t_updated=2026-09-05T14:20:31Z "Complete Locator composition transport"
+  goals: G-17
+  theme: T-03
+  fitness: G-17=+0
+  surface: packages/playwright-browser/src/locator.ts, packages/playwright-browser/src/selectors.ts, packages/playwright-browser/tests/upstream/adapter-bridge.ts, packages/playwright-browser/tests/upstream/_adapter-guard.spec.ts
+  ac:
+    | Implement Locator.and and Locator.or with same-page ownership validation and pinned Playwright selector serialization.
+    | Teach only the upstream Node bridge to encode and reconstruct Locator chain arguments needed to exercise composition; add no runtime serializer, hybrid setup, or real-driver fallback.
+  hypothesis:
+    | Locator composition is already browser-native, and explicit chain transport at the test boundary will expose its real compatibility without changing production behavior.
+  evidence_strategy:
+    | Add package composition tests and adapter guards, run relevant unchanged upstream specs, and verify browser execution evidence.
+
+w W-51 type=feature status=proposed cynefin=complicated t_created=2026-09-05T14:19:58Z t_updated=2026-09-05T14:20:31Z "Add small browser-native Page conveniences"
+  goals: G-17
+  theme: T-03
+  fitness: G-17=+0
+  surface: packages/playwright-browser/src/page.ts, packages/playwright-browser/src/contract.test.ts
+  ac:
+    | Implement Page.title, default timeout storage, default navigation timeout storage, and browser-feasible Page convenience methods by delegating to Locator behavior.
+    | Keep goto, reload, ElementHandle-returning methods, frames, contexts, and all real-driver fallback outside this work item.
+  hypothesis:
+    | Thin Page delegates and local metadata methods deepen the existing module without duplicating Locator semantics.
+  evidence_strategy:
+    | Add pinned-source-derived contract tests for signatures, default timeout use, delegation, and unsupported boundaries; run package checks.
+
+w W-52 type=feature status=proposed cynefin=complicated t_created=2026-09-05T14:19:58Z t_updated=2026-09-05T14:20:31Z "Verify browser-native convenience wave"
+  goals: G-17
+  theme: T-03
+  fitness: G-17=+1
+  surface: packages/playwright-browser/tests/upstream/baseline.json, packages/playwright-browser/test-results, packages/playwright-browser
+  ac:
+    | Review every new passing upstream test for meaningful assertions and matching adapter execution before promotion.
+    | Run the unchanged 473-test corpus with checksum verification and zero reviewed-baseline regressions, plus the full workspace check.
+    | Report remaining failures by browser-feasible, necessarily partial, browser-process-only, and harness-only categories; stop before goto, ElementHandle, frames, or hybrid setup.
+  hypothesis:
+    | A single integrated review will measure genuine browser-native gains and expose the next decision boundary without inflating compatibility claims.
+  evidence_strategy:
+    | Record reviewed promotions, corpus totals and clusters, checksums, adapter guards, full workspace checks, commits, and PR state.
+
 d D-01 status=superseded t_created=2026-08-27T08:43:08Z t_updated=2026-08-27T11:48:35Z "Use the five-workspace monorepo layout"
   context:
     | The open-source WebMCP library needs independently publishable core and Vite packages, a private example application, and shared tooling configuration.
@@ -1179,6 +1252,8 @@ t T-01 status=done t_created=2026-09-05T11:41:46Z t_updated=2026-09-05T12:20:11Z
 
 t T-02 status=done t_created=2026-09-05T12:53:18Z t_updated=2026-09-05T13:47:24Z "Browser-native API expansion"
 
+t T-03 status=open t_created=2026-09-05T14:19:44Z t_updated=2026-09-05T14:19:44Z "Browser-native convenience surface"
+
 y Y-01 status=active t_created=2026-08-27T13:24:26Z t_updated=2026-08-27T13:25:03Z "Shared Page Object behavior"
   tags: Page Object Model (POM), Generated WebMCP Tool
   surface: packages/webmcp, packages/unplugin-webmcp, apps/example-vue
@@ -1286,6 +1361,10 @@ e W-45 implements D-15 t_created=2026-09-05T12:53:51Z
 e W-46 blocks W-47 t_created=2026-09-05T12:54:13Z
 e W-46 implements D-15 t_created=2026-09-05T12:54:03Z
 e W-47 implements D-15 t_created=2026-09-05T12:54:13Z
+e W-48 blocks W-49 t_created=2026-09-05T14:20:30Z
+e W-49 blocks W-50 t_created=2026-09-05T14:20:30Z
+e W-50 blocks W-51 t_created=2026-09-05T14:20:31Z
+e W-51 blocks W-52 t_created=2026-09-05T14:20:31Z
 e Y-02 distills D-08 t_created=2026-08-27T14:40:25Z
 e Y-03 distills D-10 t_created=2026-09-02T09:50:35Z
 e Y-03 distills D-11 t_created=2026-09-02T09:50:35Z

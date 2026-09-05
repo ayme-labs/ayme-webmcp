@@ -250,6 +250,22 @@ export class LocatorImpl {
     );
   }
 
+  async innerText(options?: LocatorQueryOptions): Promise<string> {
+    return this.ownerPage.locatorInnerText(this.selector, this.label, options);
+  }
+
+  async innerHTML(options?: LocatorQueryOptions): Promise<string> {
+    return this.ownerPage.locatorInnerHTML(this.selector, this.label, options);
+  }
+
+  async allInnerTexts(): Promise<string[]> {
+    return this.ownerPage.locatorAllInnerTexts(this.selector);
+  }
+
+  async allTextContents(): Promise<string[]> {
+    return this.ownerPage.locatorAllTextContents(this.selector);
+  }
+
   async inputValue(options?: LocatorQueryOptions): Promise<string> {
     return this.ownerPage.locatorInputValue(this.selector, this.label, options);
   }
@@ -264,6 +280,26 @@ export class LocatorImpl {
 
   async isChecked(options?: LocatorQueryOptions): Promise<boolean> {
     return this.ownerPage.locatorIsChecked(this.selector, this.label, options);
+  }
+
+  async isEditable(options?: LocatorQueryOptions): Promise<boolean> {
+    return this.ownerPage.locatorIsEditable(this.selector, this.label, options);
+  }
+
+  async isVisible(options?: LocatorQueryOptions): Promise<boolean> {
+    return this.ownerPage.locatorIsVisible(this.selector, this.label, options);
+  }
+
+  async isHidden(options?: LocatorQueryOptions): Promise<boolean> {
+    return !this.ownerPage.locatorIsVisible(this.selector, this.label, options);
+  }
+
+  async boundingBox(options?: LocatorQueryOptions) {
+    return this.ownerPage.locatorBoundingBox(
+      this.selector,
+      this.label,
+      options
+    );
   }
 
   /**

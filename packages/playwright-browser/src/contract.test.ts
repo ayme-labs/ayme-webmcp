@@ -940,6 +940,70 @@ describe("Single-document adapter contract", () => {
         "Not a checkbox or radio button"
       );
     });
+
+    it("returns strict inner text and HTML plus all matching text values", async () => {
+      document.body.innerHTML = `
+        <div class=item><span>One</span></div>
+        <div class=item><span>Two</span></div>
+        <svg id=svg><text>Vector</text></svg>
+      `;
+      const page = createPage();
+
+      expect(await page.locator(".item").allTextContents()).toEqual([
+        "One",
+        "Two",
+      ]);
+      expect(await page.locator(".item").allInnerTexts()).toEqual([
+        "One",
+        "Two",
+      ]);
+      expect(await page.locator(".item").first().innerHTML()).toBe(
+        "<span>One</span>"
+      );
+      expect(await page.locator(".item").last().innerText()).toBe("Two");
+      await expect(page.locator(".item").innerText()).rejects.toThrow(
+        /Expected one element/
+      );
+      await expect(page.locator("#svg").innerText()).rejects.toThrow(
+        "Node is not an HTMLElement"
+      );
+    });
+
+    it("reports editable, visible, and hidden state using InjectedScript", async () => {
+      document.body.innerHTML = `
+        <input id=editable />
+        <input id=readonly readonly />
+        <div id=contenteditable contenteditable=true></div>
+        <div id=hidden hidden></div>
+      `;
+      const page = createPage();
+
+      expect(await page.locator("#editable").isEditable()).toBe(true);
+      expect(await page.locator("#readonly").isEditable()).toBe(false);
+      expect(await page.locator("#contenteditable").isEditable()).toBe(true);
+      expect(await page.locator("#editable").isVisible()).toBe(true);
+      expect(await page.locator("#editable").isHidden()).toBe(false);
+      expect(await page.locator("#hidden").isVisible()).toBe(false);
+      expect(await page.locator("#hidden").isHidden()).toBe(true);
+      expect(await page.locator("#missing").isVisible()).toBe(false);
+      expect(await page.locator("#missing").isHidden()).toBe(true);
+    });
+
+    it("returns a visible element's browser bounds and null when hidden", async () => {
+      document.body.innerHTML = `<div id=visible></div><div id=hidden hidden></div>`;
+      const visible = document.querySelector("#visible")!;
+      visible.getBoundingClientRect = () =>
+        ({ x: 10, y: 20, width: 30, height: 40 }) as DOMRect;
+      const page = createPage();
+
+      expect(await page.locator("#visible").boundingBox()).toEqual({
+        x: 10,
+        y: 20,
+        width: 30,
+        height: 40,
+      });
+      expect(await page.locator("#hidden").boundingBox()).toBeNull();
+    });
   });
 
   // ── AC5: resolveOne removed ───────────────────────────────────
