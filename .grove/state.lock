@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:52db76d5a7bfcc1aaef2e43f7658c8c4ed454d3bea7f3cb96e305b9a35a55cb6
+# checksum: sha256:74bfb2bd43b3cbf7beb4cd2c88f2a348486268b00a7f2ee9b18ca38313635f16
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -90,10 +90,10 @@ g G-18 status=verified fitness_kind=count t_created=2026-09-03T15:49:53Z t_updat
   fitness_target: 1
   fitness_current: 1
 
-g G-19 status=partial fitness_kind=count t_created=2026-09-05T16:41:59Z t_updated=2026-09-05T16:49:25Z "Deepen verified single-document Playwright semantics"
+g G-19 status=verified fitness_kind=count t_created=2026-09-05T16:41:59Z t_updated=2026-09-05T18:07:08Z "Deepen verified single-document Playwright semantics"
   area: A-02
   fitness_target: 4
-  fitness_current: 3
+  fitness_current: 4
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -1224,7 +1224,7 @@ w W-59 type=bug status=done cynefin=complicated t_created=2026-09-05T16:42:01Z t
   evidence:
     | The upstream bridge reconstructs Page.evaluate, Page.waitForFunction, Page., Page.320eval, Locator.evaluate, and Locator.evaluateAll callbacks only at the Node-to-browser fixture boundary. A discriminated bridge envelope rehydrates only symbol-confirmed adapter timeouts as Playwright TimeoutError and preserves colliding ordinary values. Thirty-one adapter guards, four focused unchanged upstream callback and timeout cases, 118 package Vitest tests, 19 baseline-script tests, lint, typecheck, and build pass.
 
-w W-60 type=feature status=ready cynefin=complicated t_created=2026-09-05T16:42:02Z t_updated=2026-09-05T16:42:04Z "Verify single-document compatibility corrections"
+w W-60 type=feature status=done cynefin=complicated t_created=2026-09-05T16:42:02Z t_updated=2026-09-05T18:07:08Z "Verify single-document compatibility corrections"
   goals: G-19
   fitness: G-19=+1
   surface: packages/playwright-browser/tests/upstream/baseline.json, packages/playwright-browser/test-results, packages/playwright-browser
@@ -1236,6 +1236,10 @@ w W-60 type=feature status=ready cynefin=complicated t_created=2026-09-05T16:42:
     | Correcting the harness fixture and the known single-document mismatches will increase truthful compatibility without hybrid routing or fallback.
   evidence_strategy:
     | Record checksum, guard, corpus, promotion review, package, workspace, and PR results.
+  evidence:
+    | The unchanged 473-test corpus reconciled as 160 execution-backed candidates, 303 failures, 1 skip, and 9 diagnostic-only passes; 9 assertion-reviewed tests were promoted for 159 reviewed entries, the no-assertion setContent throughput pass remained unpromoted, and regressions were 0.
+    | pnpm check passed after 32 adapter guards, 118 Vitest contract tests, 19 baseline-tool tests, the complete upstream corpus, build, lint, typecheck, formatting, and boundary checks; copied upstream checksums matched 22 of 22 specs.
+    | Failure review grouped 303 expected failures into 186 missing members or references, 58 argument-transport limits, 30 serialization failures, 18 assertion mismatches, 5 timeouts, 4 after-adapter-entry failures, and 2 before-adapter-entry failures.
 
 d D-01 status=superseded t_created=2026-08-27T08:43:08Z t_updated=2026-08-27T11:48:35Z "Use the five-workspace monorepo layout"
   context:

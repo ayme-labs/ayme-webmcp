@@ -26,6 +26,11 @@
       "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
     },
     {
+      "id": "locator-convenience.spec.ts > innerText should produce log",
+      "method": "Locator.innerText",
+      "evidence": "The unchanged assertion verifies the missing-locator wait log after Locator.innerText enters the browser adapter."
+    },
+    {
       "id": "locator-convenience.spec.ts > innerText should throw",
       "method": "Page.innerText",
       "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
@@ -91,6 +96,11 @@
       "evidence": "The unchanged test iterates the returned locator array and asserts all three browser-resolved text values in order."
     },
     {
+      "id": "locator-misc-1.spec.ts > focus should respect strictness",
+      "method": "Locator.focus",
+      "evidence": "The unchanged assertion verifies Locator.focus rejects a multi-match selector with Playwright strict-mode diagnostics."
+    },
+    {
       "id": "locator-misc-1.spec.ts > should check the box",
       "method": "Locator.check",
       "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
@@ -129,6 +139,11 @@
       "id": "locator-misc-2.spec.ts > should pressSequentially",
       "method": "Locator.pressSequentially",
       "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+    },
+    {
+      "id": "locator-misc-2.spec.ts > should scroll zero-sized element into view",
+      "method": "Locator.scrollIntoViewIfNeeded",
+      "evidence": "The unchanged assertions verify a zero-sized target is scrolled through the adapter and its bounding box changes as expected."
     },
     {
       "id": "locator-misc-2.spec.ts > should support filter(visible)",
@@ -239,6 +254,16 @@
       "id": "locator-query.spec.ts > should throw on capture w/ nth()",
       "method": "Locator.click",
       "evidence": "The click rejects an out-of-range nth target with the expected selector query error."
+    },
+    {
+      "id": "locator-query.spec.ts > should throw on due to strictness",
+      "method": "Locator.isVisible",
+      "evidence": "The unchanged assertion verifies Locator.isVisible rejects a multi-match selector with strict-mode diagnostics."
+    },
+    {
+      "id": "locator-query.spec.ts > should throw on due to strictness 2",
+      "method": "Locator.evaluate",
+      "evidence": "The unchanged assertion verifies Locator.evaluate rejects a multi-match selector with strict-mode diagnostics."
     },
     {
       "id": "page-aria-snapshot-ai.spec.ts > emit generic roles for nodes w/o roles",
@@ -354,6 +379,11 @@
       "id": "page-aria-snapshot-ai.spec.ts > should resolve refs of distilled-away nodes",
       "method": "Page.ariaSnapshot",
       "evidence": "Exact upstream snapshot assertions verify should resolve refs of distilled-away nodes through Page.ariaSnapshot."
+    },
+    {
+      "id": "page-aria-snapshot-ai.spec.ts > should show visible children of hidden elements",
+      "method": "Page.ariaSnapshot",
+      "evidence": "The unchanged exact snapshot assertion verifies browser-side ARIA capture preserves visible descendants of a hidden container."
     },
     {
       "id": "page-aria-snapshot-ai.spec.ts > should truncate data url in link",
@@ -489,6 +519,16 @@
       "id": "page-wait-for-function.spec.ts > should poll on raf",
       "method": "Page.waitForFunction",
       "evidence": "The RAF polling form remains pending until an adapter-routed mutation and then resolves."
+    },
+    {
+      "id": "page-wait-for-function.spec.ts > should respect default timeout",
+      "method": "Page.waitForFunction",
+      "evidence": "The unchanged assertions verify the configured default timeout produces Playwright TimeoutError identity and the exact timeout message."
+    },
+    {
+      "id": "page-wait-for-function.spec.ts > should respect timeout",
+      "method": "Page.waitForFunction",
+      "evidence": "The unchanged assertions verify an explicit timeout produces Playwright TimeoutError identity and the exact timeout message."
     },
     {
       "id": "page-wait-for-function.spec.ts > should return the success value as a JSHandle",
@@ -679,6 +719,11 @@
       "id": "selectors-misc.spec.ts > should escape the scope with >>",
       "method": "Page.$eval",
       "evidence": "Upstream assertions verify should escape the scope with >> through browser-side Page.$eval selector evaluation."
+    },
+    {
+      "id": "selectors-misc.spec.ts > should print original xpath in error",
+      "method": "Locator.isVisible",
+      "evidence": "The unchanged assertions verify implicit XPath diagnostics retain the caller original expression and omit the transformed form."
     },
     {
       "id": "selectors-misc.spec.ts > should work with >> visible=false",

@@ -372,6 +372,7 @@ function doUpdate(entries) {
   const corpusEntries = entries.filter((e) => corpusSpecs.has(e.file));
 
   const args = process.argv.slice(3);
+  if (args[0] === "--") args.shift();
   if (!args.length || args.length % 3)
     throw new Error(
       "Provide one or more <test-id> <method> <evidence> triples."

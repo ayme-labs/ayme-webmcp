@@ -44,6 +44,17 @@ test("page.locator returns an adapter proxy locator", async ({
   expect((locator as any).__aymeAdapter).toBe(true);
 });
 
+test("page.mainFrame keeps the single-document adapter facade", async ({
+  page,
+  adapterPage,
+}) => {
+  await page.setContent("<main><p>hello</p></main>");
+
+  const mainFrame = adapterPage.mainFrame();
+  expect((mainFrame as any).__aymeAdapter).toBe(true);
+  await expect(mainFrame.locator("p").textContent()).resolves.toBe("hello");
+});
+
 // ── Adapter routing works ───────────────────────────────────────────
 
 test("adapter locator.click reaches the DOM", async ({

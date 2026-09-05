@@ -279,6 +279,11 @@ function createPageProxy(realPage: Page): Page {
       if (prop === "__aymeAdapter") return true;
       if (prop === "then") return undefined;
 
+      // The production single-document adapter defines mainFrame() as the
+      // current Page facade. Preserve that synchronous identity without
+      // exposing Playwright's real Frame object through the fixture.
+      if (prop === "mainFrame") return () => createPageProxy(realPage);
+
       // Locator-creating: return proxy locator.
       if (LOCATOR_CREATING_METHODS.has(prop)) {
         return (...args: unknown[]) =>
