@@ -17,6 +17,20 @@ it("reports observed failure phases without claiming subject execution", () => {
     "argument transport"
   );
   assert.equal(
+    failurePhase({
+      status: "failed",
+      error: "Passed function is not well-serializable!",
+    }),
+    "callback reconstruction"
+  );
+  assert.equal(
+    failurePhase({
+      status: "failed",
+      error: "Unexpected serialization failure",
+    }),
+    "serialization failure"
+  );
+  assert.equal(
     failurePhase({ status: "failed", error: "goto is not a function" }),
     "missing member or reference"
   );

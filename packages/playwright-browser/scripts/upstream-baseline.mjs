@@ -197,7 +197,14 @@ export function failurePhase(entry) {
   const error = entry.error ?? "";
   if (entry.status === "passed" || entry.status === "skipped")
     return entry.status;
-  if (/serializ/i.test(error)) return "argument transport";
+  if (
+    /cannot serialize (?:function|argument)|nested function arguments|event callbacks|handles, frames, or non-plain object arguments/i.test(
+      error
+    )
+  )
+    return "argument transport";
+  if (/well-serializable/i.test(error)) return "callback reconstruction";
+  if (/serializ/i.test(error)) return "serialization failure";
   if (/is not a function|is not defined/.test(error))
     return "missing member or reference";
   if (/can be only used with Locator object/.test(error))

@@ -8,7 +8,7 @@
  * Infrastructure operations (setContent, evaluate) use the real
  * Playwright page directly; only the adapter proxy is tested.
  */
-import { test as base, expect } from "@playwright/test";
+import { errors as playwrightErrors, test as base, expect } from "@playwright/test";
 import { createAdapterPage } from "./adapter-bridge";
 
 const test = base.extend<{ adapterPage: import("@playwright/test").Page }>({
@@ -163,7 +163,7 @@ test("adapter locator matchers retry through the browser adapter", async ({
   });
 });
 
-test("adapter locator callbacks serialize arguments and execute in the adapter", async ({
+test("adapter callback operations reconstruct in the adapter", async ({
   page,
   adapterPage,
 }) => {
@@ -189,6 +189,42 @@ test("adapter locator callbacks serialize arguments and execute in the adapter",
   const execution = await page.evaluate(() => (window as any).__aymeEvidence);
   expect(execution.entered).toContain("Locator.evaluate");
   expect(execution.entered).toContain("Locator.evaluateAll");
+});
+
+test("adapter page callbacks enter public adapter methods", async ({
+  page,
+  adapterPage,
+}) => {
+  await adapterPage.setContent("<p>callback</p>");
+
+  await expect(
+    (adapterPage as any).evaluate(() => document.querySelector("p")?.textContent)
+  ).resolves.toBe("callback");
+  await expect(
+    (adapterPage as any).$eval("p", element => element.textContent)
+  ).resolves.toBe("callback");
+  await expect(
+    (adapterPage as any).$$eval("p", elements => elements.length)
+  ).resolves.toBe(1);
+
+  const execution = await page.evaluate(() => (window as any).__aymeEvidence);
+  expect(execution.entered).toContain("Page.evaluate");
+  expect(execution.entered).toContain("Page.$eval");
+  expect(execution.entered).toContain("Page.$$eval");
+});
+
+test("adapter values cannot collide with the timeout envelope", async ({
+  adapterPage,
+}) => {
+  await expect(
+    (adapterPage as any).evaluate(() => ({
+      __aymeAdapterTimeout: true,
+      message: "ordinary callback value",
+    }))
+  ).resolves.toEqual({
+    __aymeAdapterTimeout: true,
+    message: "ordinary callback value",
+  });
 });
 
 test("adapter locator evaluate forwards its third timeout option", async ({
@@ -344,6 +380,31 @@ test("adapter waitForFunction false predicate times out", async ({
       timeout: 100,
     })
   ).rejects.toThrow(/[Tt]imeout/);
+});
+
+test("adapter timeout is rethrown without real driver fallback", async ({
+  page,
+  adapterPage,
+}) => {
+  const realWaitForFunction = page.waitForFunction;
+  (page as any).waitForFunction = () => {
+    throw new Error("real Playwright waitForFunction must not run");
+  };
+
+  try {
+    const error = await (adapterPage as any)
+      .waitForFunction(() => false, {}, { polling: 10, timeout: 25 })
+      .catch((failure: unknown) => failure);
+    expect(error).toBeInstanceOf(playwrightErrors.TimeoutError);
+    expect((error as Error).message).toContain(
+      "page.waitForFunction: Timeout 25ms exceeded"
+    );
+  } finally {
+    (page as any).waitForFunction = realWaitForFunction;
+  }
+
+  const execution = await page.evaluate(() => (window as any).__aymeEvidence);
+  expect(execution.entered).toContain("Page.waitForFunction");
 });
 
 test("adapter waitForFunction string expression works", async ({
