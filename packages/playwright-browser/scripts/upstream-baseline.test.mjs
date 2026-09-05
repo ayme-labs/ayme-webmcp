@@ -5,9 +5,71 @@ import {
   compareBaseline,
   validateCompleteness,
   validateReportErrors,
+  reviewedPromotion,
 } from "./upstream-baseline.mjs";
 
 // ── parseReport ─────────────────────────────────────────────────────
+
+describe("reviewed promotion", () => {
+  it("treats a raw pass without the reviewed operation as a regression", () => {
+    const baseline = {
+      reviewed: [
+        { id: "test", method: "Locator.click", evidence: "click changes DOM" },
+      ],
+    };
+    for (const execution of [
+      null,
+      { entered: ["Page.setContent"], failures: [] },
+      { entered: ["Locator.click"], failures: ["serialization failed"] },
+    ]) {
+      const result = compareBaseline(
+        [{ id: "test", file: "test.ts", status: "passed", execution }],
+        baseline,
+        ["test.ts"]
+      );
+      assert.deepEqual(result.regressions, ["test"]);
+    }
+  });
+  const entry = {
+    id: "test",
+    status: "passed",
+    execution: { entered: ["Page.evaluate"], failures: [] },
+  };
+  it("requires execution of the reviewed method", () => {
+    assert.throws(() =>
+      reviewedPromotion([entry], "test", "Page.goto", "checks navigation")
+    );
+  });
+  it("rejects swallowed transport failures and missing evidence", () => {
+    assert.throws(() =>
+      reviewedPromotion(
+        [
+          {
+            ...entry,
+            execution: { ...entry.execution, failures: ["not a function"] },
+          },
+        ],
+        "test",
+        "Page.evaluate",
+        "checks value"
+      )
+    );
+    assert.throws(() =>
+      reviewedPromotion([entry], "test", "Page.evaluate", "")
+    );
+  });
+  it("records the reviewed assertion", () => {
+    assert.deepEqual(
+      reviewedPromotion(
+        [entry],
+        "test",
+        "Page.evaluate",
+        "checks returned value"
+      ),
+      { id: "test", method: "Page.evaluate", evidence: "checks returned value" }
+    );
+  });
+});
 
 describe("parseReport", () => {
   it("extracts flat test entries with stable IDs", () => {
@@ -150,6 +212,7 @@ describe("compareBaseline", () => {
     id,
     status,
     file: id.split(" > ")[0],
+    execution: { entered: ["Locator.click"], failures: [] },
   });
 
   const names = ["locator-click.spec.ts", "page-goto.spec.ts"];
@@ -160,10 +223,10 @@ describe("compareBaseline", () => {
       makeEntry("locator-click.spec.ts > should fill", "passed"),
     ];
     const baseline = {
-      passingIds: [
+      reviewed: [
         "locator-click.spec.ts > should click",
         "locator-click.spec.ts > should fill",
-      ],
+      ].map((id) => ({ id, method: "Locator.click" })),
     };
     const result = compareBaseline(entries, baseline, names);
     assert.deepEqual(result.regressions, [
@@ -176,10 +239,10 @@ describe("compareBaseline", () => {
       makeEntry("locator-click.spec.ts > should fill", "passed"),
     ];
     const baseline = {
-      passingIds: [
+      reviewed: [
         "locator-click.spec.ts > should click",
         "locator-click.spec.ts > should fill",
-      ],
+      ].map((id) => ({ id, method: "Locator.click" })),
     };
     const result = compareBaseline(entries, baseline, names);
     assert.deepEqual(result.regressions, [
@@ -193,7 +256,9 @@ describe("compareBaseline", () => {
       makeEntry("locator-click.spec.ts > new test", "passed"),
     ];
     const baseline = {
-      passingIds: ["locator-click.spec.ts > should click"],
+      reviewed: [
+        { id: "locator-click.spec.ts > should click", method: "Locator.click" },
+      ],
     };
     const result = compareBaseline(entries, baseline, names);
     assert.deepEqual(result.regressions, []);
@@ -206,7 +271,7 @@ describe("compareBaseline", () => {
       makeEntry("locator-click.spec.ts > b", "skipped"),
       makeEntry("locator-click.spec.ts > c", "passed"),
     ];
-    const baseline = { passingIds: [] };
+    const baseline = { reviewed: [] };
     const result = compareBaseline(entries, baseline, names);
     assert.equal(result.failed, 1);
     assert.equal(result.skipped, 1);
@@ -220,7 +285,7 @@ describe("compareBaseline", () => {
       makeEntry("locator-click.spec.ts > c", "skipped"),
       makeEntry("page-goto.spec.ts > d", "passed"),
     ];
-    const baseline = { passingIds: [] };
+    const baseline = { reviewed: [] };
     const result = compareBaseline(entries, baseline, names);
     const reconciled =
       result.currentPassing.length + result.failed + result.skipped;

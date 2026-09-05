@@ -55,9 +55,20 @@ export const test = base.extend<
   // ── Adapter page ──────────────────────────────────────────────────
   // Wraps the real Playwright page with a proxy that routes all
   // compatibility operations through the in-browser adapter.
-  page: async ({ page }, use) => {
+  page: async ({ page }, use, testInfo) => {
     const proxyPage = await createAdapterPage(page);
-    await use(proxyPage);
+    try {
+      await use(proxyPage);
+    } finally {
+      const evidence = await page
+        .evaluate(() => (window as any).__aymeEvidence)
+        .catch(() => null);
+      if (evidence) evidence.failures = (page as any).__aymeTransportFailures;
+      testInfo.annotations.push({
+        type: "adapter-execution",
+        description: JSON.stringify(evidence),
+      });
+    }
   },
 
   // ── Test server ───────────────────────────────────────────────────

@@ -357,10 +357,11 @@ export class PageImpl {
    * For bridge-transported strings the isFunction flag is explicit.
    * Never retries evaluation after a runtime exception.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async evaluate(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     pageFunction: string | ((...a: any[]) => any),
     arg?: unknown
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
     const isFunction = typeof pageFunction === "function";
     return this._evaluateExpression(
@@ -379,11 +380,12 @@ export class PageImpl {
    *                    false → return the evaled result directly
    * @param arg         serialized argument
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async _evaluateExpression(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expression: string | ((...a: any[]) => any),
     isFunction: boolean,
     arg?: unknown
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
     if (typeof expression === "function") return await expression(arg);
     // Normalize: wrap function expressions in parens per

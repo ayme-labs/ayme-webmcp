@@ -72,16 +72,73 @@ function buildAdapterBundle(): string {
 export async function createAdapterPage(realPage: Page): Promise<Page> {
   const bundle = buildAdapterBundle();
 
-  // Register init scripts: on every navigation, inject the adapter bundle
+  // Single init script: on every navigation, inject the adapter bundle
   // and create the adapter page from the current window.
-  await realPage.addInitScript(bundle);
-  await realPage.addInitScript(`
-    window.__aymeAdapterPage = window.__aymeAdapter.createPage();
-  `);
+  // W-28 AC1: deterministic single-script initialization.
+  await realPage.addInitScript(
+    bundle + "\nwindow.__aymeAdapterPage = window.__aymeAdapter.createPage();"
+  );
 
   // Force a navigation so init scripts execute immediately.
   await realPage.goto("about:blank");
 
+  await realPage.evaluate(() => {
+    const host = window as any;
+    host.__aymeEvidence = { entered: [], failures: [] };
+    const wrapped = new WeakSet<object>();
+    const instrument = (object: any, kind: string): any => {
+      if (!object || typeof object !== "object" || wrapped.has(object))
+        return object;
+      wrapped.add(object);
+      const prototype = Object.getPrototypeOf(object);
+      for (const name of Object.getOwnPropertyNames(prototype)) {
+        if (
+          name === "constructor" ||
+          typeof Object.getOwnPropertyDescriptor(prototype, name)?.value !==
+            "function"
+        )
+          continue;
+        const original = object[name];
+        const publicName =
+          name === "_evaluateExpression"
+            ? "evaluate"
+            : name === "_waitForFunctionExpression"
+              ? "waitForFunction"
+              : name;
+        object[name] = function (...args: unknown[]) {
+          host.__aymeEvidence.entered.push(`${kind}.${publicName}`);
+          const result = original.apply(this, args);
+          if (
+            result &&
+            typeof result.then !== "function" &&
+            typeof result.count === "function"
+          )
+            instrument(result, "Locator");
+          return result;
+        };
+      }
+      return object;
+    };
+    instrument(host.__aymeAdapterPage, "Page");
+  });
+
+  const evaluate = realPage.evaluate.bind(realPage);
+  const failures: string[] = [];
+  (realPage as any).__aymeTransportFailures = failures;
+  realPage.evaluate = (async (...args: any[]) => {
+    try {
+      return await (evaluate as any)(...args);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (
+        /is not a function|serializ|execution context|target.*closed/i.test(
+          message
+        )
+      )
+        failures.push(message.split("\n")[0]);
+      throw error;
+    }
+  }) as Page["evaluate"];
   return createPageProxy(realPage);
 }
 

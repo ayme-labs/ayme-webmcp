@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:dd45a907888afa2e15459c95f857aa78437ef0c49cc1cb6e5c68e535723a2574
+# checksum: sha256:e067c6d8eb4eeef4aa9bd2cda30e12e82b360f81fabd4ddeff8d5fc75e4ac131
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -60,7 +60,7 @@ g G-11 status=verified fitness_kind=count t_created=2026-09-03T14:15:39Z t_updat
 g G-12 status=partial fitness_kind=count t_created=2026-09-03T15:52:54Z t_updated=2026-09-03T18:36:27Z "Make the single-document Playwright adapter truthfully verifiable"
   area: A-02
   fitness_target: 4
-  fitness_current: 2
+  fitness_current: 3
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -624,7 +624,7 @@ w W-27 type=feature status=done cynefin=complicated t_created=2026-09-03T15:52:5
   plan:
     | Follow the pinned Playwright Page orchestration where it applies, while keeping browser-process navigation and other out-of-scope capabilities absent.
 
-w W-28 type=bug status=progress cynefin=complicated session=host:75cd936167237b83 session_at=2026-09-03T19:55:43Z t_created=2026-09-03T15:53:18Z t_updated=2026-09-03T19:55:43Z "Make upstream compatibility evidence truthful"
+w W-28 type=bug status=done cynefin=complicated t_created=2026-09-03T15:53:18Z t_updated=2026-09-05T06:53:44Z "Make upstream compatibility evidence truthful"
   goals: G-12
   fitness: G-12=+1
   ac:
@@ -638,10 +638,12 @@ w W-28 type=bug status=progress cynefin=complicated session=host:75cd936167237b8
     | The current five-entry passing baseline consists of no-assertion, unsupported-operation, or callback-serialization false positives, and the guard suite is outside declared test commands.
   evidence_strategy:
     | Run adapter guards, baseline-script unit tests, checksum verification, and controlled false-positive and regression cases.
+  evidence:
+    | Added package-local upstream-first and assertion-review instructions. Promotion requires exact test ID, method-entry evidence and assertion explanation; CI checks reviewed method execution, checksum integrity, and 22 passing routing guards. Eighteen baseline unit tests, package typecheck and lint pass. Full 473-test rerun completed; two directly asserted locator cases promoted, remaining passes diagnostic or unreviewed.
   plan:
     | Keep every selected upstream test visible while separating verified compatibility passes from diagnostic outcomes.
 
-w W-29 type=bug status=proposed cynefin=clear t_created=2026-09-03T15:53:19Z t_updated=2026-09-03T15:53:35Z "Close distribution compliance and report the new baseline"
+w W-29 type=bug status=progress cynefin=clear session=host:75cd936167237b83 session_at=2026-09-05T06:53:44Z t_created=2026-09-03T15:53:19Z t_updated=2026-09-05T06:53:44Z "Close distribution compliance and report the new baseline"
   goals: G-12
   fitness: G-12=+1
   ac:

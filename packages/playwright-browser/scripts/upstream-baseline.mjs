@@ -4,7 +4,7 @@
  *
  * Commands:
  *   check   verify corpus integrity → run tests → gate against baseline
- *   update  verify corpus integrity → run tests → promote to baseline
+ *   promote <test-id> <method> <evidence>  rerun corpus and promote a reviewed test
  */
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -49,6 +49,11 @@ export function parseReport(report) {
           id: `${filename} > ${fullTitle}`,
           status: result.status,
           file: filename,
+          error: result.error?.message ?? result.errors?.[0]?.message ?? null,
+          execution: JSON.parse(
+            (test.annotations ?? []).find((a) => a.type === "adapter-execution")
+              ?.description ?? "null"
+          ),
         });
       }
     }
@@ -118,23 +123,31 @@ export function validateCompleteness(entries, names) {
  * Compare current results against a recorded baseline.
  *
  * @param {Array} entries  Parsed test entries.
- * @param {{ passingIds: string[] }} baseline  Recorded baseline.
+ * @param {{ reviewed: Array<{id: string, method: string, evidence: string}> }} baseline Recorded baseline.
  * @param {readonly string[]} names  Corpus spec filenames.
  */
 export function compareBaseline(entries, baseline, names) {
-  const baselineSet = new Set(baseline.passingIds);
+  const baselineSet = new Set(baseline.reviewed.map((entry) => entry.id));
   const corpusSpecs = new Set(names);
   const corpusEntries = entries.filter((e) => corpusSpecs.has(e.file));
 
-  const passed = corpusEntries.filter((e) => e.status === "passed");
-  const passedIds = new Set(passed.map((e) => e.id));
+  const passed = corpusEntries.filter((e) => isCandidate(e));
 
   const skipped = corpusEntries.filter((e) => e.status === "skipped");
   const failed = corpusEntries.filter(
     (e) => e.status !== "passed" && e.status !== "skipped"
   );
 
-  const regressions = [...baselineSet].filter((id) => !passedIds.has(id));
+  const regressions = baseline.reviewed
+    .filter(
+      (review) =>
+        !passed.some(
+          (entry) =>
+            entry.id === review.id &&
+            entry.execution.entered.includes(review.method)
+        )
+    )
+    .map((review) => review.id);
   const newlyPassing = passed
     .filter((e) => !baselineSet.has(e.id))
     .map((e) => e.id);
@@ -146,8 +159,34 @@ export function compareBaseline(entries, baseline, names) {
     currentPassing: passed.map((e) => e.id).sort(),
     failed: failed.length,
     skipped: skipped.length,
+    diagnosticPassed: corpusEntries.filter(
+      (e) => e.status === "passed" && !isCandidate(e)
+    ).length,
     total: corpusEntries.length,
   };
+}
+
+export function isCandidate(entry) {
+  return (
+    entry.status === "passed" &&
+    entry.execution?.entered?.length > 0 &&
+    entry.execution?.failures?.length === 0
+  );
+}
+
+export function reviewedPromotion(entries, id, method, evidence) {
+  const entry = entries.find((entry) => entry.id === id);
+  if (
+    !entry ||
+    !isCandidate(entry) ||
+    !entry.execution.entered.includes(method)
+  )
+    throw new Error(
+      "Promotion requires a passing test with matching adapter execution and no recorded transport/dispatch failures."
+    );
+  if (!evidence?.trim())
+    throw new Error("Explain what the reviewed assertion proves.");
+  return { id, method, evidence: evidence.trim() };
 }
 
 // ── Clustering ──────────────────────────────────────────────────────
@@ -297,10 +336,29 @@ function doUpdate(entries) {
   const corpusSpecs = new Set(specNames);
   const corpusEntries = entries.filter((e) => corpusSpecs.has(e.file));
 
-  const passing = corpusEntries
-    .filter((e) => e.status === "passed")
-    .map((e) => e.id)
-    .sort();
+  const args = process.argv.slice(3);
+  if (!args.length || args.length % 3)
+    throw new Error(
+      "Provide one or more <test-id> <method> <evidence> triples."
+    );
+  const promotions = [];
+  for (let index = 0; index < args.length; index += 3)
+    promotions.push(
+      reviewedPromotion(entries, ...args.slice(index, index + 3))
+    );
+  if (new Set(promotions.map((entry) => entry.id)).size !== promotions.length)
+    throw new Error("Each promoted test ID must be unique.");
+  const previous = JSON.parse(readFileSync(BASELINE_PATH, "utf8"));
+  if (compareBaseline(entries, previous, specNames).regressions.length)
+    throw new Error(
+      "Resolve existing baseline regressions before promoting tests."
+    );
+  const reviewed = [
+    ...previous.reviewed.filter(
+      (entry) => !promotions.some((p) => p.id === entry.id)
+    ),
+    ...promotions,
+  ].sort((a, b) => a.id.localeCompare(b.id));
 
   const baseline = {
     source: {
@@ -308,24 +366,33 @@ function doUpdate(entries) {
       commit: corpus.source.commit,
     },
     selectedTestCount: corpusEntries.length,
-    passingIds: passing,
+    reviewed,
   };
 
   writeFileSync(BASELINE_PATH, JSON.stringify(baseline, null, 2) + "\n");
   console.log(
-    `Baseline updated: ${passing.length} passing, ${corpusEntries.length} selected tests.`
+    `Baseline updated: ${reviewed.length} reviewed, ${corpusEntries.length} selected tests.`
   );
 }
 
 function doCheck(entries) {
   if (!existsSync(BASELINE_PATH)) {
-    console.error(
-      "ERROR: No baseline found. Run `node scripts/upstream-baseline.mjs update` first."
-    );
+    console.error("ERROR: No reviewed baseline found.");
     process.exit(1);
   }
 
   const baseline = JSON.parse(readFileSync(BASELINE_PATH, "utf8"));
+  if (
+    !Array.isArray(baseline.reviewed) ||
+    baseline.reviewed.some(
+      (entry) => !entry.id || !entry.method || !entry.evidence?.trim()
+    ) ||
+    new Set(baseline.reviewed.map((entry) => entry.id)).size !==
+      baseline.reviewed.length
+  )
+    throw new Error(
+      "Baseline entries require unique IDs, methods, and review evidence."
+    );
   const corpusSpecs = new Set(specNames);
 
   // Validate baseline provenance matches corpus
@@ -359,16 +426,22 @@ function doCheck(entries) {
 
   // Reconcile: total = passed + failed + skipped
   const reconciled =
-    result.currentPassing.length + result.failed + result.skipped;
+    result.currentPassing.length +
+    result.diagnosticPassed +
+    result.failed +
+    result.skipped;
 
   console.log("Compatibility baseline check");
   console.log("─".repeat(40));
   console.log(`Corpus: ${result.total} tests`);
   console.log(
-    `Passed: ${result.currentPassing.length} (${result.baselinePassing} baseline)`
+    `Candidate passes: ${result.currentPassing.length} (${result.baselinePassing} reviewed baseline)`
   );
   console.log(`Failed: ${result.failed}`);
   console.log(`Skipped: ${result.skipped}`);
+  console.log(
+    `Diagnostic passes without execution evidence: ${result.diagnosticPassed}`
+  );
   console.log(`Reconciled: ${reconciled} / ${result.total}`);
   console.log(`Newly passing: ${result.newlyPassing.length}`);
   console.log(`Regressions: ${result.regressions.length}`);
@@ -380,7 +453,9 @@ function doCheck(entries) {
   }
 
   if (result.newlyPassing.length > 0) {
-    console.log("\nNewly passing (promote with baseline:update):");
+    console.log(
+      "\nCandidates requiring assertion review before baseline:promote:"
+    );
     for (const id of result.newlyPassing) console.log(`  + ${id}`);
   }
 
@@ -409,7 +484,7 @@ const isMain =
 if (isMain) {
   const command = process.argv[2];
   switch (command) {
-    case "update": {
+    case "promote": {
       requireCorpusIntegrity(2);
       const entries = runCorpus();
       doUpdate(entries);
@@ -422,7 +497,9 @@ if (isMain) {
       break;
     }
     default:
-      console.error("Usage: upstream-baseline.mjs <check|update>");
+      console.error(
+        "Usage: upstream-baseline.mjs check | promote <test-id> <method> <evidence>"
+      );
       process.exit(1);
   }
 }

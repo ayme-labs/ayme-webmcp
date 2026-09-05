@@ -20,6 +20,17 @@ const test = base.extend<{ adapterPage: import("@playwright/test").Page }>({
 
 // ── Proxy presence ──────────────────────────────────────────────────
 
+test("execution evidence records browser method entry and swallowed dispatch failures", async ({page, adapterPage}) => {
+  await adapterPage.setContent("<button>hello</button>");
+  await adapterPage.locator("button").count();
+  await adapterPage.goto("about:blank").catch(() => {});
+  const execution = await page.evaluate(() => (window as any).__aymeEvidence);
+  expect(execution.entered).toContain("Page.setContent");
+  expect(execution.entered).toContain("Locator.count");
+  expect(execution.entered).not.toContain("Page.goto");
+  expect((page as any).__aymeTransportFailures.length).toBeGreaterThan(0);
+});
+
 test("page fixture is the adapter proxy", async ({ adapterPage }) => {
   expect((adapterPage as any).__aymeAdapter).toBe(true);
 });

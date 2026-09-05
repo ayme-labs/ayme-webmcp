@@ -4,11 +4,16 @@
     "commit": "b25d782e3fbdf21abdae60e974e49b78ca07e828"
   },
   "selectedTestCount": 473,
-  "passingIds": [
-    "page-basic.spec.ts > should iterate over page properties",
-    "page-goto.spec.ts > should not leak listeners during bad navigation",
-    "page-wait-for-function.spec.ts > should fail with ReferenceError on wrong page",
-    "page-wait-for-function.spec.ts > should fail with predicate throwing on first call",
-    "page-wait-for-function.spec.ts > should fail with predicate throwing sometimes"
+  "reviewed": [
+    {
+      "id": "locator-query.spec.ts > should respect first() and last() @smoke",
+      "method": "Locator.first",
+      "evidence": "Assertions count descendants of the first and last matching div as 1 and 3; unfiltered counts are 6."
+    },
+    {
+      "id": "locator-query.spec.ts > should respect nth()",
+      "method": "Locator.nth",
+      "evidence": "Assertions count descendants of indices 1 and 2 as 2 and 3, and the first paragraph as 1."
+    }
   ]
 }
