@@ -6,15 +6,15 @@
 
 | Measure | Count | Composition |
 | --- | --- | --- |
-| C (content) | 17 | validated B 2 · answered Q 2 · accepted D 10 · active Discovery 3 |
-| V (uncertainty) | 0 | open Q 0 · pending B 0 · W below DoR 0 |
+| C (content) | 18 | validated B 2 · answered Q 2 · accepted D 11 · active Discovery 3 |
+| V (uncertainty) | 2 | open Q 2 · pending B 0 · W below DoR 0 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 13 | 0 | C: validated B 1 · answered Q 2 · accepted D 7 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 |
+| A-02 | Page Object interoperability | 14 | 0 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 |
 | A-03 | Consumer browser capabilities | 4 | 0 | C: validated B 1 · answered Q 0 · accepted D 1 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
@@ -33,7 +33,15 @@
 | G-08 | Structural page state is review-ready | count; current=3 target=2 | verified |
 | G-09 | POM barrel imports remain browser-loadable | count; current=1 target=1 | verified |
 | G-10 | Consumers can use Structural Refs in browser capabilities | count; current=5 target=3 | verified |
-| G-11 | Discover annotated Page Object children | count; current=1 target=1 | verified |
+| G-11 | Enforce browser-side Playwright compatibility | count; current=4 target=4 | verified |
+| G-12 | Make the single-document Playwright adapter truthfully verifiable | count; current=4 target=4 | verified |
+| G-13 | Increase verified Playwright compatibility | count; current=3 target=3 | verified |
+| G-14 | Increase Playwright behavioral compatibility | count; current=4 target=4 | verified |
+| G-15 | Expand verified single-document Playwright compatibility | boolean; current=true | verified |
+| G-16 | Expand browser-native Playwright compatibility | boolean; current=true | verified |
+| G-17 | Expand browser-native Page and Locator conveniences | boolean; current=true target=true | verified |
+| G-18 | Discover annotated Page Object children | count; current=1 target=1 | verified |
+| G-19 | Deepen verified single-document Playwright semantics | count; current=4 target=4 | verified |
 
 ## Work items
 
@@ -60,10 +68,45 @@
 | W-19 | feature | Simplify application-model highlighting interactions | G-10 | clear | ⊤ | done |  |
 | W-20 | bug | Make continuous ref resolution merge-safe | G-10 | complicated | ⊤ | done |  |
 | W-21 | bug | Preserve ref identity through temporary removal | G-10 | clear | ⊤ | done |  |
-| W-22 | feature | Discover annotated Page Object children | G-11 | complicated | ⊤ | done |  |
-| W-23 | bug | Correct annotated Page Object child regressions | G-11 | complicated | ⊤ | done |  |
-| W-24 | bug | Separate POM metadata registration from root activation | G-11 | complicated | ⊤ | done |  |
-| W-25 | bug | Correct annotated component type classification | G-11 | complicated | ⊤ | done |  |
+| W-22 | feature | Ship the compiled browser adapter | G-11 | complicated | ⊤ | done |  |
+| W-23 | feature | Make the upstream corpus self-verifying | G-11 | clear | ⊤ | done |  |
+| W-24 | feature | Delegate browser semantics to InjectedScript | G-11 | complicated | ⊤ | done |  |
+| W-25 | feature | Record a zero-exclusion compatibility baseline | G-11 | complicated | ⊤ | done |  |
+| W-26 | bug | Correct the single-document adapter contract | G-12 | complicated | ⊤ | done |  |
+| W-27 | feature | Implement browser-native setup and callback operations | G-12 | complicated | ⊤ | done |  |
+| W-28 | bug | Make upstream compatibility evidence truthful | G-12 | complicated | ⊤ | done |  |
+| W-29 | bug | Close distribution compliance and report the new baseline | G-12 | clear | ⊤ | done |  |
+| W-30 | feature | Promote reviewed compatibility evidence | G-13 | clear | ⊤ | done |  |
+| W-31 | feature | Integrate locator expectations and callbacks | G-13 | complicated | ⊤ | done |  |
+| W-32 | feature | Verify expanded compatibility evidence | G-13 | complicated | ⊤ | done |  |
+| W-33 | feature | Implement locator expectation retries | G-14 | complicated | ⊤ | done |  |
+| W-34 | feature | Improve browser action semantics | G-14 | complicated | ⊤ | done |  |
+| W-35 | feature | Add common locator query methods | G-14 | clear | ⊤ | done |  |
+| W-36 | feature | Verify behavioral compatibility round | G-14 | complicated | ⊤ | done |  |
+| W-37 | feature | Certify Locator all execution | G-15 | clear | ⊤ | done |  |
+| W-38 | feature | Strengthen document content compatibility | G-15 | complicated | ⊤ | done |  |
+| W-39 | feature | Transport Playwright callback shapes | G-15 | complicated | ⊤ | done |  |
+| W-40 | feature | Complete locator factories and queries | G-15 | complicated | ⊤ | done |  |
+| W-41 | feature | Expand locator expectations and waits | G-15 | complicated | ⊤ | done |  |
+| W-42 | feature | Improve browser-feasible locator actions | G-15 | complicated | ⊤ | done |  |
+| W-43 | feature | Verify expanded compatibility evidence | G-15 | complicated | ⊤ | done |  |
+| W-44 | feature | Expose browser-native ARIA snapshots | G-16 | complicated | ⊤ | done |  |
+| W-45 | feature | Implement browser-native callback methods | G-16 | complicated | ⊤ | done |  |
+| W-46 | feature | Add small single-document methods | G-16 | complicated | ⊤ | done |  |
+| W-47 | feature | Verify browser-native compatibility expansion | G-16 | complicated | ⊤ | done |  |
+| W-48 | feature | Add browser-native Locator observations | G-17 | complicated | ⊤ | done |  |
+| W-49 | feature | Add browser-native Locator conveniences | G-17 | complicated | ⊤ | done |  |
+| W-50 | feature | Complete Locator composition transport | G-17 | complicated | ⊤ | done |  |
+| W-51 | feature | Add small browser-native Page conveniences | G-17 | complicated | ⊤ | done |  |
+| W-52 | feature | Verify browser-native convenience wave | G-17 | complicated | ⊤ | done |  |
+| W-53 | feature | Discover annotated Page Object children | G-18 | complicated | ⊤ | done |  |
+| W-54 | bug | Correct annotated Page Object child regressions | G-18 | complicated | ⊤ | done |  |
+| W-55 | bug | Separate POM metadata registration from root activation | G-18 | complicated | ⊤ | done |  |
+| W-56 | bug | Correct annotated component type classification | G-18 | complicated | ⊤ | done |  |
+| W-57 | bug | Correct upstream ARIA fixture normalization | G-19 | complicated | ⊤ | done |  |
+| W-58 | bug | Align remaining single-document semantics | G-19 | complicated | ⊤ | done |  |
+| W-59 | bug | Keep callback and timeout transport test-only | G-19 | complicated | ⊤ | done |  |
+| W-60 | feature | Verify single-document compatibility corrections | G-19 | complicated | ⊤ | done |  |
 
 ## Decisions
 
@@ -81,6 +124,9 @@
 | D-10 | Use capture-scoped Structural Refs | superseded |  |
 | D-11 | Capture only the top-level document | accepted |  |
 | D-12 | Preserve best-effort node continuity in Page State Sessions | accepted | D-10 |
+| D-13 | Use upstream tests as compatibility contract | superseded |  |
+| D-14 | Use a compiled Playwright-compatible browser adapter | superseded | D-13 |
+| D-15 | Use a compiled Playwright-compatible single-document adapter | accepted | D-14 |
 
 ## Open questions
 
@@ -89,6 +135,8 @@
 | Q-01 | Choose the public activation interface | complicated | D-06, W-03 | deferred |
 | Q-02 | Choose the compact structural output contract | complicated | W-10 | answered |
 | Q-03 | Choose multiple POM root match behavior | complicated | W-10 | answered |
+| Q-04 | Choose navigation compatibility boundary | complicated |  | open |
+| Q-05 | Choose handle compatibility boundary | complicated |  | open |
 
 ## Assumptions
 
@@ -96,6 +144,14 @@
 | --- | --- | --- | --- | --- |
 | B-01 | Vue 3.2.0 supports lifecycle integration |  | W-05 | validated |
 | B-02 | Existing capture and reconciliation seams support session continuity |  | W-16 | validated |
+
+## Themes
+
+| ID | Title | Status | Causes work | Themed work |
+| --- | --- | --- | --- | --- |
+| T-01 | Browser-native compatibility expansion | done | – | W-37, W-38, W-39, W-40, W-41, W-42, W-43 |
+| T-02 | Browser-native API expansion | done | – | W-44, W-45, W-46, W-47 |
+| T-03 | Browser-native convenience surface | done | – | W-48, W-49, W-50, W-51, W-52 |
 
 ## Discoveries
 
@@ -120,7 +176,15 @@ graph TD
   G_08["G-08: Structural page state is review-ready"]:::goal
   G_09["G-09: POM barrel imports remain browser-loadable"]:::goal
   G_10["G-10: Consumers can use Structural Refs in browser capabilities"]:::goal
-  G_11["G-11: Discover annotated Page Object children"]:::goal
+  G_11["G-11: Enforce browser-side Playwright compatibility"]:::goal
+  G_12["G-12: Make the single-document Playwright adapter truthfully verifiable"]:::goal
+  G_13["G-13: Increase verified Playwright compatibility"]:::goal
+  G_14["G-14: Increase Playwright behavioral compatibility"]:::goal
+  G_15["G-15: Expand verified single-document Playwright compatibility"]:::goal
+  G_16["G-16: Expand browser-native Playwright compatibility"]:::goal
+  G_17["G-17: Expand browser-native Page and Locator conveniences"]:::goal
+  G_18["G-18: Discover annotated Page Object children"]:::goal
+  G_19["G-19: Deepen verified single-document Playwright semantics"]:::goal
   W_01["W-01: Establish the monorepo walking skeleton"]:::done
   W_02["W-02: Preserve spike behavior through package extraction"]:::done
   W_03["W-03: Extract Vue Page Object activation composable"]:::done
@@ -142,10 +206,45 @@ graph TD
   W_19["W-19: Simplify application-model highlighting interactions"]:::done
   W_20["W-20: Make continuous ref resolution merge-safe"]:::done
   W_21["W-21: Preserve ref identity through temporary removal"]:::done
-  W_22["W-22: Discover annotated Page Object children"]:::done
-  W_23["W-23: Correct annotated Page Object child regressions"]:::done
-  W_24["W-24: Separate POM metadata registration from root activation"]:::done
-  W_25["W-25: Correct annotated component type classification"]:::done
+  W_22["W-22: Ship the compiled browser adapter"]:::done
+  W_23["W-23: Make the upstream corpus self-verifying"]:::done
+  W_24["W-24: Delegate browser semantics to InjectedScript"]:::done
+  W_25["W-25: Record a zero-exclusion compatibility baseline"]:::done
+  W_26["W-26: Correct the single-document adapter contract"]:::done
+  W_27["W-27: Implement browser-native setup and callback operations"]:::done
+  W_28["W-28: Make upstream compatibility evidence truthful"]:::done
+  W_29["W-29: Close distribution compliance and report the new baseline"]:::done
+  W_30["W-30: Promote reviewed compatibility evidence"]:::done
+  W_31["W-31: Integrate locator expectations and callbacks"]:::done
+  W_32["W-32: Verify expanded compatibility evidence"]:::done
+  W_33["W-33: Implement locator expectation retries"]:::done
+  W_34["W-34: Improve browser action semantics"]:::done
+  W_35["W-35: Add common locator query methods"]:::done
+  W_36["W-36: Verify behavioral compatibility round"]:::done
+  W_37["W-37: Certify Locator all execution"]:::done
+  W_38["W-38: Strengthen document content compatibility"]:::done
+  W_39["W-39: Transport Playwright callback shapes"]:::done
+  W_40["W-40: Complete locator factories and queries"]:::done
+  W_41["W-41: Expand locator expectations and waits"]:::done
+  W_42["W-42: Improve browser-feasible locator actions"]:::done
+  W_43["W-43: Verify expanded compatibility evidence"]:::done
+  W_44["W-44: Expose browser-native ARIA snapshots"]:::done
+  W_45["W-45: Implement browser-native callback methods"]:::done
+  W_46["W-46: Add small single-document methods"]:::done
+  W_47["W-47: Verify browser-native compatibility expansion"]:::done
+  W_48["W-48: Add browser-native Locator observations"]:::done
+  W_49["W-49: Add browser-native Locator conveniences"]:::done
+  W_50["W-50: Complete Locator composition transport"]:::done
+  W_51["W-51: Add small browser-native Page conveniences"]:::done
+  W_52["W-52: Verify browser-native convenience wave"]:::done
+  W_53["W-53: Discover annotated Page Object children"]:::done
+  W_54["W-54: Correct annotated Page Object child regressions"]:::done
+  W_55["W-55: Separate POM metadata registration from root activation"]:::done
+  W_56["W-56: Correct annotated component type classification"]:::done
+  W_57["W-57: Correct upstream ARIA fixture normalization"]:::done
+  W_58["W-58: Align remaining single-document semantics"]:::done
+  W_59["W-59: Keep callback and timeout transport test-only"]:::done
+  W_60["W-60: Verify single-document compatibility corrections"]:::done
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
   D_02["D-02: Use Devbox and Corepack for local runtimes"]:::decision
   D_03["D-03: Keep Vitest configuration package-local"]:::decision
@@ -158,11 +257,19 @@ graph TD
   D_10["D-10: Use capture-scoped Structural Refs"]:::decision
   D_11["D-11: Capture only the top-level document"]:::decision
   D_12["D-12: Preserve best-effort node continuity in Page State Sessions"]:::decision
+  D_13["D-13: Use upstream tests as compatibility contract"]:::decision
+  D_14["D-14: Use a compiled Playwright-compatible browser adapter"]:::decision
+  D_15["D-15: Use a compiled Playwright-compatible single-document adapter"]:::decision
   Q_01["Q-01: Choose the public activation interface"]:::question
   Q_02["Q-02: Choose the compact structural output contract"]:::question
   Q_03["Q-03: Choose multiple POM root match behavior"]:::question
+  Q_04["Q-04: Choose navigation compatibility boundary"]:::question
+  Q_05["Q-05: Choose handle compatibility boundary"]:::question
   B_01["B-01: Vue 3.2.0 supports lifecycle integration"]:::assumption
   B_02["B-02: Existing capture and reconciliation seams support session continuity"]:::assumption
+  T_01["T-01: Browser-native compatibility expansion"]:::theme
+  T_02["T-02: Browser-native API expansion"]:::theme
+  T_03["T-03: Browser-native convenience surface"]:::theme
   Y_01["Y-01: Shared Page Object behavior"]:::discovery
   Y_02["Y-02: Framework lifecycle owns Page Object disposal"]:::discovery
   Y_03["Y-03: Synthetic roots are observation-only"]:::discovery
@@ -174,6 +281,8 @@ graph TD
   B_02 -.->|targets| W_16
   D_05 -->|supersedes| D_01
   D_12 -->|supersedes| D_10
+  D_14 -->|supersedes| D_13
+  D_15 -->|supersedes| D_14
   Q_01 -->|asks| D_06
   Q_01 -->|asks| W_03
   Q_02 -->|asks| W_10
@@ -206,6 +315,52 @@ graph TD
   W_16 ==>|blocks| W_17
   W_16 -->|implements| D_12
   W_17 -->|implements| D_12
+  W_22 -->|implements| D_14
+  W_23 -->|implements| D_13
+  W_24 -->|implements| D_14
+  W_25 -->|implements| D_14
+  W_26 ==>|blocks| W_27
+  W_26 -->|implements| D_15
+  W_27 ==>|blocks| W_28
+  W_27 -->|implements| D_15
+  W_28 ==>|blocks| W_29
+  W_28 -->|implements| D_15
+  W_29 -->|implements| D_15
+  W_30 ==>|blocks| W_31
+  W_31 ==>|blocks| W_32
+  W_31 -->|implements| D_15
+  W_33 ==>|blocks| W_34
+  W_33 -->|implements| D_15
+  W_34 ==>|blocks| W_35
+  W_34 -->|implements| D_15
+  W_35 ==>|blocks| W_36
+  W_35 -->|implements| D_15
+  W_36 -->|implements| D_15
+  W_37 ==>|blocks| W_43
+  W_38 ==>|blocks| W_40
+  W_39 ==>|blocks| W_40
+  W_40 ==>|blocks| W_41
+  W_40 ==>|blocks| W_42
+  W_41 ==>|blocks| W_43
+  W_42 ==>|blocks| W_43
+  W_44 ==>|blocks| W_45
+  W_44 -->|implements| D_15
+  W_45 ==>|blocks| W_46
+  W_45 -->|implements| D_15
+  W_46 ==>|blocks| W_47
+  W_46 -->|implements| D_15
+  W_47 -->|implements| D_15
+  W_48 ==>|blocks| W_49
+  W_49 ==>|blocks| W_50
+  W_50 ==>|blocks| W_51
+  W_51 ==>|blocks| W_52
+  W_57 ==>|blocks| W_60
+  W_57 -->|implements| D_15
+  W_58 ==>|blocks| W_59
+  W_58 -->|implements| D_15
+  W_59 ==>|blocks| W_60
+  W_59 -->|implements| D_15
+  W_60 -->|implements| D_15
   Y_02 -->|distills| D_08
   Y_03 -->|distills| D_10
   Y_03 -->|distills| D_11

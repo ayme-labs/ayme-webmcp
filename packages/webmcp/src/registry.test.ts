@@ -1,7 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { BrowserPage } from "./browserPage";
+import { LOCATOR_BRAND } from "@ayme-dev/playwright-browser";
+import type { Page } from "@playwright/test";
 import type { PomManifest } from "./contracts";
+
+function brandedLocator(overrides: Record<string, unknown> = {}) {
+  const locator: Record<string | symbol, unknown> = { ...overrides };
+  locator[LOCATOR_BRAND] = Object.freeze({
+    ownerPage: {},
+    getSelector: () => "mock",
+    resolveElements: () => [],
+  });
+  return locator;
+}
 
 class FakeMutationObserver {
   static instances: FakeMutationObserver[] = [];
@@ -54,7 +65,7 @@ describe("live Page Object registry", () => {
 
   it("observes while at least one Page Object is registered", async () => {
     const registry = await import("./registry");
-    const page = {} as BrowserPage;
+    const page = {} as Page;
     registry.configureAymeRuntime(page);
 
     class FirstPage {
@@ -99,11 +110,11 @@ describe("live Page Object registry", () => {
 
   it("coalesces DOM mutations and ignores unchanged observations", async () => {
     const registry = await import("./registry");
-    registry.configureAymeRuntime({} as BrowserPage);
+    registry.configureAymeRuntime({} as Page);
 
     const count = vi.fn(async () => 1);
     class PageWithLocator {
-      readonly item = { count };
+      readonly item = brandedLocator({ count });
     }
     registry.registerCompiledPom(PageWithLocator, {
       ...emptyManifest("PageWithLocator"),
@@ -132,7 +143,7 @@ describe("live Page Object registry", () => {
 
   it("schedules an initial probe for every added Page Object", async () => {
     const registry = await import("./registry");
-    registry.configureAymeRuntime({} as BrowserPage);
+    registry.configureAymeRuntime({} as Page);
 
     class FirstPage {}
     registry.registerCompiledPom(FirstPage, emptyManifest("FirstPage"));
@@ -141,7 +152,7 @@ describe("live Page Object registry", () => {
 
     const count = vi.fn(async () => 1);
     class LaterPage {
-      readonly item = { count };
+      readonly item = brandedLocator({ count });
     }
     registry.registerCompiledPom(LaterPage, {
       ...emptyManifest("LaterPage"),
@@ -159,7 +170,7 @@ describe("live Page Object registry", () => {
 
   it("keeps same-class registrations independent", async () => {
     const registry = await import("./registry");
-    registry.configureAymeRuntime({} as BrowserPage);
+    registry.configureAymeRuntime({} as Page);
 
     class ReusedPage {}
     registry.registerCompiledPom(ReusedPage, emptyManifest("ReusedPage"));
@@ -186,13 +197,40 @@ describe("live Page Object registry", () => {
     ).toHaveBeenCalledOnce();
   });
 
+  it("reports an observation error for a manifest-declared locator without a brand", async () => {
+    const registry = await import("./registry");
+    registry.configureAymeRuntime({} as Page);
+
+    class UnbrandedLocatorPage {
+      readonly link = { count: async () => 1 };
+    }
+    registry.registerCompiledPom(UnbrandedLocatorPage, {
+      ...emptyManifest("UnbrandedLocatorPage"),
+      members: [{ memberName: "link", kind: "locator", access: "field" }],
+    });
+    const registration = registry.createPageRegistration(UnbrandedLocatorPage);
+
+    await vi.runOnlyPendingTimersAsync();
+
+    const observations =
+      registry.listRegisteredPoms()[0]?.memberObservations ?? [];
+    const linkObservation = observations.find(
+      (observation) => observation.memberName === "link"
+    );
+    expect(linkObservation).toBeDefined();
+    expect(linkObservation?.count).toBe(0);
+    expect(linkObservation?.error).toMatch(/not a browser locator/);
+
+    registration.dispose();
+  });
+
   it("bounds recursive component manifests to the current component path", async () => {
     const registry = await import("./registry");
-    registry.configureAymeRuntime({} as BrowserPage);
+    registry.configureAymeRuntime({} as Page);
 
     class RecursivePage {
       readonly node = {
-        root: { count: async () => 1 },
+        root: brandedLocator({ count: async () => 1 }),
         open: vi.fn(),
       };
     }
@@ -238,7 +276,7 @@ describe("live Page Object registry", () => {
 
   it("lists tools for live singular and nested component roots", async () => {
     const registry = await import("./registry");
-    registry.configureAymeRuntime({} as BrowserPage);
+    registry.configureAymeRuntime({} as Page);
 
     let dialogRootCount = 1;
     let panelRootCount = 0;
@@ -246,10 +284,10 @@ describe("live Page Object registry", () => {
     const save = vi.fn();
     class NestedPage {
       readonly dialog = {
-        root: { count: async () => dialogRootCount },
+        root: brandedLocator({ count: async () => dialogRootCount }),
         confirm,
         panel: {
-          root: { count: async () => panelRootCount },
+          root: brandedLocator({ count: async () => panelRootCount }),
           save,
         },
       };
@@ -322,15 +360,15 @@ describe("live Page Object registry", () => {
 
   it("lists collection tools only for their direct live roots", async () => {
     const registry = await import("./registry");
-    registry.configureAymeRuntime({} as BrowserPage);
+    registry.configureAymeRuntime({} as Page);
 
     let rootCount = 0;
     class ItemsPage {
       readonly addItem = vi.fn();
       readonly items = [
         {
-          root: { count: async () => rootCount },
-          child: { root: { count: async () => 1 } },
+          root: brandedLocator({ count: async () => rootCount }),
+          child: { root: brandedLocator({ count: async () => 1 }) },
           archive: vi.fn(),
         },
       ];
@@ -400,21 +438,21 @@ describe("live Page Object registry", () => {
 
   it("resolves method-backed collections from the current returned array", async () => {
     const registry = await import("./registry");
-    registry.configureAymeRuntime({} as BrowserPage);
+    registry.configureAymeRuntime({} as Page);
 
     const firstArchive = vi.fn(() => "first");
     const secondArchive = vi.fn(() => "second");
     const replacementArchive = vi.fn(() => "replacement");
     const first = {
-      root: { count: async () => 1 },
+      root: brandedLocator({ count: async () => 1 }),
       archive: firstArchive,
     };
     const second = {
-      root: { count: async () => 1 },
+      root: brandedLocator({ count: async () => 1 }),
       archive: secondArchive,
     };
     const replacement = {
-      root: { count: async () => 1 },
+      root: brandedLocator({ count: async () => 1 }),
       archive: replacementArchive,
     };
     let currentItems = [first, second];

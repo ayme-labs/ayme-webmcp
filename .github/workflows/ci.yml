@@ -90,6 +90,13 @@ jobs:
         run: pnpm exec turbo run build lint typecheck test test:e2e
       - run: pnpm run format:check
       - run: pnpm run boundaries
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-browser-report
+          path: packages/playwright-browser/test-results/report.json
+          if-no-files-found: ignore
 
   vue-compatibility:
     name: Vue 3.2 compatibility

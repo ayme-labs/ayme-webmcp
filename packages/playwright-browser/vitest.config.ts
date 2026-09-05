@@ -1,7 +1,7 @@
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 
-import { playwrightInjectedPlugin } from "./src/tsdown.ts";
+import { playwrightInjectedPlugin } from "./build/playwrightInjectedPlugin.ts";
 
 export default defineConfig({
   plugins: [playwrightInjectedPlugin()],

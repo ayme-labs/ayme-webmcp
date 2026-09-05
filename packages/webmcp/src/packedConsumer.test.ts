@@ -73,6 +73,19 @@ it(
       const packedPkgPath = path.join(extractDir, "package", "package.json");
       const packedPkg = JSON.parse(fs.readFileSync(packedPkgPath, "utf-8"));
       const distDir = path.join(extractDir, "package", "dist");
+      const notices = fs.readFileSync(
+        path.join(distDir, "THIRD_PARTY_NOTICES.txt"),
+        "utf8"
+      );
+      expect(notices).toBe(
+        fs.readFileSync(
+          path.join(webmcpRoot, "THIRD_PARTY_NOTICES.txt"),
+          "utf8"
+        )
+      );
+      expect(notices).toContain("Apache License");
+      expect(notices).toContain("Version 2.0, January 2004");
+      expect(notices).toContain("Microsoft");
 
       // ── Assert: manifest has no private deps ────────────────────────
       const depSections = [
@@ -142,9 +155,9 @@ it(
         [
           'const main = await import("@ayme-dev/webmcp");',
           'const internal = await import("@ayme-dev/webmcp/internal");',
+          'if (typeof main.WebMCP !== "function") throw new Error("missing WebMCP");',
           'if (typeof main.ayme?.getPageState !== "function") throw new Error("missing named Ayme facade");',
           'if (main.default !== main.ayme) throw new Error("Ayme default differs from named export");',
-          'if (typeof main.createBrowserPage !== "function") throw new Error("missing createBrowserPage");',
           'if (typeof internal.configureAymeRuntime !== "function") throw new Error("missing configureAymeRuntime");',
           'console.log("ok");',
         ].join("\n")

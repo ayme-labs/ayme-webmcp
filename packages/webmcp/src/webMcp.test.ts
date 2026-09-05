@@ -1,6 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { BrowserPage } from "./browserPage";
+import { LOCATOR_BRAND } from "@ayme-dev/playwright-browser";
+import type { Page } from "@playwright/test";
+
+function brandedLocator(overrides: Record<string, unknown> = {}) {
+  const locator: Record<string | symbol, unknown> = { ...overrides };
+  locator[LOCATOR_BRAND] = Object.freeze({
+    ownerPage: {},
+    getSelector: () => "mock",
+    resolveElements: () => [],
+  });
+  return locator;
+}
 
 type PublishedTool = { name: string };
 
@@ -79,14 +90,14 @@ describe("WebMCP publisher", () => {
 
     const registry = await import("./registry");
     const { synchronizeWebMcpTools } = await import("./webMcp");
-    registry.configureAymeRuntime({} as BrowserPage);
+    registry.configureAymeRuntime({} as Page);
 
     let rootCount = 1;
     class ItemsPage {
       readonly addItem = vi.fn();
       readonly items = [
         {
-          root: { count: async () => rootCount },
+          root: brandedLocator({ count: async () => rootCount }),
           archive: vi.fn(),
         },
       ];
@@ -171,7 +182,7 @@ describe("WebMCP publisher", () => {
 
     const registry = await import("./registry");
     const { synchronizeWebMcpTools } = await import("./webMcp");
-    registry.configureAymeRuntime({} as BrowserPage);
+    registry.configureAymeRuntime({} as Page);
 
     class SharedPage {
       readonly run = vi.fn();
