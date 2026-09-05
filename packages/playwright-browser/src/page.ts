@@ -1,4 +1,5 @@
 import { injectedScriptFor } from "./injected";
+import { AdapterTimeoutError } from "./errors";
 import type { ByRoleOptions, LocatorOptions } from "./locator";
 import { LocatorImpl } from "./locator";
 import {
@@ -206,22 +207,21 @@ export class PageImpl {
   // ── Resolution ──────────────────────────────────────────────────
 
   resolveAll(selector: string): Element[] {
-    const parsed = this.injected.parseSelector(selector);
-    return this.injected.querySelectorAll(
-      parsed,
-      this.document.documentElement
-    );
+    try {
+      const parsed = this.injected.parseSelector(selector);
+      return this.injected.querySelectorAll(
+        parsed,
+        this.document.documentElement
+      );
+    } catch (error) {
+      throw presentOriginalXPath(error, selector);
+    }
   }
 
   requireSingle(selector: string, label: string): Element {
-    const elements = this.resolveAll(selector);
-    const first = elements[0];
-    if (!first) throw new Error(`No elements found for locator ${label}`);
-    if (elements.length > 1)
-      throw new Error(
-        `Expected one element for locator ${label}, found ${elements.length}`
-      );
-    return first;
+    const element = this.resolveLocatorElement(selector, true);
+    if (!element) throw new Error(`No elements found for locator ${label}`);
+    return element;
   }
 
   // ── State ───────────────────────────────────────────────────────
@@ -666,13 +666,14 @@ export class PageImpl {
   }
 
   async scrollLocatorIntoView(selector: string, label: string): Promise<void> {
-    await this.retryActionability(
+    const { element } = await this.retryActionability(
       selector,
       label,
       "scroll into view",
       ["stable"],
       false
     );
+    this.scrollIntoViewIfNeeded(element);
   }
 
   async waitForState(
@@ -704,8 +705,8 @@ export class PageImpl {
         }
         if (Date.now() >= deadline) {
           finish(
-            new Error(
-              `Timed out waiting for ${label} to become ${options.state}.`
+            new AdapterTimeoutError(
+              `locator.waitFor: Timeout ${timeout}ms exceeded.\nCall log:\n  - waiting for ${formatLocator(selector)} to be ${options.state}\n  - Timed out waiting for ${label} to become ${options.state}.`
             )
           );
           return;
@@ -843,13 +844,11 @@ export class PageImpl {
     this.resolveTimeout(options?.timeout, DEFAULT_QUERY_TIMEOUT);
     if (options?.signal?.aborted) throw queryAborted(options.signal);
 
-    const elements = this.resolveAll(selector);
-    if (elements.length === 0) return false;
-    if (options?.strict && elements.length > 1)
-      throw new Error(
-        `Expected one element for locator page.isVisible(${JSON.stringify(selector)}), found ${elements.length}`
-      );
-    return this.elementState(elements[0], "visible").matches;
+    const element = options?.strict
+      ? this.resolveLocatorElement(selector, true)
+      : this.resolveAll(selector)[0];
+    if (!element) return false;
+    return this.elementState(element, "visible").matches;
   }
 
   async isHidden(
@@ -1015,14 +1014,14 @@ export class PageImpl {
     if (!validStates.includes(waitUntil))
       throw new Error(`Unsupported waitUntil value: ${waitUntil}`);
 
-    this.document.open();
-    this.document.write(html);
-    this.document.close();
-    // Re-acquire InjectedScript since the document was replaced.
-    this._injected = undefined;
-
     // 'commit' — resolve immediately after the write.
-    if (waitUntil === "commit") return;
+    if (waitUntil === "commit") {
+      this.document.open();
+      this._injected = undefined;
+      this.document.write(html);
+      this.document.close();
+      return;
+    }
 
     // Wait for the requested lifecycle event with optional timeout.
     const eventName =
@@ -1049,32 +1048,43 @@ export class PageImpl {
         else resolve();
       };
 
-      // Check if the event already fired (readyState).
-      if (eventName === "DOMContentLoaded") {
-        if (
-          this.document.readyState === "interactive" ||
-          this.document.readyState === "complete"
-        ) {
-          settle();
-          return;
-        }
-      } else if (eventName === "load") {
-        if (this.document.readyState === "complete") {
-          settle();
-          return;
-        }
-      }
-
+      // Pinned frames.ts starts waiting before document.open(). This makes a
+      // synchronous DOMContentLoaded/load from document.close observable.
       this.window.addEventListener(eventName, handler, { once: true });
 
       if (timeout !== undefined && timeout > 0)
         timeoutId = this.window.setTimeout(
           () =>
             settle(
-              new Error(`page.setContent: Timeout ${timeout}ms exceeded.`)
+              new AdapterTimeoutError(
+                `page.setContent: Timeout ${timeout}ms exceeded.`
+              )
             ),
           timeout
         );
+
+      try {
+        this.document.open();
+        // The pinned lifecycle reset happens immediately after document.open.
+        this._injected = undefined;
+        this.document.write(html);
+        this.document.close();
+      } catch (error) {
+        settle(asError(error));
+        return;
+      }
+
+      // Browsers may complete the lifecycle synchronously without dispatching
+      // an observable event in this realm, notably in DOM test environments.
+      if (eventName === "DOMContentLoaded") {
+        if (
+          this.document.readyState === "interactive" ||
+          this.document.readyState === "complete"
+        )
+          settle();
+      } else if (this.document.readyState === "complete") {
+        settle();
+      }
     });
   }
 
@@ -1290,7 +1300,11 @@ export class PageImpl {
       if (timeout > 0) {
         timeoutId = this.window.setTimeout(() => {
           cleanup();
-          reject(new Error("Timeout exceeded while waiting for function"));
+          reject(
+            new AdapterTimeoutError(
+              `page.waitForFunction: Timeout ${timeout}ms exceeded.`
+            )
+          );
         }, timeout);
       }
 
@@ -1547,13 +1561,9 @@ export class PageImpl {
     this.resolveTimeout(options?.timeout, DEFAULT_QUERY_TIMEOUT);
     if (options?.signal?.aborted) throw queryAborted(options.signal);
 
-    const elements = this.resolveAll(selector);
-    if (elements.length === 0) return false;
-    if (elements.length > 1)
-      throw new Error(
-        `Expected one element for locator ${label}, found ${elements.length}`
-      );
-    return this.elementState(elements[0], "visible").matches;
+    const element = this.resolveLocatorElement(selector, true);
+    if (!element) return false;
+    return this.elementState(element, "visible").matches;
   }
 
   async locatorBoundingBox(
@@ -1562,8 +1572,14 @@ export class PageImpl {
     options?: LocatorQueryOptions
   ): Promise<{ x: number; y: number; width: number; height: number } | null> {
     return this.query(selector, label, options, true, (element) => {
-      if (!this.elementState(element, "visible").matches) return null;
       const rect = element.getBoundingClientRect();
+      // A zero-sized but rendered element has a valid native box and can be
+      // scrolled into view. Only a non-rendered element has no box.
+      if (
+        element.getClientRects().length === 0 &&
+        this.window.getComputedStyle(element).display === "none"
+      )
+        return null;
       return {
         x: rect.x,
         y: rect.y,
@@ -1670,8 +1686,8 @@ export class PageImpl {
         if (!isRetryableQueryError(error)) throw error;
         const remaining = deadline - Date.now();
         if (remaining <= 0)
-          throw new Error(
-            `Timeout ${timeout}ms exceeded while waiting for locator ${label}`,
+          throw new AdapterTimeoutError(
+            `Timeout ${timeout}ms exceeded.\nCall log:\n  - waiting for ${formatLocator(selector)}`,
             { cause: error }
           );
         const delay = Math.min(QUERY_RETRY_DELAY, remaining);
@@ -1682,14 +1698,25 @@ export class PageImpl {
   }
 
   private queryElement(selector: string, label: string, strict: boolean) {
-    const elements = this.resolveAll(selector);
-    const first = elements[0];
-    if (!first) throw new Error(`No elements found for locator ${label}`);
-    if (strict && elements.length > 1)
-      throw new Error(
-        `Expected one element for locator ${label}, found ${elements.length}`
+    const element = this.resolveLocatorElement(selector, strict);
+    if (!element) throw new Error(`No elements found for locator ${label}`);
+    return element;
+  }
+
+  private resolveLocatorElement(
+    selector: string,
+    strict: boolean
+  ): Element | undefined {
+    try {
+      const parsed = this.injected.parseSelector(selector);
+      return this.injected.querySelector(
+        parsed,
+        this.document.documentElement,
+        strict
       );
-    return first;
+    } catch (error) {
+      throw presentOriginalXPath(error, selector);
+    }
   }
 
   private async ensureActionable(
@@ -1732,7 +1759,7 @@ export class PageImpl {
       try {
         const element = this.requireSingle(selector, label);
         await this.ensureActionable(element, states);
-        this.scrollIntoView(element);
+        if (actionName !== "scroll into view") this.scrollIntoView(element);
         // Scrolling can change visibility or expose a covering element.
         await this.ensureActionable(element, states);
         const point = checkHitTarget
@@ -1744,7 +1771,7 @@ export class PageImpl {
         lastError = asError(error);
         const remaining = deadline - Date.now();
         if (remaining <= 0)
-          throw new Error(
+          throw new AdapterTimeoutError(
             `${actionName}: Timeout ${effectiveTimeout}ms exceeded. ${lastError.message}`,
             { cause: error }
           );
@@ -1756,6 +1783,17 @@ export class PageImpl {
   private scrollIntoView(element: Element) {
     if (typeof element.scrollIntoView !== "function") return;
     element.scrollIntoView({ block: "center", inline: "center" });
+  }
+
+  private scrollIntoViewIfNeeded(element: Element) {
+    const nativeScrollIntoViewIfNeeded = (
+      element as Element & { scrollIntoViewIfNeeded?: () => void }
+    ).scrollIntoViewIfNeeded;
+    if (typeof nativeScrollIntoViewIfNeeded === "function") {
+      nativeScrollIntoViewIfNeeded.call(element);
+      return;
+    }
+    this.scrollIntoView(element);
   }
 
   private ensureReceivesEvents(element: Element): ActionPoint {
@@ -2167,6 +2205,24 @@ function isRetryableQueryError(error: unknown): boolean {
     message.startsWith("No elements found for locator") ||
     message === "Element is not connected"
   );
+}
+
+function formatLocator(selector: string): string {
+  return `locator('${selector.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}')`;
+}
+
+function presentOriginalXPath(error: unknown, selector: string): Error {
+  const source = asError(error);
+  if (!selector.startsWith("//")) return source;
+  // The browser evaluates implicit XPath as a relative expression in some
+  // engines. Playwright reports the caller's expression, with embedded quotes
+  // escaped as they appear in its selector diagnostics.
+  const originalXPath = selector.replaceAll("'", "\\'");
+  const rewritten = source.message
+    .replaceAll(`.${selector}`, originalXPath)
+    .replaceAll(selector, originalXPath);
+  if (rewritten === source.message) return source;
+  return new Error(rewritten, { cause: source });
 }
 
 function queryAborted(signal: AbortSignal): Error {

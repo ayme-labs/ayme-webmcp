@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- intentional casts to test runtime validation */
-import { describe, expect, it, afterEach } from "vitest";
+import { describe, expect, it, afterEach, vi } from "vitest";
 
 import {
   createPage,
@@ -8,6 +8,7 @@ import {
   resolveLocatorElements,
 } from "./index";
 import { AdapterJSHandle, PageImpl } from "./page";
+import { ADAPTER_TIMEOUT_ERROR } from "./errors";
 
 describe("Single-document adapter contract", () => {
   describe("ARIA snapshots", () => {
@@ -123,7 +124,7 @@ describe("Single-document adapter contract", () => {
       document.body.innerHTML = "<p>First</p><p>Second</p>";
       await expect(
         page.locator("p").evaluate((element) => element.textContent)
-      ).rejects.toThrow(/Expected one element/);
+      ).rejects.toThrow(/strict mode violation/);
 
       const cancelled = new AbortController();
       window.setTimeout(() => cancelled.abort("cancel evaluate"), 10);
@@ -191,7 +192,7 @@ describe("Single-document adapter contract", () => {
       await expect(page.isVisible("#hidden")).resolves.toBe(false);
       await expect(page.isVisible("div")).resolves.toBe(false);
       await expect(page.isVisible("div", { strict: true })).rejects.toThrow(
-        "found 3"
+        "strict mode violation"
       );
     });
 
@@ -239,14 +240,26 @@ describe("Single-document adapter contract", () => {
       await expect(page.innerText("#missing")).rejects.toThrow(
         "Timeout 20ms exceeded"
       );
-      await expect(page.locator("#missing").waitFor()).rejects.toThrow(
-        "Timed out waiting"
-      );
-      await expect(page.check("#missing")).rejects.toThrow(
-        "Timeout 20ms exceeded"
-      );
-      await expect(page.waitForFunction(() => false)).rejects.toThrow(
-        "Timeout exceeded while waiting for function"
+      const waitForStateError = await page
+        .locator("#missing")
+        .waitFor()
+        .catch((error) => error);
+      expect(waitForStateError.name).toBe("TimeoutError");
+      expect(waitForStateError[ADAPTER_TIMEOUT_ERROR]).toBe(true);
+      expect(waitForStateError.message).toContain("Timed out waiting");
+
+      const actionError = await page.check("#missing").catch((error) => error);
+      expect(actionError.name).toBe("TimeoutError");
+      expect(actionError[ADAPTER_TIMEOUT_ERROR]).toBe(true);
+      expect(actionError.message).toContain("Timeout 20ms exceeded");
+
+      const waitForFunctionError = await page
+        .waitForFunction(() => false)
+        .catch((error) => error);
+      expect(waitForFunctionError.name).toBe("TimeoutError");
+      expect(waitForFunctionError[ADAPTER_TIMEOUT_ERROR]).toBe(true);
+      expect(waitForFunctionError.message).toBe(
+        "page.waitForFunction: Timeout 20ms exceeded."
       );
     });
 
@@ -270,9 +283,12 @@ describe("Single-document adapter contract", () => {
       document.close = () => {};
 
       try {
-        await expect(
-          page.setContent("<p>never loads</p>", { waitUntil: "load" })
-        ).rejects.toThrow("Timeout 20ms exceeded");
+        const error = await page
+          .setContent("<p>never loads</p>", { waitUntil: "load" })
+          .catch((error) => error);
+        expect(error.name).toBe("TimeoutError");
+        expect(error[ADAPTER_TIMEOUT_ERROR]).toBe(true);
+        expect(error.message).toContain("Timeout 20ms exceeded");
       } finally {
         document.open = originalOpen;
         document.write = originalWrite;
@@ -1066,9 +1082,9 @@ describe("Single-document adapter contract", () => {
       await expect(page.getAttribute("div", "id")).resolves.toBe("first");
       await expect(
         page.getAttribute("div", "id", { strict: true })
-      ).rejects.toThrow(/Expected one element/);
+      ).rejects.toThrow(/strict mode violation/);
       await expect(page.locator("div").getAttribute("id")).rejects.toThrow(
-        /Expected one element/
+        /strict mode violation/
       );
     });
 
@@ -1108,7 +1124,7 @@ describe("Single-document adapter contract", () => {
       );
       expect(await page.locator(".item").last().innerText()).toBe("Two");
       await expect(page.locator(".item").innerText()).rejects.toThrow(
-        /Expected one element/
+        /strict mode violation/
       );
       await expect(page.locator("#svg").innerText()).rejects.toThrow(
         "Node is not an HTMLElement"
@@ -1149,6 +1165,49 @@ describe("Single-document adapter contract", () => {
         height: 40,
       });
       expect(await page.locator("#hidden").boundingBox()).toBeNull();
+    });
+
+    it("preserves a rendered zero-size bounding box", async () => {
+      document.body.innerHTML = `<div id=zero></div>`;
+      const zero = document.querySelector("#zero")!;
+      zero.getBoundingClientRect = () =>
+        ({ x: 0, y: 2020, width: 1280, height: 0 }) as DOMRect;
+      zero.getClientRects = () => [zero.getBoundingClientRect()] as any;
+      const page = createPage();
+
+      await expect(page.locator("#zero").boundingBox()).resolves.toEqual({
+        x: 0,
+        y: 2020,
+        width: 1280,
+        height: 0,
+      });
+    });
+
+    it("retains the original implicit XPath in selector errors", async () => {
+      const page = createPage();
+      const selector = "//*[contains(@Class, 'foo']";
+      const error = await page
+        .locator(selector)
+        .isVisible()
+        .catch((error) => error);
+      const expectedSelector = selector.replaceAll("'", "\\'");
+
+      expect(error.message).toContain(expectedSelector);
+      expect(error.message).not.toContain(`.${expectedSelector}`);
+    });
+
+    it("marks locator query timeouts and includes the locator call log", async () => {
+      document.body.innerHTML = "";
+      const page = createPage();
+      const error = await page
+        .locator("span")
+        .innerText({ timeout: 1 })
+        .catch((error) => error);
+
+      expect(error.name).toBe("TimeoutError");
+      expect(error[ADAPTER_TIMEOUT_ERROR]).toBe(true);
+      expect(error.message).toContain("Timeout 1ms exceeded.");
+      expect(error.message).toContain("waiting for locator('span')");
     });
   });
 
@@ -1202,7 +1261,9 @@ describe("Single-document adapter contract", () => {
 
       await page.locator("#checkbox").check();
       expect(clicks).toBe(0);
-      await expect(page.locator("button").focus()).rejects.toThrow("found 2");
+      await expect(page.locator("button").focus()).rejects.toThrow(
+        "strict mode violation"
+      );
     });
 
     it("selects options through InjectedScript and dispatches input and change", async () => {
@@ -1257,6 +1318,22 @@ describe("Single-document adapter contract", () => {
       await page.locator("#button").hover();
       expect(scrolls.length).toBeGreaterThan(0);
       expect(events).toEqual(["pointerover", "mouseover"]);
+    });
+
+    it("uses the native scrollIntoViewIfNeeded primitive when available", async () => {
+      document.body.innerHTML = `<button id=button>Scroll</button>`;
+      const page = createPage();
+      const button = document.querySelector("#button") as HTMLButtonElement & {
+        scrollIntoViewIfNeeded?: () => void;
+      };
+      const nativeScroll = vi.fn();
+      button.scrollIntoViewIfNeeded = nativeScroll;
+      button.scrollIntoView = vi.fn();
+
+      await page.locator("#button").scrollIntoViewIfNeeded();
+
+      expect(nativeScroll).toHaveBeenCalledOnce();
+      expect(button.scrollIntoView).not.toHaveBeenCalled();
     });
 
     it("rejects action options whose semantics are not implemented", async () => {
@@ -1462,6 +1539,36 @@ describe("Single-document adapter contract", () => {
       expect(dedicatedPage.document.querySelector("div")?.textContent).toBe(
         "load-test"
       );
+    });
+
+    it("installs lifecycle waiting before document.close", async () => {
+      setupDedicatedPage();
+      const pageWindow = dedicatedPage.window;
+      const originalAddEventListener =
+        pageWindow.addEventListener.bind(pageWindow);
+      const originalClose = dedicatedPage.document.close.bind(
+        dedicatedPage.document
+      );
+      let loadListenerInstalled = false;
+      pageWindow.addEventListener = ((
+        type: string,
+        listener: EventListenerOrEventListenerObject,
+        options?: boolean | AddEventListenerOptions
+      ) => {
+        if (type === "load") loadListenerInstalled = true;
+        originalAddEventListener(type, listener, options);
+      }) as typeof pageWindow.addEventListener;
+      dedicatedPage.document.close = () => {
+        expect(loadListenerInstalled).toBe(true);
+        originalClose();
+      };
+
+      try {
+        await dedicatedPage.setContent("<p>ordered</p>");
+      } finally {
+        pageWindow.addEventListener = originalAddEventListener;
+        dedicatedPage.document.close = originalClose;
+      }
     });
 
     it("setContent resolves before timeout for simple HTML", async () => {

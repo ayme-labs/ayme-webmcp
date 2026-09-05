@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:b3019f2daac2d6dd17f8b3d33e8da0e598d442d9421ee74ef798a8f3049daa93
+# checksum: sha256:f56296e8c2cb91169ecc958a48d775a44e5363c694bc825f4fb1f2bd25d7718d
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -93,7 +93,7 @@ g G-18 status=verified fitness_kind=count t_created=2026-09-03T15:49:53Z t_updat
 g G-19 status=partial fitness_kind=count t_created=2026-09-05T16:41:59Z t_updated=2026-09-05T16:49:25Z "Deepen verified single-document Playwright semantics"
   area: A-02
   fitness_target: 4
-  fitness_current: 1
+  fitness_current: 2
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -1194,7 +1194,7 @@ w W-57 type=bug status=done cynefin=complicated t_created=2026-09-05T16:41:59Z t
   evidence:
     | Pinned Playwright tests/config/utils.ts at b25d782 inspected; the local test-only helper now mirrors whitespace normalization, copied-spec checksums remain unchanged, package typecheck passes, 113 Vitest tests and 19 baseline-script tests pass, and focused ARIA specs proceed beyond helper normalization.
 
-w W-58 type=bug status=progress cynefin=complicated session=host:75cd936167237b83 session_at=2026-09-05T16:42:13Z t_created=2026-09-05T16:42:00Z t_updated=2026-09-05T16:42:13Z "Align remaining single-document semantics"
+w W-58 type=bug status=done cynefin=complicated t_created=2026-09-05T16:42:00Z t_updated=2026-09-05T17:26:31Z "Align remaining single-document semantics"
   goals: G-19
   fitness: G-19=+1
   surface: packages/playwright-browser/src/locator.ts, packages/playwright-browser/src/page.ts, packages/playwright-browser/src/errors.ts, packages/playwright-browser/src/contract.test.ts
@@ -1206,6 +1206,8 @@ w W-58 type=bug status=progress cynefin=complicated session=host:75cd936167237b8
     | The reviewed upstream corpus contains eleven assertion-phase failures caused by these in-scope semantic mismatches.
   evidence_strategy:
     | Add focused package tests derived from pinned Playwright cases, run package checks, and record the pinned source paths followed.
+  evidence:
+    | Pinned Playwright client errors and locator, server DOM and frames, InjectedScript, and selected upstream tests at b25d782 were followed. Package lint and typecheck pass; 118 package Vitest tests and 19 baseline-script tests pass; six selected unchanged upstream cases pass from a fresh temporary build, covering strictness, zero-size scroll, timeout logs, original XPath, and setContent lifecycle.
 
 w W-59 type=bug status=ready cynefin=complicated t_created=2026-09-05T16:42:01Z t_updated=2026-09-05T16:42:03Z "Keep callback and timeout transport test-only"
   goals: G-19
