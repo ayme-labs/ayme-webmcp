@@ -56,6 +56,14 @@ export type SelectorQueryOptions = {
 
 export type LocatorQueryOptions = Omit<SelectorQueryOptions, "strict">;
 
+export type AriaSnapshotOptions = {
+  boxes?: boolean;
+  depth?: number;
+  mode?: "ai" | "default";
+  signal?: AbortSignal;
+  timeout?: number;
+};
+
 type QueryState = "enabled" | "disabled" | "checked";
 
 type QueryStateResult =
@@ -714,6 +722,36 @@ export class PageImpl {
             ),
           timeout
         );
+    });
+  }
+
+  // ── Accessibility ───────────────────────────────────────────────
+
+  /**
+   * Captures the accessibility snapshot for the controlled document.
+   *
+   * Pinned b25d782 `Page.ariaSnapshot` delegates to the main frame. The
+   * single-document adapter has that frame in-process, so it delegates
+   * directly to the compiled InjectedScript which owns ARIA-tree generation
+   * and rendering. There is no frame traversal or protocol transport here.
+   */
+  async ariaSnapshot(options: AriaSnapshotOptions = {}): Promise<string> {
+    // Pinned `ariaSnapshotForFrame` resolves `body,frameset`, rather than
+    // documentElement, so the document wrapper itself is not rendered.
+    return this.injectedAriaSnapshot(
+      this.document.body ?? this.document.documentElement,
+      options
+    );
+  }
+
+  injectedAriaSnapshot(
+    element: Element,
+    options: AriaSnapshotOptions = {}
+  ): string {
+    return this.injected.ariaSnapshot(element, {
+      mode: options.mode ?? "default",
+      depth: options.depth,
+      boxes: options.boxes,
     });
   }
 

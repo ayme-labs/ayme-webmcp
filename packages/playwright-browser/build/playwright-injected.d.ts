@@ -29,7 +29,14 @@ declare module "virtual:ayme-playwright-injected" {
 
   export class InjectedScript {
     constructor(browserWindow: Window, options: InjectedScriptOptions);
-    ariaSnapshot(node: Element, options: { mode: "ai" | "default" }): string;
+    ariaSnapshot(
+      node: Element,
+      options: {
+        boxes?: boolean;
+        depth?: number;
+        mode: "ai" | "default";
+      }
+    ): string;
     captureAriaSnapshot(root: Element): CaptureAriaSnapshotResult;
     parseSelector(selector: string): ParsedSelector;
     querySelector(

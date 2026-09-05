@@ -1,4 +1,8 @@
-import type { LocatorQueryOptions, PageImpl } from "./page";
+import type {
+  AriaSnapshotOptions,
+  LocatorQueryOptions,
+  PageImpl,
+} from "./page";
 import {
   escapeForTextSelector,
   getByAltTextSelector,
@@ -237,6 +241,18 @@ export class LocatorImpl {
 
   async isChecked(options?: LocatorQueryOptions): Promise<boolean> {
     return this.ownerPage.locatorIsChecked(this.selector, this.label, options);
+  }
+
+  /**
+   * Captures the accessibility snapshot rooted at this locator's sole element.
+   *
+   * The compiled InjectedScript remains the only ARIA implementation. This
+   * method intentionally resolves within the one controlled document and does
+   * not add frame traversal, waiting, or browser-process behavior.
+   */
+  async ariaSnapshot(options: AriaSnapshotOptions = {}): Promise<string> {
+    const element = this.ownerPage.requireSingle(this.selector, this.label);
+    return this.ownerPage.injectedAriaSnapshot(element, options);
   }
 
   // ── Expectations and callback operations ────────────────────────

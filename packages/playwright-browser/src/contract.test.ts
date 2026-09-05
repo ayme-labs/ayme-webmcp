@@ -10,6 +10,31 @@ import {
 import { AdapterJSHandle, PageImpl } from "./page";
 
 describe("Single-document adapter contract", () => {
+  describe("ARIA snapshots", () => {
+    it("captures the current document through the compiled InjectedScript", async () => {
+      document.body.innerHTML = "<h1>Accessible title</h1>";
+      const page = createPage();
+
+      await expect((page as any).ariaSnapshot()).resolves.toContain(
+        'heading "Accessible title" [level=1]'
+      );
+    });
+
+    it("captures a locator subtree with the pinned mode and depth options", async () => {
+      document.body.innerHTML = `
+        <ul id="target"><li>First</li><li><ul><li>Nested</li></ul></li></ul>
+      `;
+      const page = createPage();
+
+      const snapshot = await (page as any)
+        .locator("#target")
+        .ariaSnapshot({ mode: "ai", depth: 1 });
+
+      expect(snapshot).toContain("listitem [ref=");
+      expect(snapshot).not.toContain("Nested");
+    });
+  });
+
   // ── AC1: createPage targets only the current Window ────────────
 
   it("createPage uses the current window without an alternate-window option", () => {
