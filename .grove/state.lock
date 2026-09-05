@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:7413651868daaa9c69d8794cbe1d5019f83cef1957ec263619f37ba8b6076e6c
+# checksum: sha256:f74ca0a047c22bffa75e55bbcdd689cbf2bd23ab18f0ba14411ad881c31d8e44
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -1054,7 +1054,7 @@ w W-50 type=feature status=done cynefin=complicated t_created=2026-09-05T14:19:5
   evidence:
     | Pinned b25d782 Locator.and/or source and unchanged locator-query specs inspected. Production selector composition mirrors internal:and/or JSON serialization with same-page validation; only the upstream bridge recursively transports proxy chains. pnpm --filter @ayme-dev/playwright-browser typecheck passed; focused contract suite passed (108 tests); adapter guards passed (28 tests); unchanged upstream locator-query tests passed: locator.filter, locator.and, locator.or, locator.locator with and/or (4 tests).
 
-w W-51 type=feature status=proposed cynefin=complicated t_created=2026-09-05T14:19:58Z t_updated=2026-09-05T14:20:31Z "Add small browser-native Page conveniences"
+w W-51 type=feature status=done cynefin=complicated t_created=2026-09-05T14:19:58Z t_updated=2026-09-05T15:04:21Z "Add small browser-native Page conveniences"
   goals: G-17
   theme: T-03
   fitness: G-17=+0
@@ -1066,6 +1066,9 @@ w W-51 type=feature status=proposed cynefin=complicated t_created=2026-09-05T14:
     | Thin Page delegates and local metadata methods deepen the existing module without duplicating Locator semantics.
   evidence_strategy:
     | Add pinned-source-derived contract tests for signatures, default timeout use, delegation, and unsupported boundaries; run package checks.
+  evidence:
+    | Pinned b25d782 Page facade and Frame visibility source inspected. Page façade delegates title, queries, and browser-feasible actions to existing selector/action primitives; default timeout priority is explicit, then navigation default for setContent or ordinary default, then built-in. pnpm --filter @ayme-dev/playwright-browser typecheck passed; focused contract suite passed (112 tests); compiled adapter guards passed (28 tests).
+    | Coordinator review added default-timeout coverage for Locator.waitFor and missing check targets; focused suite still passes 112 tests and adapter guards pass 28 tests.
 
 w W-52 type=feature status=proposed cynefin=complicated t_created=2026-09-05T14:19:58Z t_updated=2026-09-05T14:20:31Z "Verify browser-native convenience wave"
   goals: G-17

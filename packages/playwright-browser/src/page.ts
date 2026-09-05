@@ -56,6 +56,9 @@ export type SelectorQueryOptions = {
 
 export type LocatorQueryOptions = Omit<SelectorQueryOptions, "strict">;
 
+type PageActionOptions = { timeout?: number };
+type PageTypeOptions = PageActionOptions & { delay?: number };
+
 export type AriaSnapshotOptions = {
   boxes?: boolean;
   depth?: number;
@@ -174,6 +177,8 @@ export class PageImpl {
   readonly document: Document;
   readonly window: Window & typeof globalThis;
   private _injected: ReturnType<typeof injectedScriptFor> | undefined;
+  private defaultTimeout: number | undefined;
+  private defaultNavigationTimeout: number | undefined;
 
   constructor(
     browserWindow: Window & typeof globalThis,
@@ -396,13 +401,14 @@ export class PageImpl {
 
   // ── Terminal actions ────────────────────────────────────────────
 
-  async click(selector: string, label: string) {
+  async clickSelector(selector: string, label: string, timeout?: number) {
     let target = await this.retryActionability(
       selector,
       label,
       "click",
       ["visible", "enabled", "stable"],
-      true
+      true,
+      timeout
     );
     await this.waitBeforeClick(target.element);
     // The pacing cue can itself yield to the page, so use the same locator
@@ -412,7 +418,8 @@ export class PageImpl {
       label,
       "click",
       ["visible", "enabled", "stable"],
-      true
+      true,
+      timeout
     );
 
     // Playwright drives a real mouse. A single-document adapter cannot create
@@ -453,14 +460,20 @@ export class PageImpl {
     else this.dispatchMouseEvent(element, "click", point, 0, 0, 1);
   }
 
-  async fill(selector: string, value: string, label: string) {
+  async fillSelector(
+    selector: string,
+    value: string,
+    label: string,
+    timeout?: number
+  ) {
     await this.waitBeforeAction();
     const { element } = await this.retryActionability(
       selector,
       label,
       "fill",
       ["visible", "enabled", "editable"],
-      false
+      false,
+      timeout
     );
 
     // Pinned InjectedScript validates input types, normalizes settable values,
@@ -478,9 +491,20 @@ export class PageImpl {
     await this.insertFilledText(element, value);
   }
 
-  async press(selector: string, key: string, label: string) {
+  async pressSelector(
+    selector: string,
+    key: string,
+    label: string,
+    timeout?: number
+  ) {
     await this.waitBeforeAction();
-    const element = this.requireSingle(selector, label);
+    const element = await this.query(
+      selector,
+      label,
+      { timeout },
+      true,
+      (candidate) => candidate
+    );
     this.focusElement(element);
 
     const keys = parseKeyDescription(key);
@@ -525,7 +549,7 @@ export class PageImpl {
     }
   }
 
-  async focus(
+  async focusSelector(
     selector: string,
     label: string,
     options?: LocatorQueryOptions
@@ -537,7 +561,7 @@ export class PageImpl {
     });
   }
 
-  async blur(
+  async blurSelector(
     selector: string,
     label: string,
     options?: LocatorQueryOptions
@@ -549,13 +573,18 @@ export class PageImpl {
     });
   }
 
-  async hover(selector: string, label: string): Promise<void> {
+  async hoverSelector(
+    selector: string,
+    label: string,
+    timeout?: number
+  ): Promise<void> {
     const { element, point } = await this.retryActionability(
       selector,
       label,
       "hover",
       ["visible", "stable"],
-      true
+      true,
+      timeout
     );
     this.dispatchPointerEvent(element, "pointerover", point, 0, 0, 0);
     this.dispatchPointerEvent(element, "pointerenter", point, 0, 0, 0, false);
@@ -565,12 +594,19 @@ export class PageImpl {
     this.dispatchMouseEvent(element, "mousemove", point, 0, 0, 0);
   }
 
-  async setChecked(
+  async setCheckedSelector(
     selector: string,
     checked: boolean,
-    label: string
+    label: string,
+    timeout?: number
   ): Promise<void> {
-    const before = this.requireSingle(selector, label);
+    const before = await this.query(
+      selector,
+      label,
+      { timeout },
+      true,
+      (element) => element
+    );
     const state = (
       this.injected as typeof this.injected & QueryCapableInjectedScript
     ).elementState(before, "checked");
@@ -580,7 +616,7 @@ export class PageImpl {
         "Cannot uncheck radio button. Radio buttons can only be unchecked by selecting another radio button in the same group."
       );
 
-    await this.click(selector, label);
+    await this.clickSelector(selector, label, timeout);
     const after = (
       this.injected as typeof this.injected & QueryCapableInjectedScript
     ).elementState(this.requireSingle(selector, label), "checked");
@@ -588,10 +624,11 @@ export class PageImpl {
       throw new Error("Clicking the checkbox did not change its state");
   }
 
-  async selectOption(
+  async selectOptionSelector(
     selector: string,
     values: string | SelectOptionValue | (string | SelectOptionValue)[] | null,
-    label: string
+    label: string,
+    timeout?: number
   ): Promise<string[]> {
     const normalized =
       values === null ? [] : Array.isArray(values) ? values : [values];
@@ -603,7 +640,8 @@ export class PageImpl {
       label,
       "select option",
       ["visible", "enabled"],
-      false
+      false,
+      timeout
     );
     const result = this.actionableInjected.selectOptions(element, options);
     if (Array.isArray(result)) return result;
@@ -642,7 +680,7 @@ export class PageImpl {
     options: { state: "visible" | "hidden"; timeout?: number },
     label: string
   ) {
-    const timeout = options.timeout ?? 1_000;
+    const timeout = this.resolveTimeout(options.timeout, 1_000);
 
     if (this.isInState(selector, options.state)) return;
 
@@ -742,6 +780,205 @@ export class PageImpl {
     return this;
   }
 
+  // ── Page compatibility façade ────────────────────────────────────
+
+  /** Mirrors pinned Page.title by reading the controlled document title. */
+  async title(): Promise<string> {
+    return this.document.title;
+  }
+
+  setDefaultTimeout(timeout: number): void {
+    this.defaultTimeout = validateTimeout(timeout, "Default timeout");
+  }
+
+  setDefaultNavigationTimeout(timeout: number): void {
+    this.defaultNavigationTimeout = validateTimeout(
+      timeout,
+      "Default navigation timeout"
+    );
+  }
+
+  async innerText(
+    selector: string,
+    options?: SelectorQueryOptions
+  ): Promise<string> {
+    return this.query(
+      selector,
+      `page.innerText(${JSON.stringify(selector)})`,
+      options,
+      false,
+      (element) => {
+        if (element.namespaceURI !== "http://www.w3.org/1999/xhtml")
+          throw new Error("Node is not an HTMLElement");
+        return (element as HTMLElement).innerText;
+      }
+    );
+  }
+
+  async innerHTML(
+    selector: string,
+    options?: SelectorQueryOptions
+  ): Promise<string> {
+    return this.query(
+      selector,
+      `page.innerHTML(${JSON.stringify(selector)})`,
+      options,
+      false,
+      (element) => element.innerHTML
+    );
+  }
+
+  async isEditable(
+    selector: string,
+    options?: SelectorQueryOptions
+  ): Promise<boolean> {
+    return this.queryState(selector, "editable", options, false);
+  }
+
+  async isVisible(
+    selector: string,
+    options?: SelectorQueryOptions
+  ): Promise<boolean> {
+    assertQueryOptions(options, true);
+    this.resolveTimeout(options?.timeout, DEFAULT_QUERY_TIMEOUT);
+    if (options?.signal?.aborted) throw queryAborted(options.signal);
+
+    const elements = this.resolveAll(selector);
+    if (elements.length === 0) return false;
+    if (options?.strict && elements.length > 1)
+      throw new Error(
+        `Expected one element for locator page.isVisible(${JSON.stringify(selector)}), found ${elements.length}`
+      );
+    return this.elementState(elements[0], "visible").matches;
+  }
+
+  async isHidden(
+    selector: string,
+    options?: SelectorQueryOptions
+  ): Promise<boolean> {
+    return !(await this.isVisible(selector, options));
+  }
+
+  async click(selector: string, options?: PageActionOptions): Promise<void> {
+    assertPageActionOptions("click", options);
+    await this.clickSelector(
+      selector,
+      `page.click(${JSON.stringify(selector)})`,
+      options?.timeout
+    );
+  }
+
+  async fill(
+    selector: string,
+    value: string,
+    options?: PageActionOptions
+  ): Promise<void> {
+    assertPageActionOptions("fill", options);
+    await this.fillSelector(
+      selector,
+      value,
+      `page.fill(${JSON.stringify(selector)})`,
+      options?.timeout
+    );
+  }
+
+  async press(
+    selector: string,
+    key: string,
+    options?: PageActionOptions
+  ): Promise<void> {
+    assertPageActionOptions("press", options);
+    await this.pressSelector(
+      selector,
+      key,
+      `page.press(${JSON.stringify(selector)})`,
+      options?.timeout
+    );
+  }
+
+  async type(
+    selector: string,
+    text: string,
+    options?: PageTypeOptions
+  ): Promise<void> {
+    assertPageActionOptions("type", options, ["delay"]);
+    for (const character of text) {
+      await this.pressSelector(
+        selector,
+        character,
+        `page.type(${JSON.stringify(selector)})`,
+        options?.timeout
+      );
+      if (options?.delay && options.delay > 0) await this.wait(options.delay);
+    }
+  }
+
+  async focus(selector: string, options?: PageActionOptions): Promise<void> {
+    assertPageActionOptions("focus", options);
+    await this.focusSelector(
+      selector,
+      `page.focus(${JSON.stringify(selector)})`,
+      options
+    );
+  }
+
+  async hover(selector: string, options?: PageActionOptions): Promise<void> {
+    assertPageActionOptions("hover", options);
+    await this.hoverSelector(
+      selector,
+      `page.hover(${JSON.stringify(selector)})`,
+      options?.timeout
+    );
+  }
+
+  async selectOption(
+    selector: string,
+    values: string | SelectOptionValue | (string | SelectOptionValue)[] | null,
+    options?: PageActionOptions
+  ): Promise<string[]> {
+    assertPageActionOptions("selectOption", options);
+    return this.selectOptionSelector(
+      selector,
+      values,
+      `page.selectOption(${JSON.stringify(selector)})`,
+      options?.timeout
+    );
+  }
+
+  async check(selector: string, options?: PageActionOptions): Promise<void> {
+    assertPageActionOptions("check", options);
+    await this.setCheckedSelector(
+      selector,
+      true,
+      `page.check(${JSON.stringify(selector)})`,
+      options?.timeout
+    );
+  }
+
+  async uncheck(selector: string, options?: PageActionOptions): Promise<void> {
+    assertPageActionOptions("uncheck", options);
+    await this.setCheckedSelector(
+      selector,
+      false,
+      `page.uncheck(${JSON.stringify(selector)})`,
+      options?.timeout
+    );
+  }
+
+  async setChecked(
+    selector: string,
+    checked: boolean,
+    options?: PageActionOptions
+  ): Promise<void> {
+    assertPageActionOptions("setChecked", options);
+    await this.setCheckedSelector(
+      selector,
+      checked,
+      `page.setChecked(${JSON.stringify(selector)})`,
+      options?.timeout
+    );
+  }
+
   /**
    * Replaces the controlled document's content.
    *
@@ -790,7 +1027,11 @@ export class PageImpl {
     // Wait for the requested lifecycle event with optional timeout.
     const eventName =
       waitUntil === "domcontentloaded" ? "DOMContentLoaded" : "load";
-    const timeout = options?.timeout;
+    const timeout = this.resolveTimeout(
+      options?.timeout,
+      DEFAULT_QUERY_TIMEOUT,
+      true
+    );
 
     await new Promise<void>((resolve, reject) => {
       let settled = false;
@@ -1024,7 +1265,7 @@ export class PageImpl {
     arg?: unknown,
     options?: { polling?: number | "raf"; timeout?: number }
   ): Promise<AdapterJSHandle> {
-    const timeout = options?.timeout ?? 30_000;
+    const timeout = this.resolveTimeout(options?.timeout, 30_000);
     const polling = options?.polling ?? "raf";
 
     // Validate polling per frames.ts:1628
@@ -1173,6 +1414,18 @@ export class PageImpl {
 
   // ── Private helpers ─────────────────────────────────────────────
 
+  private resolveTimeout(
+    explicit: number | undefined,
+    fallback: number,
+    navigation = false
+  ): number {
+    if (explicit !== undefined) return validateTimeout(explicit, "Timeout");
+    if (navigation && this.defaultNavigationTimeout !== undefined)
+      return this.defaultNavigationTimeout;
+    if (this.defaultTimeout !== undefined) return this.defaultTimeout;
+    return fallback;
+  }
+
   private async wait(durationMs: number | undefined) {
     if (!durationMs || durationMs <= 0) return;
     await new Promise<void>((resolve) =>
@@ -1291,7 +1544,7 @@ export class PageImpl {
     options?: LocatorQueryOptions
   ): boolean {
     assertQueryOptions(options, false);
-    queryTimeout(options?.timeout);
+    this.resolveTimeout(options?.timeout, DEFAULT_QUERY_TIMEOUT);
     if (options?.signal?.aborted) throw queryAborted(options.signal);
 
     const elements = this.resolveAll(selector);
@@ -1396,7 +1649,10 @@ export class PageImpl {
     evaluate: (element: Element) => T | Promise<T>
   ): Promise<T> {
     assertQueryOptions(options, !strict);
-    const timeout = queryTimeout(options?.timeout);
+    const timeout = this.resolveTimeout(
+      options?.timeout,
+      DEFAULT_QUERY_TIMEOUT
+    );
     const signal = options?.signal;
     if (signal?.aborted) throw queryAborted(signal);
     const deadline = timeout === 0 ? Infinity : Date.now() + timeout;
@@ -1461,9 +1717,15 @@ export class PageImpl {
       | "select text"
       | "scroll into view",
     states: ("visible" | "enabled" | "editable" | "stable")[],
-    checkHitTarget: boolean
+    checkHitTarget: boolean,
+    timeout?: number
   ): Promise<ActionTarget> {
-    const deadline = Date.now() + DEFAULT_ACTION_TIMEOUT;
+    const effectiveTimeout = this.resolveTimeout(
+      timeout,
+      DEFAULT_ACTION_TIMEOUT
+    );
+    const deadline =
+      effectiveTimeout === 0 ? Infinity : Date.now() + effectiveTimeout;
     let lastError: Error | undefined;
 
     while (true) {
@@ -1483,7 +1745,7 @@ export class PageImpl {
         const remaining = deadline - Date.now();
         if (remaining <= 0)
           throw new Error(
-            `${actionName}: Timeout ${DEFAULT_ACTION_TIMEOUT}ms exceeded. ${lastError.message}`,
+            `${actionName}: Timeout ${effectiveTimeout}ms exceeded. ${lastError.message}`,
             { cause: error }
           );
         await this.wait(Math.min(ACTION_RETRY_DELAY, remaining));
@@ -1847,9 +2109,31 @@ function isRetryableActionError(error: unknown): boolean {
 
 function queryTimeout(timeout: unknown): number {
   if (timeout === undefined) return DEFAULT_QUERY_TIMEOUT;
+  return validateTimeout(timeout, "Query timeout");
+}
+
+function validateTimeout(timeout: unknown, name: string): number {
   if (typeof timeout !== "number" || timeout < 0 || !Number.isFinite(timeout))
-    throw new TypeError("Query timeout must be a non-negative finite number");
+    throw new TypeError(`${name} must be a non-negative finite number`);
   return timeout;
+}
+
+function assertPageActionOptions(
+  method: string,
+  options: Record<string, unknown> | undefined,
+  supported: string[] = []
+): void {
+  if (!options) return;
+  const unsupported = Object.keys(options).filter(
+    (key) => key !== "timeout" && !supported.includes(key)
+  );
+  if (unsupported.length > 0)
+    throw new Error(
+      `${method}(): unsupported options: ${unsupported.join(", ")}. ` +
+        `Unsupported Playwright option(s) are not supported by the single-document adapter.`
+    );
+  if (options.timeout !== undefined)
+    validateTimeout(options.timeout, `${method} timeout`);
 }
 
 function assertAriaSnapshotOptions(options: AriaSnapshotOptions) {

@@ -169,6 +169,121 @@ describe("Single-document adapter contract", () => {
     expect(page.locator("body")).toBeDefined();
   });
 
+  describe("Page compatibility façade", () => {
+    it("delegates title and selector queries to the controlled document", async () => {
+      document.title = "Adapter title";
+      document.body.innerHTML = `
+        <p id=copy>Hello <strong>world</strong></p>
+        <input id=editable />
+        <div id=hidden hidden>Hidden</div>
+        <div>First</div><div>Second</div>
+      `;
+      const page = createPage();
+
+      await expect(page.title()).resolves.toBe("Adapter title");
+      await expect(page.innerText("#copy")).resolves.toBe("Hello world");
+      await expect(page.innerHTML("#copy")).resolves.toBe(
+        "Hello <strong>world</strong>"
+      );
+      await expect(page.isEditable("#editable")).resolves.toBe(true);
+      await expect(page.isVisible("#missing")).resolves.toBe(false);
+      await expect(page.isHidden("#missing")).resolves.toBe(true);
+      await expect(page.isVisible("#hidden")).resolves.toBe(false);
+      await expect(page.isVisible("div")).resolves.toBe(false);
+      await expect(page.isVisible("div", { strict: true })).rejects.toThrow(
+        "found 3"
+      );
+    });
+
+    it("delegates browser-feasible Page actions without recursive dispatch", async () => {
+      document.body.innerHTML = `
+        <button id=button>Click</button>
+        <input id=input />
+        <input id=check type=checkbox />
+        <select id=select><option value=one>One</option></select>
+      `;
+      const page = createPage();
+      const button = document.querySelector("#button")!;
+      let clicks = 0;
+      let hovers = 0;
+      button.addEventListener("click", () => clicks++);
+      button.addEventListener("mouseover", () => hovers++);
+
+      await page.click("#button");
+      await page.fill("#input", "a");
+      await page.press("#input", "b");
+      await page.type("#input", "cd");
+      await page.focus("#input");
+      await page.hover("#button");
+      await page.check("#check");
+      await page.uncheck("#check");
+      await page.setChecked("#check", true);
+      await expect(page.selectOption("#select", "one")).resolves.toEqual([
+        "one",
+      ]);
+
+      expect(clicks).toBe(1);
+      expect(hovers).toBe(2);
+      expect((document.querySelector("#input") as HTMLInputElement).value).toBe(
+        "abcd"
+      );
+      expect(
+        (document.querySelector("#check") as HTMLInputElement).checked
+      ).toBe(true);
+    });
+
+    it("applies stored default timeouts to queries and waitForFunction", async () => {
+      const page = createPage();
+      page.setDefaultTimeout(20);
+
+      await expect(page.innerText("#missing")).rejects.toThrow(
+        "Timeout 20ms exceeded"
+      );
+      await expect(page.locator("#missing").waitFor()).rejects.toThrow(
+        "Timed out waiting"
+      );
+      await expect(page.check("#missing")).rejects.toThrow(
+        "Timeout 20ms exceeded"
+      );
+      await expect(page.waitForFunction(() => false)).rejects.toThrow(
+        "Timeout exceeded while waiting for function"
+      );
+    });
+
+    it("prefers the separate navigation default for setContent", async () => {
+      const page = createPage();
+      page.setDefaultTimeout(50);
+      page.setDefaultNavigationTimeout(20);
+      const originalReadyState = Object.getOwnPropertyDescriptor(
+        document,
+        "readyState"
+      );
+      const originalOpen = document.open;
+      const originalWrite = document.write;
+      const originalClose = document.close;
+      Object.defineProperty(document, "readyState", {
+        configurable: true,
+        value: "loading",
+      });
+      document.open = (() => document) as typeof document.open;
+      document.write = () => {};
+      document.close = () => {};
+
+      try {
+        await expect(
+          page.setContent("<p>never loads</p>", { waitUntil: "load" })
+        ).rejects.toThrow("Timeout 20ms exceeded");
+      } finally {
+        document.open = originalOpen;
+        document.write = originalWrite;
+        document.close = originalClose;
+        if (originalReadyState)
+          Object.defineProperty(document, "readyState", originalReadyState);
+        else delete (document as any).readyState;
+      }
+    });
+  });
+
   // ── AC2: filter serialization (JSON.stringify) ────────────────
 
   describe("filter", () => {

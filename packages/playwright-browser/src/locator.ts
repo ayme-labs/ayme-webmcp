@@ -387,51 +387,51 @@ export class LocatorImpl {
   async click(options?: Record<string, unknown>) {
     rejectUnsupportedOptions("click", options);
     this.record({ operation: "click" });
-    await this.ownerPage.click(this.selector, this.label);
+    await this.ownerPage.clickSelector(this.selector, this.label);
   }
 
   async fill(value: string, options?: Record<string, unknown>) {
     rejectUnsupportedOptions("fill", options);
     this.record({ operation: "fill", value });
-    await this.ownerPage.fill(this.selector, value, this.label);
+    await this.ownerPage.fillSelector(this.selector, value, this.label);
   }
 
   async press(key: string, options?: Record<string, unknown>) {
     rejectUnsupportedOptions("press", options);
-    await this.ownerPage.press(this.selector, key, this.label);
+    await this.ownerPage.pressSelector(this.selector, key, this.label);
   }
 
   async focus(options?: LocatorQueryOptions) {
-    await this.ownerPage.focus(this.selector, this.label, options);
+    await this.ownerPage.focusSelector(this.selector, this.label, options);
   }
 
   async blur(options?: LocatorQueryOptions) {
-    await this.ownerPage.blur(this.selector, this.label, options);
+    await this.ownerPage.blurSelector(this.selector, this.label, options);
   }
 
   async clear(options?: Record<string, unknown>) {
     rejectUnsupportedOptions("clear", options);
-    await this.ownerPage.fill(this.selector, "", this.label);
+    await this.ownerPage.fillSelector(this.selector, "", this.label);
   }
 
   async hover(options?: Record<string, unknown>) {
     rejectUnsupportedOptions("hover", options);
-    await this.ownerPage.hover(this.selector, this.label);
+    await this.ownerPage.hoverSelector(this.selector, this.label);
   }
 
   async check(options?: Record<string, unknown>) {
     rejectUnsupportedOptions("check", options);
-    await this.ownerPage.setChecked(this.selector, true, this.label);
+    await this.ownerPage.setCheckedSelector(this.selector, true, this.label);
   }
 
   async uncheck(options?: Record<string, unknown>) {
     rejectUnsupportedOptions("uncheck", options);
-    await this.ownerPage.setChecked(this.selector, false, this.label);
+    await this.ownerPage.setCheckedSelector(this.selector, false, this.label);
   }
 
   async setChecked(checked: boolean, options?: Record<string, unknown>) {
     rejectUnsupportedOptions("setChecked", options);
-    await this.ownerPage.setChecked(this.selector, checked, this.label);
+    await this.ownerPage.setCheckedSelector(this.selector, checked, this.label);
   }
 
   async selectOption(
@@ -439,7 +439,11 @@ export class LocatorImpl {
     options?: Record<string, unknown>
   ) {
     rejectUnsupportedOptions("selectOption", options);
-    return this.ownerPage.selectOption(this.selector, values, this.label);
+    return this.ownerPage.selectOptionSelector(
+      this.selector,
+      values,
+      this.label
+    );
   }
 
   async selectText(options?: Record<string, unknown>) {
@@ -458,7 +462,7 @@ export class LocatorImpl {
   ): Promise<void> {
     rejectUnsupportedOptions("pressSequentially", options, ["delay"]);
     for (const character of text) {
-      await this.ownerPage.press(this.selector, character, this.label);
+      await this.ownerPage.pressSelector(this.selector, character, this.label);
       if (options.delay && options.delay > 0)
         await new Promise<void>((resolve) =>
           this.ownerPage.window.setTimeout(resolve, options.delay)
