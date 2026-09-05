@@ -18,6 +18,9 @@ type FynkComponent<T, Selector extends string> = T & {
   readonly selector: Selector;
 };
 
+type DirectPromiseCollection = Promise<AnnotatedComponent[]>;
+type GenericPromiseCollection<T> = Promise<T[]>;
+
 declare const createFynkComponent: <T, Selector extends string>(
   component: T,
   selector: Selector
@@ -80,6 +83,14 @@ export class AnnotatedChildrenPom {
   async readonlyArrayComponentCollection(): Promise<
     ReadonlyArray<AnnotatedComponent>
   > {
+    return [];
+  }
+
+  async directAliasCollection(): DirectPromiseCollection {
+    return [];
+  }
+
+  async genericAliasCollection(): GenericPromiseCollection<AnnotatedComponent> {
     return [];
   }
 

@@ -88,7 +88,11 @@ function pomMembers(
       if (!memberInfo) return [];
 
       if (memberInfo.access === "method") {
-        const component = componentCollectionType(checker, memberInfo.type);
+        const component = componentCollectionType(
+          checker,
+          memberInfo.type,
+          member.name.text
+        );
         if (!component) return [];
         const componentClassName = ensureComponentManifest(
           checker,
@@ -117,7 +121,7 @@ function pomMembers(
         ];
       }
 
-      const component = componentType(memberInfo.type);
+      const component = componentType(memberInfo.type, member.name.text);
       if (!component) return [];
       const componentClassName = ensureComponentManifest(
         checker,
@@ -230,13 +234,17 @@ function toolsForClass(
   });
 }
 
-function componentType(type: ts.Type) {
-  const declaration = componentDeclaration(type);
+function componentType(type: ts.Type, memberName: string) {
+  const declaration = componentDeclaration(type, memberName);
   return declaration ? { declaration } : undefined;
 }
 
-function componentCollectionType(checker: ts.TypeChecker, type: ts.Type) {
-  if (!isNamedType(checker, type, "Promise")) return undefined;
+function componentCollectionType(
+  checker: ts.TypeChecker,
+  type: ts.Type,
+  memberName: string
+) {
+  if (!isNamedType(type, "Promise")) return undefined;
 
   const promiseType = type as ts.TypeReference;
   const promiseValue = checker.getTypeArguments(promiseType)[0];
@@ -247,26 +255,57 @@ function componentCollectionType(checker: ts.TypeChecker, type: ts.Type) {
     ts.IndexKind.Number
   );
   const declaration = arrayElement
-    ? componentDeclaration(arrayElement)
+    ? componentDeclaration(arrayElement, memberName)
     : undefined;
   return declaration ? { declaration } : undefined;
 }
 
-function componentDeclaration(type: ts.Type): ts.ClassDeclaration | undefined {
-  const symbols = [type.getSymbol(), type.aliasSymbol].filter(
-    (symbol): symbol is ts.Symbol => symbol !== undefined
-  );
-  for (const symbol of symbols) {
-    const declaration = symbol.declarations?.find(ts.isClassDeclaration);
-    if (declaration && hasWebMcpClassDecorator(declaration)) return declaration;
+function componentDeclaration(
+  type: ts.Type,
+  memberName: string
+): ts.ClassDeclaration | undefined {
+  const declarations = annotatedComponentDeclarations(type);
+  if (declarations.length > 1) {
+    throw new Error(
+      `WebMCP component member "${memberName}" is ambiguous: ${declarations
+        .map((declaration) => declaration.name?.text ?? "<anonymous>")
+        .join(", ")}.`
+    );
+  }
+  return declarations[0];
+}
+
+function annotatedComponentDeclarations(
+  type: ts.Type,
+  seen = new Set<ts.Type>()
+): ts.ClassDeclaration[] {
+  if (seen.has(type)) return [];
+  seen.add(type);
+
+  const declarations = new Set<ts.ClassDeclaration>();
+  for (const symbol of [type.getSymbol(), type.aliasSymbol]) {
+    for (const declaration of symbol?.declarations ?? []) {
+      if (
+        ts.isClassDeclaration(declaration) &&
+        hasWebMcpClassDecorator(declaration)
+      ) {
+        declarations.add(declaration);
+      }
+    }
   }
 
-  if (!type.isIntersection()) return undefined;
-  for (const constituent of type.types) {
-    const declaration = componentDeclaration(constituent);
-    if (declaration) return declaration;
+  if (type.isIntersection()) {
+    for (const constituent of type.types) {
+      for (const declaration of annotatedComponentDeclarations(
+        constituent,
+        seen
+      )) {
+        declarations.add(declaration);
+      }
+    }
   }
-  return undefined;
+
+  return [...declarations];
 }
 
 function isEligiblePomMember(member: ts.ClassElement) {
@@ -277,8 +316,8 @@ function isEligiblePomMember(member: ts.ClassElement) {
   );
 }
 
-function isNamedType(checker: ts.TypeChecker, type: ts.Type, name: string) {
-  const symbol = type.aliasSymbol ?? type.getSymbol();
+function isNamedType(type: ts.Type, name: string) {
+  const symbol = type.getSymbol();
   return symbol?.getName() === name;
 }
 

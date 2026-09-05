@@ -198,6 +198,20 @@ describe("derivePomManifests", () => {
         componentClassName: "AnnotatedComponent",
         collection: true,
       },
+      {
+        memberName: "directAliasCollection",
+        kind: "component",
+        access: "method",
+        componentClassName: "AnnotatedComponent",
+        collection: true,
+      },
+      {
+        memberName: "genericAliasCollection",
+        kind: "component",
+        access: "method",
+        componentClassName: "AnnotatedComponent",
+        collection: true,
+      },
     ]);
     expect(manifest.components).toEqual([
       {
@@ -209,5 +223,11 @@ describe("derivePomManifests", () => {
         tools: [],
       },
     ]);
+  });
+
+  it("rejects intersections containing multiple annotated components", () => {
+    expect(() => manifestFor("ambiguousAnnotatedChildrenPom")).toThrow(
+      'WebMCP component member "ambiguousChild" is ambiguous: FirstComponent, SecondComponent.'
+    );
   });
 });
