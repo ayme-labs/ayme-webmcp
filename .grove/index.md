@@ -7,14 +7,14 @@
 | Measure | Count | Composition |
 | --- | --- | --- |
 | C (content) | 18 | validated B 2 · answered Q 2 · accepted D 11 · active Discovery 3 |
-| V (uncertainty) | 6 | open Q 2 · pending B 0 · W below DoR 0 · uncovered surface 4 |
+| V (uncertainty) | 5 | open Q 2 · pending B 0 · W below DoR 0 · uncovered surface 3 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 14 | 4 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 4 |
+| A-02 | Page Object interoperability | 14 | 3 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 3 |
 | A-03 | Consumer browser capabilities | 4 | 0 | C: validated B 1 · answered Q 0 · accepted D 1 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
@@ -41,7 +41,7 @@
 | G-16 | Expand browser-native Playwright compatibility | boolean; current=true | verified |
 | G-17 | Expand browser-native Page and Locator conveniences | boolean; current=true target=true | verified |
 | G-18 | Discover annotated Page Object children | count; current=1 target=1 | verified |
-| G-19 | Deepen verified single-document Playwright semantics | count; current= target=4 | unverified |
+| G-19 | Deepen verified single-document Playwright semantics | count; current=1 target=4 | partial |
 
 ## Work items
 
@@ -103,7 +103,7 @@
 | W-54 | bug | Correct annotated Page Object child regressions | G-18 | complicated | ⊤ | done |  |
 | W-55 | bug | Separate POM metadata registration from root activation | G-18 | complicated | ⊤ | done |  |
 | W-56 | bug | Correct annotated component type classification | G-18 | complicated | ⊤ | done |  |
-| W-57 | bug | Correct upstream ARIA fixture normalization | G-19 | complicated | ⊤ | progress |  |
+| W-57 | bug | Correct upstream ARIA fixture normalization | G-19 | complicated | ⊤ | done |  |
 | W-58 | bug | Align remaining single-document semantics | G-19 | complicated | ⊤ | progress | ★ |
 | W-59 | bug | Keep callback and timeout transport test-only | G-19 | complicated | ⊤ | ready | ★ |
 | W-60 | feature | Verify single-document compatibility corrections | G-19 | complicated | ⊤ | ready | ★ |
@@ -241,7 +241,7 @@ graph TD
   W_54["W-54: Correct annotated Page Object child regressions"]:::done
   W_55["W-55: Separate POM metadata registration from root activation"]:::done
   W_56["W-56: Correct annotated component type classification"]:::done
-  W_57["W-57: Correct upstream ARIA fixture normalization"]:::progress
+  W_57["W-57: Correct upstream ARIA fixture normalization"]:::done
   W_58["W-58: Align remaining single-document semantics"]:::progress,critical
   W_59["W-59: Keep callback and timeout transport test-only"]:::ready,critical
   W_60["W-60: Verify single-document compatibility corrections"]:::ready,critical

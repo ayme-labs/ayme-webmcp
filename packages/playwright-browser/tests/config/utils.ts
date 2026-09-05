@@ -51,6 +51,21 @@ export function expectedSSLError(browserName: string): string {
   return "SEC_ERROR_UNKNOWN_ISSUER";
 }
 
-export function unshift<T>(array: T[], ...items: T[]): void {
-  array.unshift(...items);
+/**
+ * Mirrors enekesabel/playwright@b25d782e3fbdf21abdae60e974e49b78ca07e828
+ * tests/config/utils.ts for the unchanged ARIA snapshot specs.
+ */
+export function unshift(snapshot: string): string {
+  const lines = snapshot.split("\n");
+  let whitespacePrefixLength = 100;
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const match = line.match(/^(\s*)/);
+    if (match && match[1].length < whitespacePrefixLength)
+      whitespacePrefixLength = match[1].length;
+  }
+  return lines
+    .filter((line) => line.trim())
+    .map((line) => line.substring(whitespacePrefixLength))
+    .join("\n");
 }
