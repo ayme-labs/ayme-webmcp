@@ -6,6 +6,76 @@
   "selectedTestCount": 473,
   "reviewed": [
     {
+      "id": "locator-is-visible.spec.ts > isVisible and isHidden should work with details",
+      "method": "Locator._expect",
+      "evidence": "Assertions verify visible and hidden expectation results with selector details."
+    },
+    {
+      "id": "locator-is-visible.spec.ts > isVisible should be true for element outside view",
+      "method": "Locator._expect",
+      "evidence": "Assertions verify an offscreen element is visible and not hidden through locator expectations."
+    },
+    {
+      "id": "locator-is-visible.spec.ts > isVisible should be true for opacity:0",
+      "method": "Locator._expect",
+      "evidence": "Assertions verify opacity-zero elements are visible and not hidden through locator expectations."
+    },
+    {
+      "id": "locator-misc-2.spec.ts > should combine visible with other selectors",
+      "method": "Page.locator",
+      "evidence": "Assertions verify visible selector composition chooses the expected elements."
+    },
+    {
+      "id": "locator-misc-2.spec.ts > should fill programmatically enabled textarea",
+      "method": "Locator.fill",
+      "evidence": "The test enables a textarea, fills it through the locator, and asserts the resulting value."
+    },
+    {
+      "id": "locator-query.spec.ts > should filter by case-insensitive regex in a child",
+      "method": "Page.locator",
+      "evidence": "Assertions verify case-insensitive filtering matches descendant text."
+    },
+    {
+      "id": "locator-query.spec.ts > should filter by case-insensitive regex in multiple children",
+      "method": "Page.locator",
+      "evidence": "Assertions verify case-insensitive filtering across multiple descendants."
+    },
+    {
+      "id": "locator-query.spec.ts > should filter by regex",
+      "method": "Page.locator",
+      "evidence": "Assertions verify regular-expression text filtering selects the expected locator."
+    },
+    {
+      "id": "locator-query.spec.ts > should filter by regex and regexp flags",
+      "method": "Page.locator",
+      "evidence": "Assertions verify regular-expression flags are preserved during filtering."
+    },
+    {
+      "id": "locator-query.spec.ts > should filter by regex with quotes",
+      "method": "Page.locator",
+      "evidence": "Assertions verify regular expressions containing quotes filter correctly."
+    },
+    {
+      "id": "locator-query.spec.ts > should filter by regex with special symbols",
+      "method": "Page.locator",
+      "evidence": "Assertions verify special regular-expression symbols are serialized and matched correctly."
+    },
+    {
+      "id": "locator-query.spec.ts > should filter by text",
+      "method": "Page.locator",
+      "evidence": "Assertions verify hasText filtering selects the expected locator."
+    },
+    {
+      "id": "locator-query.spec.ts > should filter by text 2",
+      "method": "Page.locator",
+      "evidence": "Assertions verify hasText filtering across multiple matches."
+    },
+    {
+      "id": "locator-query.spec.ts > should filter by text with quotes",
+      "method": "Page.locator",
+      "evidence": "Assertions verify quoted text is serialized and filtered correctly."
+    },
+    {
       "id": "locator-query.spec.ts > should respect first() and last() @smoke",
       "method": "Locator.first",
       "evidence": "Assertions count descendants of the first and last matching div as 1 and 3; unfiltered counts are 6."
@@ -64,6 +134,46 @@
       "id": "retarget.spec.ts > should not retarget anchor into parent label",
       "method": "Locator.click",
       "evidence": "Clicking an anchor inside disabled label arrangements invokes the anchor in both cases."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByRole escaping",
+      "method": "Page.getByRole",
+      "evidence": "Assertions verify role selector escaping returns the exact expected elements."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByRole should accept regexp with v flag",
+      "method": "Page.getByRole",
+      "evidence": "Assertions verify a v-flag regular expression is accepted and matches the expected roles."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByRole with description",
+      "method": "Page.getByRole",
+      "evidence": "Assertions verify role description filtering returns the expected element."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByRole with description via aria-describedby",
+      "method": "Page.getByRole",
+      "evidence": "Assertions verify aria-describedby contributes the expected accessible description."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByRole with description via title fallback",
+      "method": "Page.getByRole",
+      "evidence": "Assertions verify title supplies the expected fallback description."
+    },
+    {
+      "id": "selectors-get-by.spec.ts > getByRole with description whitespace normalization",
+      "method": "Page.getByRole",
+      "evidence": "Assertions verify accessible-description whitespace normalization."
+    },
+    {
+      "id": "selectors-misc.spec.ts > should work with >> visible=false",
+      "method": "Locator._expect",
+      "evidence": "Assertions verify hidden matching before and after an adapter-routed locator callback mutation."
+    },
+    {
+      "id": "selectors-text.spec.ts > should work with leading and trailing spaces",
+      "method": "Locator._expect",
+      "evidence": "Assertions verify text selectors with leading and trailing spaces remain visible."
     }
   ]
 }
