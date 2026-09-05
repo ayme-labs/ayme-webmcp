@@ -282,6 +282,410 @@ describe("Single-document adapter contract", () => {
     });
   });
 
+  // ── W-34: browser-side action semantics ───────────────────────
+
+  describe("browser-side actions", () => {
+    it("retries hidden and disabled actions until the state becomes actionable", async () => {
+      document.body.innerHTML = `
+        <button id="button" style="display:none">go</button>
+        <input id="input" disabled />
+      `;
+      const page = createPage();
+      let clicked = false;
+      document
+        .querySelector("#button")!
+        .addEventListener("click", () => (clicked = true));
+
+      window.setTimeout(() => {
+        document.querySelector("#button")!.removeAttribute("style");
+        (document.querySelector("#input") as HTMLInputElement).disabled = false;
+      }, 25);
+
+      await page.locator("#button").click();
+      await page.locator("#input").fill("ready");
+
+      expect(clicked).toBe(true);
+      expect((document.querySelector("#input") as HTMLInputElement).value).toBe(
+        "ready"
+      );
+    });
+
+    it("times out hidden or disabled actions without dispatching events", async () => {
+      document.body.innerHTML = `
+        <button id="hidden" style="display:none">hidden</button>
+        <button id="disabled" disabled>disabled</button>
+      `;
+      const page = createPage();
+      const events: string[] = [];
+      document
+        .querySelectorAll("button")
+        .forEach((button) =>
+          button.addEventListener("click", () => events.push(button.id))
+        );
+
+      await expect(page.locator("#hidden").click()).rejects.toThrow(
+        /Timeout 1000ms exceeded.*not visible/
+      );
+      await expect(page.locator("#disabled").click()).rejects.toThrow(
+        /Timeout 1000ms exceeded.*not enabled/
+      );
+      expect(events).toEqual([]);
+    });
+
+    it("dispatches an ordered pointer/mouse prefix before one native click", async () => {
+      document.body.innerHTML = "<div id=parent><button>go</button></div>";
+      const page = createPage();
+      const events: Array<{
+        type: string;
+        button: number;
+        buttons: number;
+        clientX: number;
+        clientY: number;
+        detail: number;
+      }> = [];
+      const button = document.querySelector("button")!;
+      button.setAttribute(
+        "style",
+        "position: fixed; left: 10px; top: 20px; width: 100px; height: 40px"
+      );
+      for (const type of [
+        "pointerover",
+        "pointerenter",
+        "mouseover",
+        "mouseenter",
+        "pointermove",
+        "mousemove",
+        "pointerdown",
+        "mousedown",
+        "pointerup",
+        "mouseup",
+        "click",
+      ])
+        button.addEventListener(type, (event) => {
+          const mouse = event as MouseEvent;
+          events.push({
+            type,
+            button: mouse.button,
+            buttons: mouse.buttons,
+            clientX: mouse.clientX,
+            clientY: mouse.clientY,
+            detail: mouse.detail,
+          });
+        });
+
+      await page.locator("button").click();
+
+      expect(events.map((event) => event.type)).toEqual([
+        "pointerover",
+        "pointerenter",
+        "mouseover",
+        "mouseenter",
+        "pointermove",
+        "mousemove",
+        "pointerdown",
+        "mousedown",
+        "pointerup",
+        "mouseup",
+        "click",
+      ]);
+      expect(events[6]).toMatchObject({ button: 0, buttons: 1, detail: 0 });
+      expect(events[7]).toMatchObject({
+        button: 0,
+        buttons: 1,
+        clientX: 60,
+        clientY: 40,
+        detail: 1,
+      });
+      expect(events[8]).toMatchObject({ button: 0, buttons: 0, detail: 0 });
+      expect(events[9]).toMatchObject({ button: 0, buttons: 0, detail: 1 });
+    });
+
+    it("does not bubble enter events and suppresses compatibility mouse events after canceled pointerdown", async () => {
+      document.body.innerHTML = "<div id=parent><button>go</button></div>";
+      const page = createPage();
+      const parent = document.querySelector("#parent")!;
+      const button = document.querySelector("button")!;
+      button.setAttribute(
+        "style",
+        "position: fixed; left: 10px; top: 20px; width: 100px; height: 40px"
+      );
+      const propagated: string[] = [];
+      const targetEvents: string[] = [];
+      for (const type of [
+        "pointerover",
+        "pointerenter",
+        "mouseover",
+        "mouseenter",
+      ])
+        parent.addEventListener(type, () => propagated.push(type));
+      button.addEventListener("pointerdown", (event) => {
+        targetEvents.push("pointerdown");
+        event.preventDefault();
+      });
+      for (const type of ["mousedown", "mouseup", "focus", "click"])
+        button.addEventListener(type, () => targetEvents.push(type));
+
+      await page.locator("button").click();
+
+      expect(propagated).toEqual(["pointerover", "mouseover"]);
+      expect(targetEvents).toEqual(["pointerdown", "click"]);
+      expect(document.activeElement).not.toBe(button);
+    });
+
+    it("fills text inputs, textareas, and contenteditables through InjectedScript", async () => {
+      document.body.innerHTML = `
+        <input id="input" type="text" value="old" />
+        <textarea id="textarea">old</textarea>
+        <div id="editable" contenteditable>old</div>
+      `;
+      const page = createPage();
+      const inputEvents: string[] = [];
+      for (const element of document.querySelectorAll("input, textarea, div"))
+        element.addEventListener("input", () => inputEvents.push(element.id));
+
+      await page.locator("#input").fill("new input");
+      await page.locator("#textarea").fill("new textarea");
+      await page.locator("#editable").fill("new editable");
+
+      expect((document.querySelector("#input") as HTMLInputElement).value).toBe(
+        "new input"
+      );
+      expect(
+        (document.querySelector("#textarea") as HTMLTextAreaElement).value
+      ).toBe("new textarea");
+      expect(document.querySelector("#editable")!.textContent).toBe(
+        "new editable"
+      );
+      expect(inputEvents).toEqual(["input", "textarea", "editable"]);
+    });
+
+    it("uses InjectedScript input-type validation and editability checks for fill", async () => {
+      document.body.innerHTML = `
+        <input id="checkbox" type="checkbox" />
+        <input id="disabled" disabled />
+        <input id="readonly" readonly value="before" />
+      `;
+      const page = createPage();
+
+      await expect(page.locator("#checkbox").fill("x")).rejects.toThrow(
+        /cannot be filled/
+      );
+      await expect(page.locator("#disabled").fill("x")).rejects.toThrow(
+        /not enabled/
+      );
+      await expect(page.locator("#readonly").fill("x")).rejects.toThrow(
+        /not editable/
+      );
+      expect(
+        (document.querySelector("#readonly") as HTMLInputElement).value
+      ).toBe("before");
+    });
+
+    it("presses text, Enter, modifiers, and Space with Playwright-like key details", async () => {
+      document.body.innerHTML = `
+        <form><input id="input" type="text" /></form>
+        <textarea id="textarea"></textarea>
+        <button id="button" type="button">activate</button>
+      `;
+      const page = createPage();
+      const form = document.querySelector("form")!;
+      let submitted = 0;
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        submitted++;
+      });
+      const events: Array<{
+        code: string;
+        ctrlKey: boolean;
+        key: string;
+        shiftKey: boolean;
+        type: string;
+      }> = [];
+      for (const type of ["keydown", "keyup"])
+        document.querySelector("#input")!.addEventListener(type, (event) => {
+          const key = event as KeyboardEvent;
+          events.push({
+            code: key.code,
+            ctrlKey: key.ctrlKey,
+            key: key.key,
+            shiftKey: key.shiftKey,
+            type: key.type,
+          });
+        });
+      let activations = 0;
+      document
+        .querySelector("#button")!
+        .addEventListener("click", () => activations++);
+
+      await page.locator("#input").press("h");
+      await page.locator("#input").press("Shift+i");
+      await page.locator("#input").press("Control+Shift+1");
+      await page.locator("#input").press("Control+a");
+      await page.locator("#input").press("Enter");
+      await page.locator("#textarea").press("Enter");
+      await page.locator("#button").press("Space");
+
+      expect((document.querySelector("#input") as HTMLInputElement).value).toBe(
+        "hI"
+      );
+      expect(
+        (document.querySelector("#input") as HTMLInputElement).selectionStart
+      ).toBe(0);
+      expect(
+        (document.querySelector("#input") as HTMLInputElement).selectionEnd
+      ).toBe(2);
+      expect(submitted).toBe(1);
+      expect(activations).toBe(1);
+      expect(
+        (document.querySelector("#textarea") as HTMLTextAreaElement).value
+      ).toBe("\n");
+      expect(events).toContainEqual({
+        code: "Digit1",
+        ctrlKey: true,
+        key: "!",
+        shiftKey: true,
+        type: "keydown",
+      });
+      expect(events).toContainEqual({
+        code: "ControlLeft",
+        ctrlKey: true,
+        key: "Control",
+        shiftKey: false,
+        type: "keydown",
+      });
+      expect(events).toContainEqual({
+        code: "ShiftLeft",
+        ctrlKey: true,
+        key: "Shift",
+        shiftKey: false,
+        type: "keyup",
+      });
+      expect(events).toContainEqual({
+        code: "ControlLeft",
+        ctrlKey: false,
+        key: "Control",
+        shiftKey: false,
+        type: "keyup",
+      });
+      await expect(page.locator("#input").press("NotARealKey")).rejects.toThrow(
+        'Unknown key: "NotARealKey"'
+      );
+      await expect(page.locator("#input").press("ArrowLeft")).rejects.toThrow(
+        'Unknown key: "ArrowLeft"'
+      );
+    });
+
+    it("keeps final modifiers active for keydown and removes them before keyup", async () => {
+      document.body.innerHTML = "<input />";
+      const page = createPage();
+      const events: Array<{
+        key: string;
+        ctrlKey: boolean;
+        shiftKey: boolean;
+        type: string;
+      }> = [];
+      const input = document.querySelector("input")!;
+      for (const type of ["keydown", "keyup"])
+        input.addEventListener(type, (event) => {
+          const key = event as KeyboardEvent;
+          events.push({
+            key: key.key,
+            ctrlKey: key.ctrlKey,
+            shiftKey: key.shiftKey,
+            type: key.type,
+          });
+        });
+
+      await page.locator("input").press("Shift");
+      await page.locator("input").press("Control+Shift");
+
+      expect(events).toEqual([
+        { key: "Shift", ctrlKey: false, shiftKey: true, type: "keydown" },
+        { key: "Shift", ctrlKey: false, shiftKey: false, type: "keyup" },
+        { key: "Control", ctrlKey: true, shiftKey: false, type: "keydown" },
+        { key: "Shift", ctrlKey: true, shiftKey: true, type: "keydown" },
+        { key: "Shift", ctrlKey: true, shiftKey: false, type: "keyup" },
+        { key: "Control", ctrlKey: false, shiftKey: false, type: "keyup" },
+      ]);
+    });
+
+    it("applies selection on keydown and Space activation on keyup", async () => {
+      document.body.innerHTML = '<input value="abc" /><button>go</button>';
+      const page = createPage();
+      const input = document.querySelector("input") as HTMLInputElement;
+      const button = document.querySelector("button")!;
+      input.setSelectionRange(3, 3);
+      let selectionAtKeyup: [number | null, number | null] | undefined;
+      let clicksAtKeyup = -1;
+      let clicks = 0;
+      input.addEventListener("keyup", () => {
+        selectionAtKeyup = [input.selectionStart, input.selectionEnd];
+      });
+      button.addEventListener("keyup", () => (clicksAtKeyup = clicks));
+      button.addEventListener("click", () => clicks++);
+
+      await page.locator("input").press("Control+a");
+      await page.locator("button").press("Space");
+
+      expect(selectionAtKeyup).toEqual([0, 3]);
+      expect(clicksAtKeyup).toBe(0);
+      expect(clicks).toBe(1);
+    });
+
+    it("applies Enter defaults only for supported controls", async () => {
+      document.body.innerHTML = `
+        <form>
+          <input id=text type=text />
+          <button id=button type=button>button</button>
+          <input id=submit type=submit value=submit />
+          <input id=checkbox type=checkbox />
+          <input id=radio type=radio name=choice />
+        </form>
+      `;
+      const page = createPage();
+      const form = document.querySelector("form")!;
+      let submissions = 0;
+      let buttonClicks = 0;
+      let submitClicks = 0;
+      let checkboxClicks = 0;
+      let radioClicks = 0;
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        submissions++;
+      });
+      document
+        .querySelector("#button")!
+        .addEventListener("click", () => buttonClicks++);
+      document
+        .querySelector("#submit")!
+        .addEventListener("click", () => submitClicks++);
+      document
+        .querySelector("#checkbox")!
+        .addEventListener("click", () => checkboxClicks++);
+      document
+        .querySelector("#radio")!
+        .addEventListener("click", () => radioClicks++);
+
+      await page.locator("#button").press("Enter");
+      await page.locator("#submit").press("Enter");
+      await page.locator("#text").press("Enter");
+      await page.locator("#checkbox").press("Enter");
+      await page.locator("#radio").press("Enter");
+
+      expect(buttonClicks).toBe(1);
+      expect(submitClicks).toBe(1);
+      expect(submissions).toBe(2);
+      expect(checkboxClicks).toBe(0);
+      expect(radioClicks).toBe(0);
+      expect(
+        (document.querySelector("#checkbox") as HTMLInputElement).checked
+      ).toBe(false);
+      expect(
+        (document.querySelector("#radio") as HTMLInputElement).checked
+      ).toBe(false);
+    });
+  });
+
   // ── AC5: resolveOne removed ───────────────────────────────────
 
   it("page does not expose resolveOne", () => {

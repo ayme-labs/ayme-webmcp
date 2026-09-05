@@ -32,6 +32,11 @@ type LocatorExpectationAttempt = {
 
 const DEFAULT_EXPECT_TIMEOUT = 5_000;
 const EXPECT_RETRY_BACKOFF = [20, 50, 100, 100, 500];
+const DEFAULT_ACTION_TIMEOUT = 1_000;
+const ACTION_RETRY_DELAY = 50;
+
+type ActionPoint = { x: number; y: number };
+type ActionTarget = { element: Element; point: ActionPoint };
 
 type ExpectCapableInjectedScript = {
   expect(
@@ -39,6 +44,29 @@ type ExpectCapableInjectedScript = {
     options: { expression: string } & Record<string, unknown>,
     elements: Element[]
   ): Promise<InjectedExpectation>;
+};
+
+type ActionableInjectedScript = {
+  checkElementStates(
+    element: Element,
+    states: ("visible" | "enabled" | "editable" | "stable")[]
+  ): Promise<
+    | "error:notconnected"
+    | { missingState: "visible" | "enabled" | "editable" | "stable" }
+    | undefined
+  >;
+  expectHitTarget(
+    point: { x: number; y: number },
+    element: Element
+  ): "done" | { hitTargetDescription: string };
+  fill(
+    element: Element,
+    value: string
+  ): "error:notconnected" | "needsinput" | "done";
+  focusNode(
+    element: Element,
+    resetSelectionIfNotFocused?: boolean
+  ): "error:notconnected" | "done";
 };
 
 /**
@@ -269,48 +297,132 @@ export class PageImpl {
   // ── Terminal actions ────────────────────────────────────────────
 
   async click(selector: string, label: string) {
-    await this.waitBeforeClick(this.requireSingle(selector, label));
-    const element = this.requireSingle(selector, label);
-    if (element instanceof HTMLElement) {
-      element.click();
-      return;
-    }
-    element.dispatchEvent(
-      new MouseEvent("click", { bubbles: true, cancelable: true })
+    let target = await this.retryActionability(
+      selector,
+      label,
+      "click",
+      ["visible", "enabled", "stable"],
+      true
     );
+    await this.waitBeforeClick(target.element);
+    // The pacing cue can itself yield to the page, so use the same locator
+    // retry path again before sending events.
+    target = await this.retryActionability(
+      selector,
+      label,
+      "click",
+      ["visible", "enabled", "stable"],
+      true
+    );
+
+    // Playwright drives a real mouse. A single-document adapter cannot create
+    // trusted protocol events or full input-device hit-target interception.
+    // Keep the click itself native: dispatching a second synthetic click would
+    // duplicate handlers and lose browser default activation behavior.
+    const { element, point } = target;
+    this.dispatchPointerEvent(element, "pointerover", point, 0, 0, 0);
+    this.dispatchPointerEvent(element, "pointerenter", point, 0, 0, 0, false);
+    this.dispatchMouseEvent(element, "mouseover", point, 0, 0, 0);
+    this.dispatchMouseEvent(element, "mouseenter", point, 0, 0, 0, false);
+    this.dispatchPointerEvent(element, "pointermove", point, 0, 0, 0);
+    this.dispatchMouseEvent(element, "mousemove", point, 0, 0, 0);
+    const pointerDownAllowed = this.dispatchPointerEvent(
+      element,
+      "pointerdown",
+      point,
+      0,
+      1,
+      0
+    );
+    if (pointerDownAllowed) {
+      const mouseDownAllowed = this.dispatchMouseEvent(
+        element,
+        "mousedown",
+        point,
+        0,
+        1,
+        1
+      );
+      if (mouseDownAllowed) this.focusElement(element);
+    }
+    this.dispatchPointerEvent(element, "pointerup", point, 0, 0, 0);
+    if (pointerDownAllowed)
+      this.dispatchMouseEvent(element, "mouseup", point, 0, 0, 1);
+
+    if (isHtmlElement(element, this.window)) element.click();
+    else this.dispatchMouseEvent(element, "click", point, 0, 0, 1);
   }
 
   async fill(selector: string, value: string, label: string) {
     await this.waitBeforeAction();
-    const element = this.requireSingle(selector, label);
-    if (
-      element instanceof HTMLInputElement ||
-      element instanceof HTMLTextAreaElement
-    ) {
-      element.focus();
-      await this.fillInputElement(element, value);
-      element.dispatchEvent(new Event("change", { bubbles: true }));
-      return;
-    }
-    if (element instanceof HTMLElement && element.isContentEditable) {
-      element.focus();
-      await this.fillContentEditableElement(element, value);
-      return;
-    }
-    throw new Error(
-      `fill() is only supported for input, textarea, or contenteditable elements (${label})`
+    const { element } = await this.retryActionability(
+      selector,
+      label,
+      "fill",
+      ["visible", "enabled", "editable"],
+      false
     );
+
+    // Pinned InjectedScript validates input types, normalizes settable values,
+    // selects the current text, and performs the direct set-value path. It
+    // deliberately returns `needsinput` for ordinary text entry; Playwright's
+    // server then uses the browser keyboard. We provide that final local input
+    // effect below, without reimplementing InjectedScript's validation.
+    const result = this.actionableInjected.fill(element, value);
+    if (result === "error:notconnected")
+      throw new Error(`Element is not connected for locator ${label}`);
+    if (result === "done") return;
+    if (result !== "needsinput")
+      throw new Error(`Unexpected fill result for locator ${label}: ${result}`);
+
+    await this.insertFilledText(element, value);
   }
 
   async press(selector: string, key: string, label: string) {
     await this.waitBeforeAction();
     const element = this.requireSingle(selector, label);
-    dispatchKeyboardEvent(element, "keydown", key);
-    dispatchKeyboardEvent(element, "keypress", key);
-    dispatchKeyboardEvent(element, "keyup", key);
+    this.focusElement(element);
 
-    if (key === "Enter" && element instanceof HTMLInputElement)
-      element.form?.requestSubmit();
+    const keys = parseKeyDescription(key);
+    const modifiers = new Set<string>();
+    for (const modifier of keys.slice(0, -1)) {
+      modifiers.add(modifier.key);
+      this.dispatchKeyboardEvent(element, "keydown", modifier, modifiers);
+    }
+
+    const target = keyWithModifiers(keys.at(-1)!, modifiers);
+    const targetIsModifier = isModifier(target.key);
+    if (targetIsModifier) modifiers.add(target.key);
+    const text = textForKey(target, modifiers);
+
+    const keyDownAllowed = this.dispatchKeyboardEvent(
+      element,
+      "keydown",
+      target,
+      modifiers
+    );
+    const keyPressAllowed =
+      keyDownAllowed &&
+      (text.length > 0 || target.key === "Enter") &&
+      this.dispatchKeyboardEvent(element, "keypress", target, modifiers);
+
+    if (keyDownAllowed) this.applyKeydownDefault(element, target, modifiers);
+    if (keyPressAllowed && text) this.insertPressedText(element, text);
+    if (keyPressAllowed && target.key === "Enter") this.pressEnter(element);
+
+    if (targetIsModifier) modifiers.delete(target.key);
+    const keyUpAllowed = this.dispatchKeyboardEvent(
+      element,
+      "keyup",
+      target,
+      modifiers
+    );
+    if (keyDownAllowed && keyUpAllowed)
+      this.applyKeyupDefault(element, target, modifiers);
+    for (const modifier of keys.slice(0, -1).reverse()) {
+      modifiers.delete(modifier.key);
+      this.dispatchKeyboardEvent(element, "keyup", modifier, modifiers);
+    }
   }
 
   async waitForState(
@@ -730,42 +842,260 @@ export class PageImpl {
     );
   }
 
-  private async fillInputElement(
-    element: HTMLInputElement | HTMLTextAreaElement,
-    value: string
+  private async ensureActionable(
+    element: Element,
+    states: ("visible" | "enabled" | "editable" | "stable")[]
   ) {
+    const result = await this.actionableInjected.checkElementStates(
+      element,
+      states
+    );
+    if (!result) return;
+    if (result === "error:notconnected")
+      throw new Error("Element is not connected");
+    throw new Error(`Element is not ${result.missingState}`);
+  }
+
+  private async retryActionability(
+    selector: string,
+    label: string,
+    actionName: "click" | "fill",
+    states: ("visible" | "enabled" | "editable" | "stable")[],
+    checkHitTarget: boolean
+  ): Promise<ActionTarget> {
+    const deadline = Date.now() + DEFAULT_ACTION_TIMEOUT;
+    let lastError: Error | undefined;
+
+    while (true) {
+      try {
+        const element = this.requireSingle(selector, label);
+        await this.ensureActionable(element, states);
+        this.scrollIntoView(element);
+        // Scrolling can change visibility or expose a covering element.
+        await this.ensureActionable(element, states);
+        const point = checkHitTarget
+          ? this.ensureReceivesEvents(element)
+          : centerPoint(element);
+        return { element, point };
+      } catch (error) {
+        if (!isRetryableActionError(error)) throw error;
+        lastError = asError(error);
+        const remaining = deadline - Date.now();
+        if (remaining <= 0)
+          throw new Error(
+            `${actionName}: Timeout ${DEFAULT_ACTION_TIMEOUT}ms exceeded. ${lastError.message}`,
+            { cause: error }
+          );
+        await this.wait(Math.min(ACTION_RETRY_DELAY, remaining));
+      }
+    }
+  }
+
+  private scrollIntoView(element: Element) {
+    if (typeof element.scrollIntoView !== "function") return;
+    element.scrollIntoView({ block: "center", inline: "center" });
+  }
+
+  private ensureReceivesEvents(element: Element): ActionPoint {
+    const rect = element.getBoundingClientRect();
+    // Layoutless DOM environments have no meaningful hit point. The pinned
+    // primitive remains the authority whenever a browser supplies geometry.
+    const point = centerPoint(element);
+    if (
+      !rect.width ||
+      !rect.height ||
+      typeof this.document.elementFromPoint !== "function"
+    )
+      return point;
+    const result = this.actionableInjected.expectHitTarget(point, element);
+    if (result !== "done")
+      throw new Error(
+        `Element does not receive pointer events: ${result.hitTargetDescription}`
+      );
+    return point;
+  }
+
+  private focusElement(element: Element) {
+    this.actionableInjected.focusNode(element, true);
+  }
+
+  private async insertFilledText(element: Element, value: string) {
     if (!this.shouldTypeCharacterByCharacter()) {
-      element.value = value;
-      element.dispatchEvent(new Event("input", { bubbles: true }));
+      this.replaceSelectedText(element, value);
       return;
     }
 
-    element.value = "";
-    element.dispatchEvent(new Event("input", { bubbles: true }));
+    this.replaceSelectedText(element, "");
     for (const character of value) {
-      element.value += character;
-      element.dispatchEvent(new Event("input", { bubbles: true }));
+      this.replaceSelectedText(element, character);
       await this.waitBetweenTypedCharacters();
     }
   }
 
-  private async fillContentEditableElement(
-    element: HTMLElement,
-    value: string
-  ) {
-    if (!this.shouldTypeCharacterByCharacter()) {
-      element.textContent = value;
-      element.dispatchEvent(new Event("input", { bubbles: true }));
+  private insertPressedText(element: Element, text: string) {
+    if (!isEditableElement(element, this.window)) return;
+    this.replaceSelectedText(element, text);
+  }
+
+  private pressEnter(element: Element) {
+    if (isHtmlButton(element, this.window)) {
+      element.click();
       return;
     }
-
-    element.textContent = "";
-    element.dispatchEvent(new Event("input", { bubbles: true }));
-    for (const character of value) {
-      element.textContent += character;
-      element.dispatchEvent(new Event("input", { bubbles: true }));
-      await this.waitBetweenTypedCharacters();
+    if (isInputButton(element, this.window)) {
+      element.click();
+      return;
     }
+    if (isTextControl(element, this.window)) {
+      element.form?.requestSubmit();
+      return;
+    }
+    if (isTextArea(element, this.window) || isContentEditable(element))
+      this.insertPressedText(element, "\n");
+  }
+
+  private applyKeydownDefault(
+    element: Element,
+    target: KeyDescription,
+    modifiers: Set<string>
+  ) {
+    const primaryModifier = modifiers.has("Control") || modifiers.has("Meta");
+    if (primaryModifier && !modifiers.has("Alt") && target.code === "KeyA") {
+      this.selectEditableText(element);
+      return;
+    }
+  }
+
+  private applyKeyupDefault(
+    element: Element,
+    target: KeyDescription,
+    modifiers: Set<string>
+  ) {
+    if (
+      target.code === "Space" &&
+      modifiers.size === 0 &&
+      isSpaceActivatable(element, this.window)
+    )
+      element.click();
+  }
+
+  private selectEditableText(element: Element) {
+    if (isTextInput(element, this.window) || isTextArea(element, this.window)) {
+      element.select();
+      return;
+    }
+    if (!isContentEditable(element)) return;
+    const range = this.document.createRange();
+    range.selectNodeContents(element);
+    const selection = this.window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  }
+
+  private replaceSelectedText(element: Element, text: string) {
+    if (isTextInput(element, this.window) || isTextArea(element, this.window)) {
+      const start = element.selectionStart ?? element.value.length;
+      const end = element.selectionEnd ?? start;
+      element.setRangeText(text, start, end, "end");
+      this.dispatchInputEvent(element);
+      return;
+    }
+    if (isContentEditable(element)) {
+      // InjectedScript.selectText has selected the whole content for fill.
+      // For press, the DOM Selection API is not reliable in every host, so a
+      // single text node is the intentionally limited editable representation.
+      const selection = this.window.getSelection();
+      if (selection?.rangeCount && selection.containsNode(element, true)) {
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(this.document.createTextNode(text));
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      } else {
+        element.textContent = `${element.textContent ?? ""}${text}`;
+      }
+      this.dispatchInputEvent(element);
+      return;
+    }
+    throw new Error("Element is not editable");
+  }
+
+  private dispatchInputEvent(element: Element) {
+    element.dispatchEvent(
+      new this.window.Event("input", { bubbles: true, composed: true })
+    );
+  }
+
+  private dispatchPointerEvent(
+    element: Element,
+    type: string,
+    point: ActionPoint,
+    button: number,
+    buttons: number,
+    detail: number,
+    bubbles = true
+  ): boolean {
+    const PointerEvent = this.window.PointerEvent ?? this.window.Event;
+    return element.dispatchEvent(
+      new PointerEvent(type, {
+        bubbles,
+        button,
+        buttons,
+        cancelable: true,
+        clientX: point.x,
+        clientY: point.y,
+        composed: true,
+        detail,
+      })
+    );
+  }
+
+  private dispatchMouseEvent(
+    element: Element,
+    type: string,
+    point: ActionPoint,
+    button: number,
+    buttons: number,
+    detail: number,
+    bubbles = true
+  ): boolean {
+    return element.dispatchEvent(
+      new this.window.MouseEvent(type, {
+        bubbles,
+        button,
+        buttons,
+        cancelable: true,
+        clientX: point.x,
+        clientY: point.y,
+        composed: true,
+        detail,
+      })
+    );
+  }
+
+  private dispatchKeyboardEvent(
+    element: Element,
+    type: "keydown" | "keypress" | "keyup",
+    description: KeyDescription,
+    modifiers: Set<string>
+  ): boolean {
+    return element.dispatchEvent(
+      new this.window.KeyboardEvent(type, {
+        key: description.key,
+        code: description.code,
+        bubbles: true,
+        cancelable: true,
+        altKey: modifiers.has("Alt"),
+        ctrlKey: modifiers.has("Control"),
+        metaKey: modifiers.has("Meta"),
+        shiftKey: modifiers.has("Shift"),
+      })
+    );
+  }
+
+  private get actionableInjected() {
+    return this.injected as typeof this.injected & ActionableInjectedScript;
   }
 
   private createClickCue(element: Element, duration: number) {
@@ -896,12 +1226,222 @@ function waitForExpectationRetry(
   });
 }
 
-function dispatchKeyboardEvent(
-  target: Element,
-  type: "keydown" | "keypress" | "keyup",
-  key: string
-) {
-  target.dispatchEvent(
-    new KeyboardEvent(type, { key, bubbles: true, cancelable: true })
+function centerPoint(element: Element): ActionPoint {
+  const rect = element.getBoundingClientRect();
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+}
+
+function asError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
+function isRetryableActionError(error: unknown): boolean {
+  const message = asError(error).message;
+  return (
+    message.startsWith("No elements found for locator") ||
+    message === "Element is not connected" ||
+    message.startsWith("Element is not ") ||
+    message.startsWith("Element does not receive pointer events")
+  );
+}
+
+type KeyDescription = {
+  key: string;
+  code: string;
+  text?: string;
+  shiftedKey?: string;
+};
+
+const NAMED_KEYS: Record<string, KeyDescription> = {
+  Alt: { key: "Alt", code: "AltLeft" },
+  Control: { key: "Control", code: "ControlLeft" },
+  Enter: { key: "Enter", code: "Enter" },
+  Meta: { key: "Meta", code: "MetaLeft" },
+  Shift: { key: "Shift", code: "ShiftLeft" },
+  Space: { key: " ", code: "Space", text: " " },
+};
+
+const PRINTABLE_KEYS: Record<string, KeyDescription> = Object.fromEntries(
+  [
+    ["Backquote", "`", "~"],
+    ["Digit1", "1", "!"],
+    ["Digit2", "2", "@"],
+    ["Digit3", "3", "#"],
+    ["Digit4", "4", "$"],
+    ["Digit5", "5", "%"],
+    ["Digit6", "6", "^"],
+    ["Digit7", "7", "&"],
+    ["Digit8", "8", "*"],
+    ["Digit9", "9", "("],
+    ["Digit0", "0", ")"],
+    ["Minus", "-", "_"],
+    ["Equal", "=", "+"],
+    ["Backslash", "\\", "|"],
+    ["BracketLeft", "[", "{"],
+    ["BracketRight", "]", "}"],
+    ["Semicolon", ";", ":"],
+    ["Quote", "'", '"'],
+    ["Comma", ",", "<"],
+    ["Period", ".", ">"],
+    ["Slash", "/", "?"],
+  ].flatMap(([code, key, shiftedKey]) => [
+    [key, { code, key, text: key, shiftedKey }],
+    [shiftedKey, { code, key: shiftedKey, text: shiftedKey, shiftedKey }],
+  ])
+) as Record<string, KeyDescription>;
+
+function parseKeyDescription(value: string): KeyDescription[] {
+  const parts = splitKeyDescription(value);
+  if (!parts.length || parts.some((part) => !part)) unknownKey(value);
+  const descriptions = parts.map((part) => keyDescription(part));
+  if (descriptions.length > 1) {
+    for (const modifier of descriptions.slice(0, -1)) {
+      if (!isModifier(modifier.key)) unknownKey(value);
+    }
+  }
+  return descriptions;
+}
+
+function splitKeyDescription(value: string): string[] {
+  const parts: string[] = [];
+  let current = "";
+  for (const character of value) {
+    if (character === "+" && current) {
+      parts.push(current);
+      current = "";
+    } else {
+      current += character;
+    }
+  }
+  parts.push(current);
+  return parts;
+}
+
+function keyDescription(value: string): KeyDescription {
+  const named = NAMED_KEYS[value];
+  if (named) return named;
+  if (/^[a-zA-Z0-9]$/.test(value)) {
+    if (/^[a-zA-Z]$/.test(value))
+      return {
+        code: `Key${value.toUpperCase()}`,
+        key: value,
+        text: value,
+        shiftedKey: value.toUpperCase(),
+      };
+    const printable = PRINTABLE_KEYS[value];
+    if (printable) return printable;
+  }
+  const printable = PRINTABLE_KEYS[value];
+  if (printable) return printable;
+  unknownKey(value);
+}
+
+function unknownKey(value: string): never {
+  throw new Error(`Unknown key: "${value}"`);
+}
+
+function textForKey(key: KeyDescription, modifiers: Set<string>): string {
+  if (
+    !key.text ||
+    modifiers.has("Alt") ||
+    modifiers.has("Control") ||
+    modifiers.has("Meta")
+  )
+    return "";
+  return modifiers.has("Shift") && /^[a-z]$/.test(key.text)
+    ? key.text.toUpperCase()
+    : key.text;
+}
+
+function keyWithModifiers(
+  description: KeyDescription,
+  modifiers: Set<string>
+): KeyDescription {
+  if (!modifiers.has("Shift") || !description.shiftedKey) return description;
+  return {
+    ...description,
+    key: description.shiftedKey,
+    text: description.shiftedKey,
+  };
+}
+
+function isModifier(key: string): boolean {
+  return (
+    key === "Alt" || key === "Control" || key === "Meta" || key === "Shift"
+  );
+}
+
+function isHtmlElement(
+  element: Element,
+  browserWindow: Window & typeof globalThis
+): element is HTMLElement {
+  return element instanceof browserWindow.HTMLElement;
+}
+
+function isTextInput(
+  element: Element,
+  browserWindow: Window & typeof globalThis
+): element is HTMLInputElement {
+  return element instanceof browserWindow.HTMLInputElement;
+}
+
+function isHtmlButton(
+  element: Element,
+  browserWindow: Window & typeof globalThis
+): element is HTMLButtonElement {
+  return element instanceof browserWindow.HTMLButtonElement;
+}
+
+function isInputButton(
+  element: Element,
+  browserWindow: Window & typeof globalThis
+): element is HTMLInputElement {
+  return (
+    element instanceof browserWindow.HTMLInputElement &&
+    ["button", "reset", "submit"].includes(element.type.toLowerCase())
+  );
+}
+
+function isTextControl(
+  element: Element,
+  browserWindow: Window & typeof globalThis
+): element is HTMLInputElement {
+  return (
+    element instanceof browserWindow.HTMLInputElement &&
+    ["email", "password", "search", "tel", "text", "url"].includes(
+      element.type.toLowerCase()
+    )
+  );
+}
+
+function isTextArea(
+  element: Element,
+  browserWindow: Window & typeof globalThis
+): element is HTMLTextAreaElement {
+  return element instanceof browserWindow.HTMLTextAreaElement;
+}
+
+function isContentEditable(element: Element): element is HTMLElement {
+  return (element as HTMLElement).isContentEditable;
+}
+
+function isEditableElement(
+  element: Element,
+  browserWindow: Window & typeof globalThis
+): boolean {
+  if (isContentEditable(element)) return true;
+  if (isTextInput(element, browserWindow) || isTextArea(element, browserWindow))
+    return !element.disabled && !element.readOnly;
+  return false;
+}
+
+function isSpaceActivatable(
+  element: Element,
+  browserWindow: Window & typeof globalThis
+): element is HTMLButtonElement | HTMLInputElement {
+  if (element instanceof browserWindow.HTMLButtonElement) return true;
+  if (!(element instanceof browserWindow.HTMLInputElement)) return false;
+  return ["button", "checkbox", "radio", "reset", "submit"].includes(
+    element.type.toLowerCase()
   );
 }

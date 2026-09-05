@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:501eda6c37c6efe575b734e0ad1e3f267cc85127200e51ef8affbecc2d8a858b
+# checksum: sha256:80da41e98edcdcf4818ff6fb67d5eabdf2dd8336582f8553fb32e864cfad9651
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -70,7 +70,7 @@ g G-13 status=verified fitness_kind=count t_created=2026-09-05T07:21:39Z t_updat
 g G-14 status=partial fitness_kind=count t_created=2026-09-05T08:31:02Z t_updated=2026-09-05T08:57:46Z "Increase Playwright behavioral compatibility"
   area: A-02
   fitness_target: 4
-  fitness_current: 1
+  fitness_current: 2
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -738,7 +738,7 @@ w W-33 type=feature status=done cynefin=complicated t_created=2026-09-05T08:31:1
     | Read the pinned Playwright expectation implementation and corresponding upstream tests before editing.
     | Keep InjectedScript as the owner of matcher evaluation and add only page-side orchestration.
 
-w W-34 type=feature status=ready cynefin=complicated t_created=2026-09-05T08:31:57Z t_updated=2026-09-05T08:32:08Z "Improve browser action semantics"
+w W-34 type=feature status=done cynefin=complicated t_created=2026-09-05T08:31:57Z t_updated=2026-09-05T09:53:45Z "Improve browser action semantics"
   goals: G-14
   fitness: G-14=+1
   surface: packages/playwright-browser/src/page.ts, packages/playwright-browser/src/locator.ts, packages/playwright-browser/src/contract.test.ts, packages/playwright-browser/tests/upstream
@@ -751,6 +751,10 @@ w W-34 type=feature status=ready cynefin=complicated t_created=2026-09-05T08:31:
     | Reusing pinned actionability and input primitives where available can close common POM behavior gaps without adding browser-process capabilities.
   evidence_strategy:
     | Run focused action tests, adapter guards, type checking, and the full compatibility corpus; review new passing test assertions and adapter-entry evidence.
+  evidence:
+    | Pinned source review: enekesabel/playwright@b25d782 frames.ts, dom.ts, injectedScript.ts, input.ts, and copied locator-click, locator-misc-1, locator-misc-2, and page-basic specs informed action retries, InjectedScript fill validation, key parsing, and event sequencing.
+    | Independent verification: package tests 81/81 plus baseline parser 19/19; adapter guards 25/25; lint, typecheck, build, git diff check, and blocker review pass. The unchanged 473-test corpus reports 47 raw passes, 44 adapter-reaching candidates, 34 reviewed baseline passes, 426 failures, 1 skip, and 0 regressions.
+    | Browser-only limits remain explicit: events are untrusted and cannot reproduce browser-protocol, IME, full keyboard-layout, or clickable-quad behavior. Ten candidate passes remain unpromoted for centralized W-36 review, including locator-misc-2 press should throw on unknown keys.
   plan:
     | Inspect pinned Playwright click, fill, press, actionability, and input implementations plus their upstream tests before editing.
     | Implement only behavior feasible in the accepted single-document runtime and reject unsupported option shapes explicitly.
