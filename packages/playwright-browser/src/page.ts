@@ -67,8 +67,14 @@ export type AriaSnapshotOptions = {
 type QueryState = "enabled" | "disabled" | "editable" | "checked";
 
 type QueryStateResult =
-  | { matches: boolean; received: string }
+  | { matches: boolean; received: string; isRadio?: boolean }
   | { matches: false; received: "error:notconnected" };
+
+export type SelectOptionValue = {
+  index?: number;
+  label?: string;
+  value?: string;
+};
 
 type QueryCapableInjectedScript = {
   elementState(element: Element, state: QueryState): QueryStateResult;
@@ -104,6 +110,16 @@ type ActionableInjectedScript = {
     element: Element,
     resetSelectionIfNotFocused?: boolean
   ): "error:notconnected" | "done";
+  blurNode(element: Element): "error:notconnected" | "done";
+  selectOptions(
+    element: Element,
+    options: ({ valueOrLabel: string } | SelectOptionValue)[]
+  ):
+    | "error:notconnected"
+    | "error:optionsnotfound"
+    | "error:optionnotenabled"
+    | string[];
+  selectText(element: Element): "error:notconnected" | "done";
 };
 
 /**
@@ -507,6 +523,118 @@ export class PageImpl {
       modifiers.delete(modifier.key);
       this.dispatchKeyboardEvent(element, "keyup", modifier, modifiers);
     }
+  }
+
+  async focus(
+    selector: string,
+    label: string,
+    options?: LocatorQueryOptions
+  ): Promise<void> {
+    await this.query(selector, label, options, true, (element) => {
+      const result = this.actionableInjected.focusNode(element);
+      if (result === "error:notconnected")
+        throw new Error(`Element is not connected for locator ${label}`);
+    });
+  }
+
+  async blur(
+    selector: string,
+    label: string,
+    options?: LocatorQueryOptions
+  ): Promise<void> {
+    await this.query(selector, label, options, true, (element) => {
+      const result = this.actionableInjected.blurNode(element);
+      if (result === "error:notconnected")
+        throw new Error(`Element is not connected for locator ${label}`);
+    });
+  }
+
+  async hover(selector: string, label: string): Promise<void> {
+    const { element, point } = await this.retryActionability(
+      selector,
+      label,
+      "hover",
+      ["visible", "stable"],
+      true
+    );
+    this.dispatchPointerEvent(element, "pointerover", point, 0, 0, 0);
+    this.dispatchPointerEvent(element, "pointerenter", point, 0, 0, 0, false);
+    this.dispatchMouseEvent(element, "mouseover", point, 0, 0, 0);
+    this.dispatchMouseEvent(element, "mouseenter", point, 0, 0, 0, false);
+    this.dispatchPointerEvent(element, "pointermove", point, 0, 0, 0);
+    this.dispatchMouseEvent(element, "mousemove", point, 0, 0, 0);
+  }
+
+  async setChecked(
+    selector: string,
+    checked: boolean,
+    label: string
+  ): Promise<void> {
+    const before = this.requireSingle(selector, label);
+    const state = (
+      this.injected as typeof this.injected & QueryCapableInjectedScript
+    ).elementState(before, "checked");
+    if (state.matches === checked) return;
+    if (!checked && "isRadio" in state && state.isRadio)
+      throw new Error(
+        "Cannot uncheck radio button. Radio buttons can only be unchecked by selecting another radio button in the same group."
+      );
+
+    await this.click(selector, label);
+    const after = (
+      this.injected as typeof this.injected & QueryCapableInjectedScript
+    ).elementState(this.requireSingle(selector, label), "checked");
+    if (after.matches !== checked)
+      throw new Error("Clicking the checkbox did not change its state");
+  }
+
+  async selectOption(
+    selector: string,
+    values: string | SelectOptionValue | (string | SelectOptionValue)[] | null,
+    label: string
+  ): Promise<string[]> {
+    const normalized =
+      values === null ? [] : Array.isArray(values) ? values : [values];
+    const options = normalized.map((value) =>
+      typeof value === "string" ? { valueOrLabel: value } : value
+    );
+    const { element } = await this.retryActionability(
+      selector,
+      label,
+      "select option",
+      ["visible", "enabled"],
+      false
+    );
+    const result = this.actionableInjected.selectOptions(element, options);
+    if (Array.isArray(result)) return result;
+    if (result === "error:notconnected")
+      throw new Error(`Element is not connected for locator ${label}`);
+    if (result === "error:optionnotenabled")
+      throw new Error("Element is not enabled");
+    throw new Error("Options not found");
+  }
+
+  async selectText(selector: string, label: string): Promise<void> {
+    const { element } = await this.retryActionability(
+      selector,
+      label,
+      "select text",
+      ["visible"],
+      false
+    );
+    const result = this.actionableInjected.selectText(element);
+    if (result === "error:notconnected")
+      throw new Error(`Element is not connected for locator ${label}`);
+  }
+
+  async scrollLocatorIntoView(selector: string, label: string): Promise<void> {
+    await this.retryActionability(
+      selector,
+      label,
+      "scroll into view",
+      ["stable"],
+      false
+    );
   }
 
   async waitForState(
@@ -1325,7 +1453,13 @@ export class PageImpl {
   private async retryActionability(
     selector: string,
     label: string,
-    actionName: "click" | "fill",
+    actionName:
+      | "click"
+      | "fill"
+      | "hover"
+      | "select option"
+      | "select text"
+      | "scroll into view",
     states: ("visible" | "enabled" | "editable" | "stable")[],
     checkHitTarget: boolean
   ): Promise<ActionTarget> {

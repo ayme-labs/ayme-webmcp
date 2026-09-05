@@ -379,7 +379,7 @@ describe("Single-document adapter contract", () => {
       const page = createPage();
       await expect(
         page.locator("button").click({ force: true } as any)
-      ).rejects.toThrow(/unsupported options.*force/);
+      ).rejects.toThrow(/unsupported Playwright option.*force/);
     });
 
     it("fill rejects unsupported options", async () => {
@@ -387,7 +387,7 @@ describe("Single-document adapter contract", () => {
       const page = createPage();
       await expect(
         page.locator("input").fill("x", { timeout: 1000 } as any)
-      ).rejects.toThrow(/unsupported options.*timeout/);
+      ).rejects.toThrow(/unsupported Playwright option.*timeout/);
     });
 
     it("press rejects unsupported options", async () => {
@@ -395,7 +395,7 @@ describe("Single-document adapter contract", () => {
       const page = createPage();
       await expect(
         page.locator("input").press("a", { delay: 100 } as any)
-      ).rejects.toThrow(/unsupported options.*delay/);
+      ).rejects.toThrow(/unsupported Playwright option.*delay/);
     });
 
     it("waitFor rejects attached state", async () => {
@@ -1003,6 +1003,126 @@ describe("Single-document adapter contract", () => {
         height: 40,
       });
       expect(await page.locator("#hidden").boundingBox()).toBeNull();
+    });
+  });
+
+  describe("browser-native locator conveniences", () => {
+    it("focuses, blurs, clears, and types sequentially", async () => {
+      document.body.innerHTML = `<input id=input value=before />`;
+      const page = createPage();
+      const input = document.querySelector("#input") as HTMLInputElement;
+      const events: string[] = [];
+      input.addEventListener("focus", () => events.push("focus"));
+      input.addEventListener("blur", () => events.push("blur"));
+
+      await page.locator("#input").focus();
+      expect(document.activeElement).toBe(input);
+      await page.locator("#input").clear();
+      expect(input.value).toBe("");
+      await page.locator("#input").pressSequentially("abc");
+      expect(input.value).toBe("abc");
+      await page.locator("#input").blur();
+      expect(document.activeElement).not.toBe(input);
+      expect(events).toEqual(["focus", "blur"]);
+    });
+
+    it("checks and unchecks controls with Playwright's radio restriction", async () => {
+      document.body.innerHTML = `
+        <input id=checkbox type=checkbox />
+        <input id=radio type=radio />
+      `;
+      const page = createPage();
+      const checkbox = document.querySelector("#checkbox") as HTMLInputElement;
+
+      await page.locator("#checkbox").check();
+      expect(checkbox.checked).toBe(true);
+      await page.locator("#checkbox").setChecked(false);
+      expect(checkbox.checked).toBe(false);
+      await page.locator("#radio").check();
+      await expect(page.locator("#radio").uncheck()).rejects.toThrow(
+        "Cannot uncheck radio button"
+      );
+    });
+
+    it("preserves strictness and does not click an already-correct control", async () => {
+      document.body.innerHTML = `
+        <input id=checkbox type=checkbox checked />
+        <button>First</button><button>Second</button>
+      `;
+      const page = createPage();
+      const checkbox = document.querySelector("#checkbox")!;
+      let clicks = 0;
+      checkbox.addEventListener("click", () => clicks++);
+
+      await page.locator("#checkbox").check();
+      expect(clicks).toBe(0);
+      await expect(page.locator("button").focus()).rejects.toThrow("found 2");
+    });
+
+    it("selects options through InjectedScript and dispatches input and change", async () => {
+      document.body.innerHTML = `
+        <select id=select multiple>
+          <option value=one>One</option>
+          <option value=two>Two</option>
+          <option value=three>Three</option>
+        </select>
+      `;
+      const page = createPage();
+      const select = document.querySelector("#select") as HTMLSelectElement;
+      const events: string[] = [];
+      select.addEventListener("input", () => events.push("input"));
+      select.addEventListener("change", () => events.push("change"));
+
+      await expect(
+        page
+          .locator("#select")
+          .selectOption([{ value: "one" }, { label: "Three" }])
+      ).resolves.toEqual(["one", "three"]);
+      expect(
+        Array.from(select.selectedOptions, (option) => option.value)
+      ).toEqual(["one", "three"]);
+      expect(events).toEqual(["input", "change"]);
+      await expect(
+        page.locator("#select").selectOption("missing")
+      ).rejects.toThrow("Options not found");
+
+      await expect(page.locator("#select").selectOption(null)).resolves.toEqual(
+        []
+      );
+      expect(select.selectedOptions).toHaveLength(0);
+    });
+
+    it("selects text, scrolls, and emits hover events", async () => {
+      document.body.innerHTML = `<input id=input value=hello /><button id=button>Hover</button>`;
+      const page = createPage();
+      const input = document.querySelector("#input") as HTMLInputElement;
+      const button = document.querySelector("#button") as HTMLButtonElement;
+      const scrolls: ScrollIntoViewOptions[] = [];
+      button.scrollIntoView = (options) =>
+        scrolls.push(typeof options === "object" ? options : {});
+      const events: string[] = [];
+      button.addEventListener("pointerover", () => events.push("pointerover"));
+      button.addEventListener("mouseover", () => events.push("mouseover"));
+
+      await page.locator("#input").selectText();
+      expect(input.selectionStart).toBe(0);
+      expect(input.selectionEnd).toBe(5);
+      await page.locator("#button").scrollIntoViewIfNeeded();
+      await page.locator("#button").hover();
+      expect(scrolls.length).toBeGreaterThan(0);
+      expect(events).toEqual(["pointerover", "mouseover"]);
+    });
+
+    it("rejects action options whose semantics are not implemented", async () => {
+      document.body.innerHTML = `<input id=input />`;
+      const page = createPage();
+
+      await expect(
+        page.locator("#input").check({ force: true })
+      ).rejects.toThrow(/unsupported Playwright option/);
+      await expect(
+        page.locator("#input").pressSequentially("a", { delay: 1, timeout: 5 })
+      ).rejects.toThrow(/unsupported Playwright option/);
     });
   });
 

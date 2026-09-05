@@ -2,6 +2,7 @@ import type {
   AriaSnapshotOptions,
   LocatorQueryOptions,
   PageImpl,
+  SelectOptionValue,
 } from "./page";
 import {
   escapeForTextSelector,
@@ -374,6 +375,71 @@ export class LocatorImpl {
     await this.ownerPage.press(this.selector, key, this.label);
   }
 
+  async focus(options?: LocatorQueryOptions) {
+    await this.ownerPage.focus(this.selector, this.label, options);
+  }
+
+  async blur(options?: LocatorQueryOptions) {
+    await this.ownerPage.blur(this.selector, this.label, options);
+  }
+
+  async clear(options?: Record<string, unknown>) {
+    rejectUnsupportedOptions("clear", options);
+    await this.ownerPage.fill(this.selector, "", this.label);
+  }
+
+  async hover(options?: Record<string, unknown>) {
+    rejectUnsupportedOptions("hover", options);
+    await this.ownerPage.hover(this.selector, this.label);
+  }
+
+  async check(options?: Record<string, unknown>) {
+    rejectUnsupportedOptions("check", options);
+    await this.ownerPage.setChecked(this.selector, true, this.label);
+  }
+
+  async uncheck(options?: Record<string, unknown>) {
+    rejectUnsupportedOptions("uncheck", options);
+    await this.ownerPage.setChecked(this.selector, false, this.label);
+  }
+
+  async setChecked(checked: boolean, options?: Record<string, unknown>) {
+    rejectUnsupportedOptions("setChecked", options);
+    await this.ownerPage.setChecked(this.selector, checked, this.label);
+  }
+
+  async selectOption(
+    values: string | SelectOptionValue | (string | SelectOptionValue)[] | null,
+    options?: Record<string, unknown>
+  ) {
+    rejectUnsupportedOptions("selectOption", options);
+    return this.ownerPage.selectOption(this.selector, values, this.label);
+  }
+
+  async selectText(options?: Record<string, unknown>) {
+    rejectUnsupportedOptions("selectText", options);
+    await this.ownerPage.selectText(this.selector, this.label);
+  }
+
+  async scrollIntoViewIfNeeded(options?: Record<string, unknown>) {
+    rejectUnsupportedOptions("scrollIntoViewIfNeeded", options);
+    await this.ownerPage.scrollLocatorIntoView(this.selector, this.label);
+  }
+
+  async pressSequentially(
+    text: string,
+    options: { delay?: number } = {}
+  ): Promise<void> {
+    rejectUnsupportedOptions("pressSequentially", options, ["delay"]);
+    for (const character of text) {
+      await this.ownerPage.press(this.selector, character, this.label);
+      if (options.delay && options.delay > 0)
+        await new Promise<void>((resolve) =>
+          this.ownerPage.window.setTimeout(resolve, options.delay)
+        );
+    }
+  }
+
   async waitFor(
     options: {
       state?: "attached" | "detached" | "visible" | "hidden";
@@ -483,8 +549,7 @@ function rejectUnsupportedOptions(
   );
   if (unsupported.length > 0) {
     throw new Error(
-      `${method}(): unsupported options: ${unsupported.join(", ")}. ` +
-        `The single-document adapter does not support these Playwright options.`
+      `${method}(): unsupported Playwright option(s): ${unsupported.join(", ")}.`
     );
   }
 }

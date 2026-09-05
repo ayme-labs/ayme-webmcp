@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:2c34a6e314e5fa9a7ae7bb77f01c172651fa399b92930cc02ed0b687ac8a1fff
+# checksum: sha256:7b78c54e23ca5233a3ddeefbe4ef2eff720d77ca2eca099a9920f4f42fb161f9
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -1024,7 +1024,7 @@ w W-48 type=feature status=done cynefin=complicated t_created=2026-09-05T14:19:5
   evidence:
     | Pinned Playwright client/server locator implementations inspected at b25d782; added innerText, innerHTML, allTextContents, allInnerTexts, isVisible, isHidden, isEditable, and current-document boundingBox using the shared resolver and InjectedScript state semantics. pnpm --filter @ayme-dev/playwright-browser typecheck and test pass (101 package tests plus 19 baseline-script tests).
 
-w W-49 type=feature status=proposed cynefin=complicated t_created=2026-09-05T14:19:58Z t_updated=2026-09-05T14:20:30Z "Add browser-native Locator conveniences"
+w W-49 type=feature status=done cynefin=complicated t_created=2026-09-05T14:19:58Z t_updated=2026-09-05T14:38:03Z "Add browser-native Locator conveniences"
   goals: G-17
   theme: T-03
   fitness: G-17=+0
@@ -1036,6 +1036,8 @@ w W-49 type=feature status=proposed cynefin=complicated t_created=2026-09-05T14:
     | Common POM actions can provide useful best-effort browser behavior while preserving Playwright method shapes and explicit limitations.
   evidence_strategy:
     | Add pinned-source-derived contract tests for successful actions, strictness, states, events, options, and unsupported cases; run package checks.
+  evidence:
+    | Pinned b25d782 Locator client and selected upstream locator tests inspected; browser actions reuse InjectedScript focusNode/fill/selectOptions/selectText and existing actionability. pnpm --filter @ayme-dev/playwright-browser typecheck passed; pnpm --filter @ayme-dev/playwright-browser exec vitest run src/contract.test.ts passed (106 tests).
 
 w W-50 type=feature status=proposed cynefin=complicated t_created=2026-09-05T14:19:58Z t_updated=2026-09-05T14:20:31Z "Complete Locator composition transport"
   goals: G-17
