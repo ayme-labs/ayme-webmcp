@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:7c3c7e50e166c28a32813980b3549c2a1eab76971faeba8dceb19378c2b52500
+# checksum: sha256:677bb8741f3ca05fcedcc606a9ee783b0d0debc61d67440c85ee150a2ae51470
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -65,7 +65,7 @@ g G-12 status=verified fitness_kind=count t_created=2026-09-03T15:52:54Z t_updat
 g G-13 status=partial fitness_kind=count t_created=2026-09-05T07:21:39Z t_updated=2026-09-05T07:26:12Z "Increase verified Playwright compatibility"
   area: A-02
   fitness_target: 3
-  fitness_current: 1
+  fitness_current: 2
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -681,7 +681,7 @@ w W-30 type=feature status=done cynefin=clear t_created=2026-09-05T07:21:48Z t_u
   evidence:
     | Promoted 10 manually reviewed adapter executions; baseline now contains 12 reviewed individual tests. Full unchanged corpus remained 473 tests with 23 raw passes and 1 skip; the other 8 raw passing candidates remain visible and unreviewed. Baseline unit suite passes 19/19.
 
-w W-31 type=feature status=progress cynefin=complicated session=host:75cd936167237b83 session_at=2026-09-05T07:26:12Z t_created=2026-09-05T07:22:08Z t_updated=2026-09-05T07:26:12Z "Integrate locator expectations and callbacks"
+w W-31 type=feature status=done cynefin=complicated t_created=2026-09-05T07:22:08Z t_updated=2026-09-05T07:51:20Z "Integrate locator expectations and callbacks"
   goals: G-13
   fitness: G-13=+1
   surface: packages/playwright-browser/src, packages/playwright-browser/tests/upstream/adapter-bridge.ts, packages/playwright-browser/tests/upstream/_adapter-guard.spec.ts
@@ -693,6 +693,8 @@ w W-31 type=feature status=progress cynefin=complicated session=host:75cd9361672
     | The pinned Locator expectation protocol and existing Page callback transport provide enough behavior without a new architectural seam.
   evidence_strategy:
     | Run focused contract tests, adapter routing guards, selected unchanged upstream specifications, typecheck, and lint.
+  evidence:
+    | Commit e4a76e2a adds adapter-routed Locator._expect through pinned InjectedScript and evaluate/evaluateAll callback transport. Guard suite 24/24, copied-spec checksum verification, package checks, and full 473-test corpus passed the regression gate: 45 raw passed, 1 skipped, 42 candidates with execution evidence, 12 reviewed baseline entries, 30 newly passing candidates, 0 regressions.
   plan:
     | Inspect the pinned Playwright source and corresponding tests before implementing each path. Stop if remote handle identity, upstream test changes, or a new architectural seam is required.
 
