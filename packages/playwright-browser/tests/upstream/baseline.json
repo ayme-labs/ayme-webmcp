@@ -6,6 +6,16 @@
   "selectedTestCount": 473,
   "reviewed": [
     {
+      "id": "locator-convenience.spec.ts > isChecked should work",
+      "method": "Locator.isChecked",
+      "evidence": "Assertions verify Locator and Page checked state before and after an adapter-routed browser mutation, plus the invalid-target error."
+    },
+    {
+      "id": "locator-convenience.spec.ts > isEnabled and isDisabled should work",
+      "method": "Locator.isEnabled",
+      "evidence": "Assertions verify Locator and Page enabled and disabled state across ordinary and disabled elements using InjectedScript element-state semantics."
+    },
+    {
       "id": "locator-is-visible.spec.ts > isVisible and isHidden should work with details",
       "method": "Locator._expect",
       "evidence": "Assertions verify visible and hidden expectation results with selector details."
@@ -19,6 +29,11 @@
       "id": "locator-is-visible.spec.ts > isVisible should be true for opacity:0",
       "method": "Locator._expect",
       "evidence": "Assertions verify opacity-zero elements are visible and not hidden through locator expectations."
+    },
+    {
+      "id": "locator-misc-2.spec.ts > press should throw on unknown keys",
+      "method": "Locator.press",
+      "evidence": "Three assertions verify unsupported key names reject through the adapter with the expected Playwright-compatible error."
     },
     {
       "id": "locator-misc-2.spec.ts > should combine visible with other selectors",
@@ -49,6 +64,11 @@
       "id": "locator-query.spec.ts > should filter by regex and regexp flags",
       "method": "Page.locator",
       "evidence": "Assertions verify regular-expression flags are preserved during filtering."
+    },
+    {
+      "id": "locator-query.spec.ts > should filter by regex with a single quote",
+      "method": "Page.locator",
+      "evidence": "Positive and negative assertions verify quoted regular expressions compose and filter through adapter locator selectors."
     },
     {
       "id": "locator-query.spec.ts > should filter by regex with quotes",
@@ -91,6 +111,26 @@
       "evidence": "The click rejects an out-of-range nth target with the expected selector query error."
     },
     {
+      "id": "page-basic.spec.ts > has navigator.webdriver set to true",
+      "method": "Page.evaluate",
+      "evidence": "Assertion verifies an adapter-routed browser callback returns the expected boolean; it does not claim ownership of navigator.webdriver semantics."
+    },
+    {
+      "id": "page-basic.spec.ts > should have sane user agent",
+      "method": "Page.evaluate",
+      "evidence": "Assertions verify adapter-routed browser callback and string return transport while validating the browser-provided user-agent shape."
+    },
+    {
+      "id": "page-wait-for-function.spec.ts > should accept a string",
+      "method": "Page.waitForFunction",
+      "evidence": "The string predicate remains pending until adapter evaluate changes its observed value, then resolves."
+    },
+    {
+      "id": "page-wait-for-function.spec.ts > should disable timeout when its set to 0",
+      "method": "Page.waitForFunction",
+      "evidence": "The watchdog remains active across repeated polling with timeout zero and resolves after the browser condition changes."
+    },
+    {
       "id": "page-wait-for-function.spec.ts > should fail with predicate throwing on first call",
       "method": "Page.waitForFunction",
       "evidence": "A predicate error on its first invocation propagates with its original message."
@@ -104,6 +144,11 @@
       "id": "page-wait-for-function.spec.ts > should fail with ReferenceError on wrong page",
       "method": "Page.waitForFunction",
       "evidence": "A browser-context ReferenceError propagates with the missing identifier."
+    },
+    {
+      "id": "page-wait-for-function.spec.ts > should poll on raf",
+      "method": "Page.waitForFunction",
+      "evidence": "The RAF polling form remains pending until an adapter-routed mutation and then resolves."
     },
     {
       "id": "page-wait-for-function.spec.ts > should return the success value as a JSHandle",
@@ -124,6 +169,11 @@
       "id": "page-wait-for-function.spec.ts > should throw on polling:mutation",
       "method": "Page.waitForFunction",
       "evidence": "The method rejects the unsupported mutation polling strategy with the expected error."
+    },
+    {
+      "id": "page-wait-for-function.spec.ts > should wait for predicate with arguments",
+      "method": "Page.waitForFunction",
+      "evidence": "The predicate resolves only when the serialized argument object reaches the browser callback with both expected values."
     },
     {
       "id": "page-wait-for-function.spec.ts > should work with multiline body",
@@ -169,6 +219,11 @@
       "id": "selectors-misc.spec.ts > should work with >> visible=false",
       "method": "Locator._expect",
       "evidence": "Assertions verify hidden matching before and after an adapter-routed locator callback mutation."
+    },
+    {
+      "id": "selectors-misc.spec.ts > should work with strict mode and chaining",
+      "method": "Locator.textContent",
+      "evidence": "Assertion verifies a uniquely resolving chained selector returns the expected text through Locator.textContent; it does not claim strict-violation coverage."
     },
     {
       "id": "selectors-text.spec.ts > should work with leading and trailing spaces",

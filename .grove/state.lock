@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:fe9e1bcfb3551c86afc281f9cd4f5583333a2cecb4b321a01b4654c7059c5df1
+# checksum: sha256:6fbab6e8ce7922b8f8465e1c078994c2f9bb888b4990861d49a1e543ab5a977e
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -67,10 +67,10 @@ g G-13 status=verified fitness_kind=count t_created=2026-09-05T07:21:39Z t_updat
   fitness_target: 3
   fitness_current: 3
 
-g G-14 status=partial fitness_kind=count t_created=2026-09-05T08:31:02Z t_updated=2026-09-05T08:57:46Z "Increase Playwright behavioral compatibility"
+g G-14 status=verified fitness_kind=count t_created=2026-09-05T08:31:02Z t_updated=2026-09-05T11:19:21Z "Increase Playwright behavioral compatibility"
   area: A-02
   fitness_target: 4
-  fitness_current: 3
+  fitness_current: 4
 
 w W-01 type=feature status=done cynefin=complicated t_created=2026-08-27T08:43:16Z t_updated=2026-08-27T09:00:10Z "Establish the monorepo walking skeleton"
   goals: G-01
@@ -780,7 +780,7 @@ w W-35 type=feature status=done cynefin=clear t_created=2026-09-05T08:32:07Z t_u
     | Choose methods from actual failure clusters, favoring text, attribute, value, and basic state queries.
     | Read the pinned Playwright implementation and tests for every selected method before editing.
 
-w W-36 type=feature status=ready cynefin=complicated t_created=2026-09-05T08:32:19Z t_updated=2026-09-05T08:32:21Z "Verify behavioral compatibility round"
+w W-36 type=feature status=done cynefin=complicated t_created=2026-09-05T08:32:19Z t_updated=2026-09-05T11:19:21Z "Verify behavioral compatibility round"
   goals: G-14
   fitness: G-14=+1
   surface: packages/playwright-browser/tests/upstream/baseline.json, packages/playwright-browser/scripts/upstream-baseline.mjs, packages/playwright-browser/package.json, .github/workflows/ci.yml
@@ -793,6 +793,11 @@ w W-36 type=feature status=ready cynefin=complicated t_created=2026-09-05T08:32:
     | Independent coordinator verification can turn implementation results into a truthful merge-ready compatibility statement.
   evidence_strategy:
     | Inspect the full diff and reports, rerun all repository checks, review candidate passes individually, update the baseline, push commits, and observe CI.
+  evidence:
+    | Reviewed all 14 newly passing candidates against unchanged assertions and adapter-execution annotations. Promoted 11 with narrow method-specific evidence; rejected locator.all because the bridge bypasses runtime all(), setContent fast-enough because it has no semantic assertion, and waitForFunction window because truthiness does not prove Window-handle behavior.
+    | Final compatibility gate reconciles all 473 tests: 51 raw passes, 48 adapter-evidenced candidates, 45 individually reviewed baseline passes, 3 deliberately unpromoted candidates, 2 diagnostic passes without qualifying evidence, 422 failures, 1 upstream skip, and 0 regressions. All copied specs match pinned checksums.
+    | Repository-wide pnpm check passes build, lint, typecheck, unit tests, browser E2E, 25 adapter guards, compatibility corpus, formatting, dependency boundaries, and packed-consumer verification including Playwright third-party licensing.
+    | Independent final standards and ADR-0015 audits found no actionable P0/P1 blockers. PR #21 summary now reports reviewed compatibility evidence, diagnostic failures, and intentional single-document exclusions without claiming full Playwright parity; PR remains draft.
   plan:
     | Do not change architecture or add harness routing exceptions during verification.
     | Leave the pull request as draft until the user accepts the final checkpoint.
