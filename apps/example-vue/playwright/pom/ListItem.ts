@@ -2,6 +2,7 @@ import { WebMCP } from "@ayme-dev/webmcp";
 import type { Locator } from "playwright";
 import type { ArchiveDialog } from "./ArchiveDialog";
 
+@WebMCP
 export class ListItem {
   readonly root: Locator;
   readonly archiveButton: Locator;

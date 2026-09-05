@@ -21,29 +21,25 @@ describe("useAymeExperiment", () => {
 
   it("disposes WebMCP publication that finishes after unmount", async () => {
     vi.useFakeTimers();
-    registerCompiledPom(
-      ListPage,
-      {
-        className: "ListPage",
-        components: [],
-        members: [],
-        tools: [
-          {
-            methodName: "addItem",
-            toolName: "ListPage.addItem",
-            description: "Add an item.",
-            inputSchema: {
-              type: "object",
-              properties: {},
-              required: [],
-              additionalProperties: false,
-            },
-            parameters: [],
+    registerCompiledPom(ListPage, {
+      className: "ListPage",
+      components: [],
+      members: [],
+      tools: [
+        {
+          methodName: "addItem",
+          toolName: "ListPage.addItem",
+          description: "Add an item.",
+          inputSchema: {
+            type: "object",
+            properties: {},
+            required: [],
+            additionalProperties: false,
           },
-        ],
-      },
-      () => ({ addItem() {} })
-    );
+          parameters: [],
+        },
+      ],
+    });
     window.__AYME_DISABLE_RELAY__ = true;
 
     const wrapper = mount(

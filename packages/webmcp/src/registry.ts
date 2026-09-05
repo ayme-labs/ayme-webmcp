@@ -15,11 +15,11 @@ import {
   type BrowserLocator,
   type BrowserPage,
 } from "./browserPage";
+import type { Page } from "@playwright/test";
 
-type CompiledPom = {
-  manifest: PomManifest;
-  instantiate(page: BrowserPage): object;
-};
+export type PageObjectConstructor<T extends object = object> = new (
+  page: Page
+) => T;
 
 type LiveRegisteredPomTool = RegisteredPomTool & {
   componentPath?: string;
@@ -44,7 +44,7 @@ export type RegisteredPomTarget = {
 };
 
 let browserPage: BrowserPage | undefined;
-const compiledPoms = new WeakMap<object, CompiledPom>();
+const compiledPoms = new WeakMap<object, PomManifest>();
 const registeredPoms = new Set<RegisteredPom>();
 const subscribers = new Set<() => void>();
 let mutationObserver: MutationObserver | undefined;
@@ -54,15 +54,13 @@ export function configureAymeRuntime(page: BrowserPage) {
   browserPage = page;
 }
 
-export function registerCompiledPom(
-  PomClass: object,
-  manifest: PomManifest,
-  instantiate: (page: BrowserPage) => object
-) {
-  compiledPoms.set(PomClass, { manifest, instantiate });
+export function registerCompiledPom(PomClass: object, manifest: PomManifest) {
+  compiledPoms.set(PomClass, manifest);
 }
 
-export function createPageRegistration(PomClass: object) {
+export function createPageRegistration<T extends object>(
+  PomClass: PageObjectConstructor<T>
+) {
   const page = browserPage;
   if (!page)
     throw new Error(
@@ -75,13 +73,13 @@ export function createPageRegistration(PomClass: object) {
       "The imported page object has no compiler-derived Ayme metadata."
     );
 
-  const instance = compiledPom.instantiate(page);
+  const instance = new PomClass(page as unknown as Page);
   const registration: RegisteredPom = {
-    id: compiledPom.manifest.className,
+    id: compiledPom.className,
     instance,
-    manifest: compiledPom.manifest,
+    manifest: compiledPom,
     memberObservations: [],
-    tools: createRegisteredTools(compiledPom.manifest, instance),
+    tools: createRegisteredTools(compiledPom, instance),
   };
   const registryWasEmpty = registeredPoms.size === 0;
   registeredPoms.add(registration);
@@ -90,7 +88,7 @@ export function createPageRegistration(PomClass: object) {
   notifySubscribers();
 
   return {
-    instance: registration.instance,
+    instance,
     dispose() {
       if (!registeredPoms.delete(registration)) return;
       if (registeredPoms.size === 0) stopObservingPage();
