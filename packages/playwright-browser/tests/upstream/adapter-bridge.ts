@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { Locator, Page } from "@playwright/test";
+import type { Frame, Locator, Page } from "@playwright/test";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ADAPTER_DIST_PATH = resolve(__dirname, "../../dist/index.mjs");
@@ -149,10 +149,11 @@ function createPageProxy(realPage: Page): Page {
       if (prop === "__aymeAdapter") return true;
       if (prop === "then") return undefined;
 
-      // The adapter has exactly one current document, so its main frame is
-      // the adapter page itself. This preserves Frame's locator factories
-      // without exposing a real Playwright Frame.
-      if (prop === "mainFrame") return () => createPageProxy(realPage);
+      // mainFrame() is synchronous, but its browser-side result cannot cross
+      // the evaluate boundary. Preserve the call as a deferred browser chain
+      // and materialize a proxy for the single controlled document.
+      if (prop === "mainFrame")
+        return () => createFrameProxy(realPage, [["mainFrame", []]]);
 
       // Locator-creating: return proxy locator.
       if (LOCATOR_CREATING_METHODS.has(prop)) {
@@ -246,6 +247,38 @@ function createPageProxy(realPage: Page): Page {
         );
     },
   }) as Page;
+}
+
+function createFrameProxy(realPage: Page, chain: ChainStep[]): Frame {
+  return new Proxy(
+    {},
+    {
+      get(_, prop) {
+        if (typeof prop === "symbol") return undefined;
+        if (prop === "__aymeAdapter") return true;
+        if (prop === "then") return undefined;
+
+        if (LOCATOR_CREATING_METHODS.has(prop as string)) {
+          return (...args: unknown[]) =>
+            createLocatorProxy(realPage, [...chain, [prop as string, args]]);
+        }
+
+        return (...args: unknown[]) =>
+          realPage.evaluate(
+            ({ chain: c, member, args: a }) => {
+              let current: any = (window as any).__aymeAdapterPage;
+              for (const [method, methodArgs] of c)
+                current = current[method](...methodArgs);
+              const value = current[member];
+              if (typeof value === "function") return value.call(current, ...a);
+              if (a.length === 0 && value !== undefined) return value;
+              throw new TypeError(`${member} is not a function`);
+            },
+            { chain, member: prop as string, args: args as any[] }
+          );
+      },
+    }
+  ) as Frame;
 }
 
 // ── Locator proxy ───────────────────────────────────────────────────

@@ -911,6 +911,11 @@ describe("Single-document adapter contract", () => {
       );
     });
 
+    it("uses the controlled document as its main frame", () => {
+      setupDedicatedPage();
+      expect(dedicatedPage.mainFrame()).toBe(dedicatedPage);
+    });
+
     it("clears previous content", async () => {
       setupDedicatedPage();
       dedicatedPage.document.body.innerHTML = "<div id='old'>old</div>";

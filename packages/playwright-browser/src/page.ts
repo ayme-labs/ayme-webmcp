@@ -615,6 +615,14 @@ export class PageImpl {
   }
 
   /**
+   * The browser runtime controls exactly one document, so that document is
+   * also its main frame. Child-frame traversal remains unsupported.
+   */
+  mainFrame() {
+    return this;
+  }
+
+  /**
    * Replaces the controlled document's content.
    *
    * Mirrors pinned b25d782 server/frames.ts:962-987:
