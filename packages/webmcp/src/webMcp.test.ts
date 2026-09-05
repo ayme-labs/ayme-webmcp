@@ -82,7 +82,15 @@ describe("WebMCP publisher", () => {
     registry.configureAymeRuntime({} as BrowserPage);
 
     let rootCount = 1;
-    class ItemsPage {}
+    class ItemsPage {
+      readonly addItem = vi.fn();
+      readonly items = [
+        {
+          root: { count: async () => rootCount },
+          archive: vi.fn(),
+        },
+      ];
+    }
     registry.registerCompiledPom(
       ItemsPage,
       {
@@ -104,16 +112,7 @@ describe("WebMCP publisher", () => {
             tools: [action("archive")],
           },
         ],
-      },
-      () => ({
-        addItem: vi.fn(),
-        items: [
-          {
-            root: { count: async () => rootCount },
-            archive: vi.fn(),
-          },
-        ],
-      })
+      }
     );
     const pageRegistration = registry.createPageRegistration(ItemsPage);
 
@@ -177,7 +176,9 @@ describe("WebMCP publisher", () => {
     const { synchronizeWebMcpTools } = await import("./webMcp");
     registry.configureAymeRuntime({} as BrowserPage);
 
-    class SharedPage {}
+    class SharedPage {
+      readonly run = vi.fn();
+    }
     registry.registerCompiledPom(
       SharedPage,
       {
@@ -185,8 +186,7 @@ describe("WebMCP publisher", () => {
         tools: [action("run")],
         members: [],
         components: [],
-      },
-      () => ({ run: vi.fn() })
+      }
     );
 
     const first = registry.createPageRegistration(SharedPage);

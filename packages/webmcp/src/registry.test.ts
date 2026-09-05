@@ -54,23 +54,30 @@ describe("live Page Object registry", () => {
 
   it("observes while at least one Page Object is registered", async () => {
     const registry = await import("./registry");
-    registry.configureAymeRuntime({} as BrowserPage);
+    const page = {} as BrowserPage;
+    registry.configureAymeRuntime(page);
 
-    class FirstPage {}
-    class SecondPage {}
+    class FirstPage {
+      constructor(readonly page: unknown) {}
+    }
+    class SecondPage {
+      constructor(readonly page: unknown) {}
+    }
     registry.registerCompiledPom(
       FirstPage,
-      emptyManifest("FirstPage"),
-      () => new FirstPage()
+      emptyManifest("FirstPage")
     );
     registry.registerCompiledPom(
       SecondPage,
-      emptyManifest("SecondPage"),
-      () => new SecondPage()
+      emptyManifest("SecondPage")
     );
 
     const first = registry.createPageRegistration(FirstPage);
     const second = registry.createPageRegistration(SecondPage);
+
+    expect(first.instance).toBeInstanceOf(FirstPage);
+    expect((first.instance as FirstPage).page).toBe(page);
+    expect((second.instance as SecondPage).page).toBe(page);
 
     expect(FakeMutationObserver.instances).toHaveLength(1);
     expect(FakeMutationObserver.instances[0]?.observe).toHaveBeenCalledWith(
@@ -101,14 +108,15 @@ describe("live Page Object registry", () => {
     registry.configureAymeRuntime({} as BrowserPage);
 
     const count = vi.fn(async () => 1);
-    class PageWithLocator {}
+    class PageWithLocator {
+      readonly item = { count };
+    }
     registry.registerCompiledPom(
       PageWithLocator,
       {
         ...emptyManifest("PageWithLocator"),
         members: [{ memberName: "item", kind: "locator", access: "field" }],
-      },
-      () => ({ item: { count } })
+      }
     );
     const registration = registry.createPageRegistration(PageWithLocator);
     const subscriber = vi.fn();
@@ -138,21 +146,21 @@ describe("live Page Object registry", () => {
     class FirstPage {}
     registry.registerCompiledPom(
       FirstPage,
-      emptyManifest("FirstPage"),
-      () => new FirstPage()
+      emptyManifest("FirstPage")
     );
     const first = registry.createPageRegistration(FirstPage);
     await vi.runOnlyPendingTimersAsync();
 
     const count = vi.fn(async () => 1);
-    class LaterPage {}
+    class LaterPage {
+      readonly item = { count };
+    }
     registry.registerCompiledPom(
       LaterPage,
       {
         ...emptyManifest("LaterPage"),
         members: [{ memberName: "item", kind: "locator", access: "field" }],
-      },
-      () => ({ item: { count } })
+      }
     );
     const later = registry.createPageRegistration(LaterPage);
 
@@ -171,8 +179,7 @@ describe("live Page Object registry", () => {
     class ReusedPage {}
     registry.registerCompiledPom(
       ReusedPage,
-      emptyManifest("ReusedPage"),
-      () => ({})
+      emptyManifest("ReusedPage")
     );
 
     const first = registry.createPageRegistration(ReusedPage);
@@ -201,7 +208,12 @@ describe("live Page Object registry", () => {
     const registry = await import("./registry");
     registry.configureAymeRuntime({} as BrowserPage);
 
-    class RecursivePage {}
+    class RecursivePage {
+      readonly node = {
+        root: { count: async () => 1 },
+        open: vi.fn(),
+      };
+    }
     registry.registerCompiledPom(
       RecursivePage,
       {
@@ -232,13 +244,7 @@ describe("live Page Object registry", () => {
             tools: [action("open")],
           },
         ],
-      },
-      () => ({
-        node: {
-          root: { count: async () => 1 },
-          open: vi.fn(),
-        },
-      })
+      }
     );
 
     const registration = registry.createPageRegistration(RecursivePage);
@@ -259,7 +265,16 @@ describe("live Page Object registry", () => {
     let panelRootCount = 0;
     const confirm = vi.fn();
     const save = vi.fn();
-    class NestedPage {}
+    class NestedPage {
+      readonly dialog = {
+        root: { count: async () => dialogRootCount },
+        confirm,
+        panel: {
+          root: { count: async () => panelRootCount },
+          save,
+        },
+      };
+    }
     registry.registerCompiledPom(
       NestedPage,
       {
@@ -295,17 +310,7 @@ describe("live Page Object registry", () => {
             tools: [action("save")],
           },
         ],
-      },
-      () => ({
-        dialog: {
-          root: { count: async () => dialogRootCount },
-          confirm,
-          panel: {
-            root: { count: async () => panelRootCount },
-            save,
-          },
-        },
-      })
+      }
     );
     const registration = registry.createPageRegistration(NestedPage);
 
@@ -344,7 +349,16 @@ describe("live Page Object registry", () => {
     registry.configureAymeRuntime({} as BrowserPage);
 
     let rootCount = 0;
-    class ItemsPage {}
+    class ItemsPage {
+      readonly addItem = vi.fn();
+      readonly items = [
+        {
+          root: { count: async () => rootCount },
+          child: { root: { count: async () => 1 } },
+          archive: vi.fn(),
+        },
+      ];
+    }
     registry.registerCompiledPom(
       ItemsPage,
       {
@@ -380,17 +394,7 @@ describe("live Page Object registry", () => {
             tools: [],
           },
         ],
-      },
-      () => ({
-        addItem: vi.fn(),
-        items: [
-          {
-            root: { count: async () => rootCount },
-            child: { root: { count: async () => 1 } },
-            archive: vi.fn(),
-          },
-        ],
-      })
+      }
     );
     const registration = registry.createPageRegistration(ItemsPage);
 
@@ -441,8 +445,10 @@ describe("live Page Object registry", () => {
       archive: replacementArchive,
     };
     let currentItems = [first, second];
-    const items = vi.fn(async () => currentItems.slice());
-    class ItemsPage {}
+    const getItems = vi.fn(async () => currentItems.slice());
+    class ItemsPage {
+      readonly items = getItems;
+    }
 
     registry.registerCompiledPom(
       ItemsPage,
@@ -465,8 +471,7 @@ describe("live Page Object registry", () => {
             tools: [action("archive")],
           },
         ],
-      },
-      () => ({ items })
+      }
     );
     const registration = registry.createPageRegistration(ItemsPage);
 
@@ -487,7 +492,7 @@ describe("live Page Object registry", () => {
       result: "replacement",
     });
     expect(replacementArchive).toHaveBeenCalledOnce();
-    expect(items).toHaveBeenCalledTimes(3);
+    expect(getItems).toHaveBeenCalledTimes(3);
 
     registration.dispose();
   });

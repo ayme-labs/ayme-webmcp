@@ -41,8 +41,7 @@ describe("useAymeExperiment", () => {
             parameters: [],
           },
         ],
-      },
-      () => ({ addItem() {} })
+      }
     );
     window.__AYME_DISABLE_RELAY__ = true;
 

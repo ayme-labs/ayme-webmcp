@@ -24,7 +24,12 @@ describe("registered Page Object roots", () => {
     const { page } = createBrowserPage();
     configureAymeRuntime(page);
 
-    class ExamplePage {}
+    class ExamplePage {
+      readonly ignored = page.locator("body");
+      readonly zero = { root: page.locator(".zero") };
+      readonly one = { root: page.locator(".one") };
+      readonly many = { root: page.locator(".many") };
+    }
     registerCompiledPom(
       ExamplePage,
       {
@@ -61,13 +66,7 @@ describe("registered Page Object roots", () => {
             tools: [],
           },
         ],
-      },
-      () => ({
-        ignored: page.locator("body"),
-        zero: { root: page.locator(".zero") },
-        one: { root: page.locator(".one") },
-        many: { root: page.locator(".many") },
-      })
+      }
     );
     const registration = createPageRegistration(ExamplePage);
 
