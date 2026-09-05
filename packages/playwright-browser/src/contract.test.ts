@@ -35,6 +35,46 @@ describe("Single-document adapter contract", () => {
     });
   });
 
+  describe("browser-native callbacks", () => {
+    it("runs Page.$eval and $$eval against current-document elements", async () => {
+      document.body.innerHTML = "<p>A</p><p>B</p>";
+      const page = createPage();
+
+      await expect(
+        (page as any).$eval(
+          "p:first-child",
+          (element: Element, suffix: string) => element.textContent + suffix,
+          "!"
+        )
+      ).resolves.toBe("A!");
+      await expect(
+        (page as any).$$eval("p", (elements: Element[]) =>
+          elements.map((element) => element.textContent)
+        )
+      ).resolves.toEqual(["A", "B"]);
+    });
+
+    it("runs Locator callbacks directly without callback-source transport", async () => {
+      document.body.innerHTML = "<li>One</li><li>Two</li>";
+      const page = createPage();
+      const items = page.locator("li");
+
+      await expect(
+        items
+          .first()
+          .evaluate(
+            (element, suffix: string) => element.textContent + suffix,
+            "!"
+          )
+      ).resolves.toBe("One!");
+      await expect(
+        items.evaluateAll((elements) =>
+          elements.map((element) => element.textContent)
+        )
+      ).resolves.toEqual(["One", "Two"]);
+    });
+  });
+
   // ── AC1: createPage targets only the current Window ────────────
 
   it("createPage uses the current window without an alternate-window option", () => {

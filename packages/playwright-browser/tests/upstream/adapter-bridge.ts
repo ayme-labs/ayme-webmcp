@@ -228,6 +228,26 @@ function createPageProxy(realPage: Page): Page {
           );
       }
 
+      // Page.$eval/$$eval are direct browser callbacks in the production
+      // adapter. The Node fixture is the sole process boundary, so only this
+      // bridge reconstructs the callback source before invoking that API.
+      if (prop === "$eval" || prop === "$$eval") {
+        return async (selector: string, pageFunction: unknown, arg?: unknown) =>
+          realPage.evaluate(
+            ({ method, selector: s, expression, arg: a }) => {
+              const p = (window as any).__aymeAdapterPage;
+              const callback = (0, eval)(`(${expression})`);
+              return p[method](s, callback, a);
+            },
+            {
+              method: prop,
+              selector,
+              expression: String(pageFunction),
+              arg,
+            }
+          );
+      }
+
       // Everything else: route through the adapter page in the browser.
       // Both method calls and property accesses go through the adapter
       // so that unsupported members (keyboard, mouse, touchscreen, etc.)
@@ -344,24 +364,22 @@ function createLocatorProxy(realPage: Page, chain: ChainStep[]): Locator {
           );
       }
 
-      // Mirrors Locator.evaluate/evaluateAll transport: function source plus
-      // an explicit function bit and Playwright-serializable argument.
+      // The production Locator receives a function already in the browser
+      // runtime. Reconstruct the Node callback only at this fixture boundary.
       if (prop === "evaluate" || prop === "evaluateAll") {
         return async (pageFunction: unknown, arg?: unknown) =>
           realPage.evaluate(
-            ({ chain: c, method, expression, isFunction, arg: a }) => {
+            ({ chain: c, method, expression, arg: a }) => {
               let current: any = (window as any).__aymeAdapterPage;
               for (const [chainMethod, chainArgs] of c)
                 current = current[chainMethod](...chainArgs);
-              return method === "evaluate"
-                ? current._evaluateExpression(expression, isFunction, a)
-                : current._evaluateAllExpression(expression, isFunction, a);
+              const callback = (0, eval)(`(${expression})`);
+              return current[method](callback, a);
             },
             {
               chain,
               method: prop,
               expression: String(pageFunction),
-              isFunction: typeof pageFunction === "function",
               arg,
             }
           );

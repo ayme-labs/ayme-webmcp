@@ -7,14 +7,14 @@
 | Measure | Count | Composition |
 | --- | --- | --- |
 | C (content) | 18 | validated B 2 · answered Q 2 · accepted D 11 · active Discovery 3 |
-| V (uncertainty) | 5 | open Q 2 · pending B 0 · W below DoR 0 · uncovered surface 3 |
+| V (uncertainty) | 4 | open Q 2 · pending B 0 · W below DoR 0 · uncovered surface 2 |
 
 ## Areas
 
 | Area | Title | C (content) | V (uncertainty) | Composition |
 | --- | --- | --- | --- | --- |
 | A-01 | Repository foundation | 4 | 0 | C: validated B 0 · answered Q 0 · accepted D 3 · active Discovery 1; V: open Q 0 · pending B 0 · W below DoR 0 |
-| A-02 | Page Object interoperability | 14 | 3 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 3 |
+| A-02 | Page Object interoperability | 14 | 2 | C: validated B 1 · answered Q 2 · accepted D 8 · active Discovery 3; V: open Q 0 · pending B 0 · W below DoR 0 · uncovered surface 2 |
 | A-03 | Consumer browser capabilities | 4 | 0 | C: validated B 1 · answered Q 0 · accepted D 1 · active Discovery 2; V: open Q 0 · pending B 0 · W below DoR 0 |
 
 > Relevance view, not a partition: a node touching two areas counts in both; a W without goals counts in none. The Content health totals above are primary.
@@ -88,7 +88,7 @@
 | W-42 | feature | Improve browser-feasible locator actions | G-15 | complicated | ⊤ | done |  |
 | W-43 | feature | Verify expanded compatibility evidence | G-15 | complicated | ⊤ | done |  |
 | W-44 | feature | Expose browser-native ARIA snapshots | G-16 | complicated | ⊤ | done |  |
-| W-45 | feature | Implement browser-native callback methods | G-16 | complicated | ⊤ | ready | ★ |
+| W-45 | feature | Implement browser-native callback methods | G-16 | complicated | ⊤ | done |  |
 | W-46 | feature | Add small single-document methods | G-16 | complicated | ⊤ | ready | ★ |
 | W-47 | feature | Verify browser-native compatibility expansion | G-16 | complicated | ⊤ | ready | ★ |
 
@@ -209,7 +209,7 @@ graph TD
   W_42["W-42: Improve browser-feasible locator actions"]:::done
   W_43["W-43: Verify expanded compatibility evidence"]:::done
   W_44["W-44: Expose browser-native ARIA snapshots"]:::done
-  W_45["W-45: Implement browser-native callback methods"]:::ready,critical
+  W_45["W-45: Implement browser-native callback methods"]:::done
   W_46["W-46: Add small single-document methods"]:::ready,critical
   W_47["W-47: Verify browser-native compatibility expansion"]:::ready,critical
   D_01["D-01: Use the five-workspace monorepo layout"]:::decision
@@ -322,7 +322,7 @@ graph TD
   Y_03 -->|distills| D_12
   Y_04 -->|distills| D_12
   Y_04 -->|supersedes| Y_03
-  class W_45,W_46,W_47 critical
+  class W_46,W_47 critical
 classDef area fill:#5a1e4a,color:#fff
 classDef goal fill:#1e3a5f,color:#fff
 classDef theme fill:#2a4a3a,color:#fff

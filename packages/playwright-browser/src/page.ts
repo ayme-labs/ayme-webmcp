@@ -378,22 +378,6 @@ export class PageImpl {
     };
   }
 
-  async evaluateLocatorExpression<T extends Element | Element[]>(
-    target: T,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expression: string | ((target: T, arg?: unknown) => any),
-    isFunction: boolean,
-    arg?: unknown
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Promise<any> {
-    if (typeof expression === "function") return await expression(target, arg);
-    const normalized = normalizeExpression(expression, isFunction);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const evaluated: any = this.window.eval(normalized);
-    if (isFunction) return await evaluated(target, arg);
-    return evaluated;
-  }
-
   // ── Terminal actions ────────────────────────────────────────────
 
   async click(selector: string, label: string) {
@@ -784,6 +768,39 @@ export class PageImpl {
       isFunction,
       arg
     );
+  }
+
+  /**
+   * Calls a browser-native callback with one strictly resolved element.
+   *
+   * This is the single-document equivalent of pinned Frame.$eval. It accepts
+   * a function object already in the controlled runtime, so it has no
+   * callback-source transport or generic-handle behavior.
+   */
+  async $eval<T>(
+    selector: string,
+    callback: (element: Element, arg?: unknown) => T | Promise<T>,
+    arg?: unknown
+  ): Promise<T> {
+    return await callback(
+      this.requireSingle(selector, `page.$eval(${JSON.stringify(selector)})`),
+      arg
+    );
+  }
+
+  /**
+   * Calls a browser-native callback with every matching element.
+   *
+   * Pinned Frame.$$eval delegates to Locator.evaluateAll. The controlled
+   * document already owns the elements, so a direct array callback preserves
+   * that behavior without introducing element or JS handles.
+   */
+  async $$eval<T>(
+    selector: string,
+    callback: (elements: Element[], arg?: unknown) => T | Promise<T>,
+    arg?: unknown
+  ): Promise<T> {
+    return await callback(this.resolveAll(selector), arg);
   }
 
   /**

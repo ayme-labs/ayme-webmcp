@@ -1,6 +1,6 @@
 @grove 1
 # AUTO-GENERATED. Do not edit. Use `grove` CLI.
-# checksum: sha256:50706224581836bc35b52d1a01b6ce3141ee3c8f9c8911e6814ab5eb4bc6f480
+# checksum: sha256:b4373dd1632f4c884f785695fd3647bfd791e440481f9203ebd4275091b9b4e2
 g G-01 status=verified fitness_kind=count t_created=2026-08-27T08:42:21Z t_updated=2026-08-27T08:53:19Z "Repository has a reproducible local development loop"
   area: A-01
   fitness_target: 1
@@ -947,7 +947,7 @@ w W-44 type=feature status=done cynefin=complicated t_created=2026-09-05T12:53:2
   plan:
     | Do not add child frame, navigation, or browser protocol behavior.
 
-w W-45 type=feature status=ready cynefin=complicated t_created=2026-09-05T12:53:29Z t_updated=2026-09-05T12:54:03Z "Implement browser-native callback methods"
+w W-45 type=feature status=done cynefin=complicated t_created=2026-09-05T12:53:29Z t_updated=2026-09-05T13:07:31Z "Implement browser-native callback methods"
   goals: G-16
   theme: T-02
   fitness: G-16=+0
@@ -960,6 +960,8 @@ w W-45 type=feature status=ready cynefin=complicated t_created=2026-09-05T12:53:
     | Method-specific callback reconstruction in the test bridge can exercise direct browser callbacks while keeping the runtime simple and preserving Playwright evaluation semantics.
   evidence_strategy:
     | Record pinned callback implementation paths, contract tests for direct browser invocation, adapter transport guards, focused upstream execution evidence, and baseline regressions.
+  evidence:
+    | Pinned b25d782 Frame./62331eval and Locator.evaluate/evaluateAll inspected; contract 93/93, typecheck clean, build clean, adapter callback guard 1/1, and unchanged page-set-content  cases 4/4 passed. Callback source reconstruction is confined to tests/upstream/adapter-bridge.ts.
   plan:
     | Reject scope expansion into arbitrary nested function serialization, Node closure capture, or general handle identity.
 

@@ -149,7 +149,7 @@ test("adapter locator callbacks serialize arguments and execute in the adapter",
   expect(all).toEqual(["item:A:true:true", "item:B:true:true"]);
   const execution = await page.evaluate(() => (window as any).__aymeEvidence);
   expect(execution.entered).toContain("Locator.evaluate");
-  expect(execution.entered).toContain("Locator._evaluateAllExpression");
+  expect(execution.entered).toContain("Locator.evaluateAll");
 });
 
 // ── False-green prevention: proxy does not leak to real driver ──────
