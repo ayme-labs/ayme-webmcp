@@ -105,8 +105,8 @@ importers:
   packages/playwright-browser:
     dependencies:
       playwright-core:
-        specifier: github:enekesabel/playwright#path:/packages/playwright-core&b25d782e3fbdf21abdae60e974e49b78ca07e828
-        version: https://codeload.github.com/enekesabel/playwright/tar.gz/b25d782e3fbdf21abdae60e974e49b78ca07e828#path:/packages/playwright-core
+        specifier: github:ayme-labs/playwright#path:/packages/playwright-core&b25d782e3fbdf21abdae60e974e49b78ca07e828
+        version: https://codeload.github.com/ayme-labs/playwright/tar.gz/b25d782e3fbdf21abdae60e974e49b78ca07e828#path:/packages/playwright-core
     devDependencies:
       "@ayme-dev/eslint-config":
         specifier: workspace:*
@@ -2686,13 +2686,13 @@ packages:
     engines: { node: ">=20" }
     hasBin: true
 
-  playwright-core@https://codeload.github.com/enekesabel/playwright/tar.gz/b25d782e3fbdf21abdae60e974e49b78ca07e828#path:/packages/playwright-core:
+  playwright-core@https://codeload.github.com/ayme-labs/playwright/tar.gz/b25d782e3fbdf21abdae60e974e49b78ca07e828#path:/packages/playwright-core:
     resolution:
       {
         gitHosted: true,
         integrity: sha512-X8l1teHrgonm+agU+H/px9Vd7xJixw3daqGXDwXV8lYP1PlIS2P8NE7by17vjcmtl9Hk4ON9MLYonn8L8a0HOQ==,
         path: /packages/playwright-core,
-        tarball: https://codeload.github.com/enekesabel/playwright/tar.gz/b25d782e3fbdf21abdae60e974e49b78ca07e828,
+        tarball: https://codeload.github.com/ayme-labs/playwright/tar.gz/b25d782e3fbdf21abdae60e974e49b78ca07e828,
       }
     version: 1.62.1
     engines: { node: ">=20" }
@@ -4782,7 +4782,7 @@ snapshots:
 
   playwright-core@1.62.1: {}
 
-  playwright-core@https://codeload.github.com/enekesabel/playwright/tar.gz/b25d782e3fbdf21abdae60e974e49b78ca07e828#path:/packages/playwright-core:
+  playwright-core@https://codeload.github.com/ayme-labs/playwright/tar.gz/b25d782e3fbdf21abdae60e974e49b78ca07e828#path:/packages/playwright-core:
     {}
 
   playwright@1.62.1:
