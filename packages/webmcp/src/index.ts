@@ -1,4 +1,3 @@
-export * from "./browserPage";
 export * from "./contracts";
 export * from "./decorators";
 export { ayme, default } from "./ayme";

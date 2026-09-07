@@ -1,8 +1,8 @@
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 
+import { createPage, type TraceEntry } from "@ayme-dev/playwright-browser";
 import type { RegisteredPom } from "@ayme-dev/webmcp/internal";
 import {
-  createBrowserPage,
   configureAymeRuntime,
   capturePageState,
   getPageStateForElements,
@@ -26,8 +26,10 @@ export function useAymeExperiment() {
   const pageStateLoading = ref(false);
   const applicationModelSelectionPath = ref<string>();
 
-  const browserRuntime = createBrowserPage({
-    onTrace() {
+  const traceEntries = ref<TraceEntry[]>([]);
+  const page = createPage({
+    onTrace(entry) {
+      traceEntries.value.push(entry);
       traceRevision.value += 1;
     },
     pacing: {
@@ -36,13 +38,15 @@ export function useAymeExperiment() {
       typingIntervalMs: 60,
     },
   });
+  // The intentional demo pacing takes longer than the adapter's normal action budget.
+  page.setDefaultTimeout(10_000);
 
-  configureAymeRuntime(browserRuntime.page);
+  configureAymeRuntime(page);
   usePageObject(ListPage);
 
   const trace = computed(() => {
     void traceRevision.value;
-    return browserRuntime.trace;
+    return traceEntries.value;
   });
 
   const refreshPomMembers = () => probeRegisteredPomMembers();
@@ -227,7 +231,10 @@ export function useAymeExperiment() {
     refreshPageState,
     registeredPoms,
     refreshPomMembers,
-    resetTrace: browserRuntime.resetTrace,
+    resetTrace() {
+      traceEntries.value.splice(0);
+      traceRevision.value += 1;
+    },
     trace,
     webMcpStatus,
     previewApplicationModelTarget,
