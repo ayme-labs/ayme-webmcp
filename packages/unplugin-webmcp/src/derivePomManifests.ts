@@ -473,9 +473,7 @@ function toolDescriptionText(
   returnPoms: readonly string[]
 ) {
   if (returnPoms.length === 0) return description;
-  return `${description} Potential return POMs: ${returnPoms.join(
-    ", "
-  )}. Rediscover POM definitions after execution.`;
+  return `${description} Potential return POMs: ${returnPoms.join(", ")}.`;
 }
 
 function toolParameter(

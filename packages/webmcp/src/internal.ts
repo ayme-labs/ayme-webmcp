@@ -3,6 +3,7 @@ export {
   getPageStateForElements,
   resolvePageStateRef,
 } from "./pageState";
+export { getPageContextForDocument } from "./pageContext";
 export {
   configureAymeRuntime,
   createAymeRuntime,

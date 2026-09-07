@@ -14,7 +14,7 @@ type FillRefInput = RefInput & { value: string };
 export const clickPageStateRefTool = {
   name: "click_page_state_ref",
   description:
-    "Click a real element ref from get_page_state. The ref is resolved against a fresh capture before the action. Call get_page_state again afterward before choosing the next action.",
+    "Click a real element ref from get_page_context. The ref is resolved against a fresh capture before the action.",
   inputSchema: {
     type: "object",
     properties: { ref: { type: "string" } },
@@ -31,7 +31,7 @@ export const clickPageStateRefTool = {
 export const fillPageStateRefTool = {
   name: "fill_page_state_ref",
   description:
-    "Fill a real editable element ref from get_page_state with text. The ref is resolved against a fresh capture before the action. Call get_page_state again afterward before choosing the next action.",
+    "Fill a real editable element ref from get_page_context with text. The ref is resolved against a fresh capture before the action.",
   inputSchema: {
     type: "object",
     properties: { ref: { type: "string" }, value: { type: "string" } },
