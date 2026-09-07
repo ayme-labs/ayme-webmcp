@@ -55,6 +55,7 @@ const action = (methodName: string) => ({
     additionalProperties: false,
   },
   parameters: [],
+  returnPoms: [],
 });
 
 async function flushPublisher() {

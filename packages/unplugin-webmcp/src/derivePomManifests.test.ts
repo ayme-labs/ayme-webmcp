@@ -55,6 +55,7 @@ describe("derivePomManifests", () => {
             schema: { type: "string" },
           },
         ],
+        returnPoms: [],
       },
     ]);
   });
@@ -229,5 +230,30 @@ describe("derivePomManifests", () => {
     expect(() => manifestFor("ambiguousAnnotatedChildrenPom")).toThrow(
       'WebMCP component member "ambiguousChild" is ambiguous: FirstComponent, SecondComponent.'
     );
+  });
+
+  it("captures class descriptions and Promise-union return POMs", () => {
+    const manifest = manifestFor("returningPom");
+    if (!manifest) throw new Error("The POM manifest was not derived.");
+
+    expect(manifest).toMatchObject({
+      className: "ReturningPom",
+      description: "A page that opens related POMs.",
+      tools: [
+        {
+          methodName: "open",
+          returnPoms: ["FirstReturnPom", "SecondReturnPom"],
+          description:
+            "Run open. It may return FirstReturnPom or SecondReturnPom. Rediscover POM definitions after execution.",
+        },
+      ],
+      components: expect.arrayContaining([
+        expect.objectContaining({
+          className: "FirstReturnPom",
+          description: "The first returned POM.",
+        }),
+        expect.objectContaining({ className: "SecondReturnPom" }),
+      ]),
+    });
   });
 });

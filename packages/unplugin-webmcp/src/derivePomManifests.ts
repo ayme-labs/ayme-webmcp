@@ -57,10 +57,11 @@ export function derivePomManifests(
 
     const className = declaration.name.text;
     const members = pomMembers(checker, declaration, components);
-    const tools = toolsForClass(checker, declaration);
+    const tools = toolsForClass(checker, declaration, components);
 
     manifests.push({
       className,
+      ...classDescription(declaration),
       members,
       components: [...components.values()],
       tools,
@@ -191,18 +192,25 @@ function ensureComponentManifest(
   const existing = components.get(declaration);
   if (existing) return existing.className;
 
-  components.set(declaration, { className, members: [], tools: [] });
   components.set(declaration, {
     className,
+    ...classDescription(declaration),
+    members: [],
+    tools: [],
+  });
+  components.set(declaration, {
+    className,
+    ...classDescription(declaration),
     members: pomMembers(checker, declaration, components),
-    tools: toolsForClass(checker, declaration),
+    tools: toolsForClass(checker, declaration, components),
   });
   return className;
 }
 
 function toolsForClass(
   checker: ts.TypeChecker,
-  declaration: ts.ClassDeclaration
+  declaration: ts.ClassDeclaration,
+  components: Map<ts.ClassDeclaration, PomComponentManifest>
 ): ToolManifest[] {
   const className = declaration.name?.text;
   if (!className) throw new Error("A WebMCP tool class needs a class name.");
@@ -211,7 +219,7 @@ function toolsForClass(
     if (!isPublicInstanceMember(member) || !ts.isMethodDeclaration(member))
       return [];
     const description = toolDescription(member);
-    if (description === undefined) return [];
+    if (!description) return [];
     if (!member.name || !ts.isIdentifier(member.name)) {
       throw new Error(
         `WebMCP tool in ${className} needs an identifier method name.`
@@ -222,16 +230,59 @@ function toolsForClass(
     const parameters = member.parameters.map((parameter) =>
       toolParameter(checker, parameter, className, methodName)
     );
+    const returnPoms = returnPomClassNames(checker, member, components);
     return [
       {
         methodName,
         toolName: `${className}.${methodName}`,
-        description,
+        description:
+          description.authored ??
+          generatedToolDescription(methodName, returnPoms),
         inputSchema: inputSchemaFor(parameters),
         parameters,
+        returnPoms,
       } satisfies ToolManifest,
     ];
   });
+}
+
+function returnPomClassNames(
+  checker: ts.TypeChecker,
+  declaration: ts.MethodDeclaration,
+  components: Map<ts.ClassDeclaration, PomComponentManifest>
+) {
+  const signature = checker.getSignatureFromDeclaration(declaration);
+  if (!signature) return [];
+
+  const names = new Set<string>();
+  for (const candidate of returnPomDeclarations(
+    checker,
+    checker.getReturnTypeOfSignature(signature)
+  )) {
+    const name = ensureComponentManifest(checker, candidate, components);
+    if (name) names.add(name);
+  }
+  return [...names];
+}
+
+function returnPomDeclarations(
+  checker: ts.TypeChecker,
+  type: ts.Type,
+  seen = new Set<ts.Type>()
+): ts.ClassDeclaration[] {
+  if (seen.has(type)) return [];
+  seen.add(type);
+
+  if (isNamedType(type, "Promise")) {
+    const value = checker.getTypeArguments(type as ts.TypeReference)[0];
+    return value ? returnPomDeclarations(checker, value, seen) : [];
+  }
+  if (type.isUnion()) {
+    return type.types.flatMap((member) =>
+      returnPomDeclarations(checker, member, seen)
+    );
+  }
+  return annotatedComponentDeclarations(type);
 }
 
 function componentType(type: ts.Type, memberName: string) {
@@ -346,16 +397,44 @@ function isLocatorType(type: ts.Type) {
 
 function hasWebMcpClassDecorator(declaration: ts.ClassDeclaration) {
   return (ts.getDecorators(declaration) ?? []).some((decorator) => {
-    return (
-      ts.isIdentifier(decorator.expression) &&
-      decorator.expression.text === "WebMCP"
-    );
+    const expression = decorator.expression;
+    return ts.isIdentifier(expression)
+      ? expression.text === "WebMCP"
+      : ts.isCallExpression(expression) &&
+          ts.isIdentifier(expression.expression) &&
+          expression.expression.text === "WebMCP";
   });
 }
 
+function classDescription(declaration: ts.ClassDeclaration) {
+  for (const decorator of ts.getDecorators(declaration) ?? []) {
+    if (!ts.isCallExpression(decorator.expression)) continue;
+    if (
+      !ts.isIdentifier(decorator.expression.expression) ||
+      decorator.expression.expression.text !== "WebMCP"
+    ) {
+      continue;
+    }
+    const options = decorator.expression.arguments[0];
+    if (!options || !ts.isObjectLiteralExpression(options)) return {};
+    const description = options.properties.find(
+      (property) =>
+        ts.isPropertyAssignment(property) &&
+        ts.isIdentifier(property.name) &&
+        property.name.text === "description" &&
+        ts.isStringLiteral(property.initializer)
+    );
+    if (!description || !ts.isPropertyAssignment(description)) return {};
+    return { description: (description.initializer as ts.StringLiteral).text };
+  }
+  return {};
+}
+
+type ToolDescription = { authored?: string };
+
 function toolDescription(
   declaration: ts.MethodDeclaration
-): string | undefined {
+): ToolDescription | undefined {
   for (const decorator of ts.getDecorators(declaration) ?? []) {
     if (!ts.isCallExpression(decorator.expression)) continue;
     const callee = decorator.expression.expression;
@@ -369,7 +448,7 @@ function toolDescription(
     }
 
     const options = decorator.expression.arguments[0];
-    if (!options || !ts.isObjectLiteralExpression(options)) return "";
+    if (!options || !ts.isObjectLiteralExpression(options)) return {};
     const description = options.properties.find(
       (property) =>
         ts.isPropertyAssignment(property) &&
@@ -381,11 +460,22 @@ function toolDescription(
       !ts.isPropertyAssignment(description) ||
       !ts.isStringLiteral(description.initializer)
     ) {
-      return "";
+      return {};
     }
-    return description.initializer.text;
+    return { authored: description.initializer.text };
   }
   return undefined;
+}
+
+function generatedToolDescription(
+  methodName: string,
+  returnPoms: readonly string[]
+) {
+  const returns =
+    returnPoms.length === 0
+      ? ""
+      : ` It may return ${returnPoms.join(" or ")}. Rediscover POM definitions after execution.`;
+  return `Run ${methodName}.${returns}`;
 }
 
 function toolParameter(
