@@ -1,6 +1,5 @@
 # Local tool state
 /.devbox/
-/.grove/
 /.scratch/
 /.pnpm-store/
 
