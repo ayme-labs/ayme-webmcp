@@ -1,12 +1,37 @@
 import type {
+  JsonValue,
   PomComponentManifest,
   PomDefinition,
   PomDefinitionAction,
-  PomDefinitionLookupResult,
   PomDefinitionsResult,
   PomManifest,
 } from "./contracts";
+import type { ModelContextTool } from "@mcp-b/webmcp-types";
 import { listRegisteredPoms } from "./registry";
+
+type GetPomDefinitionsInput = { name?: string };
+
+export const getPomDefinitionsTool = {
+  name: "get_pom_definitions",
+  description:
+    "Return one named POM definition or all definitions reachable from registered POMs, including referenced POMs that are not currently visible. Definitions describe possible structure and actions; use get_page_state to determine what is currently available.",
+  inputSchema: {
+    type: "object",
+    properties: { name: { type: "string" } },
+    required: [],
+    additionalProperties: false,
+  } as const,
+  execute: async (input: unknown): Promise<JsonValue> => {
+    const name =
+      typeof input === "object" &&
+      input !== null &&
+      "name" in input &&
+      typeof input.name === "string"
+        ? input.name
+        : undefined;
+    return JSON.parse(JSON.stringify(getPomDefinitions(name))) as JsonValue;
+  },
+} satisfies ModelContextTool<GetPomDefinitionsInput, JsonValue>;
 
 type DefinitionNode = {
   name: string;
@@ -15,21 +40,26 @@ type DefinitionNode = {
   tools: PomManifest["tools"];
 };
 
-export function getPomDefinitions(): PomDefinitionsResult {
+export function getPomDefinitions(name?: string): PomDefinitionsResult {
   const index = definitionIndex();
+  if (name !== undefined)
+    return { definitions: unambiguousDefinitions(name, index.get(name) ?? []) };
+
   return {
-    definitions: [...index.entries()].flatMap(([, candidates]) => {
-      const distinct = distinctDefinitions(candidates);
-      return distinct.length === 1 ? distinct : [];
-    }),
+    definitions: [...index.entries()].flatMap(([definitionName, candidates]) =>
+      unambiguousDefinitions(definitionName, candidates)
+    ),
   };
 }
 
-export function getPomDefinition(name: string): PomDefinitionLookupResult {
-  const candidates = distinctDefinitions(definitionIndex().get(name) ?? []);
-  if (candidates.length === 0) return { status: "unknown", name };
-  if (candidates.length > 1) return { status: "ambiguous", name };
-  return { status: "found", definition: candidates[0] };
+function unambiguousDefinitions(
+  name: string,
+  candidates: readonly PomDefinition[]
+) {
+  const definitions = distinctDefinitions(candidates);
+  if (definitions.length > 1)
+    throw new Error(`POM definition "${name}" is ambiguous.`);
+  return definitions;
 }
 
 function definitionIndex() {
@@ -58,7 +88,9 @@ function reachableDefinitions(manifest: PomManifest) {
       const definition = definitionFor(node);
       reachable.push(definition);
       pending.push(
-        ...definition.children,
+        ...definition.children.flatMap((child) =>
+          child.kind === "component" ? [child.componentClassName] : []
+        ),
         ...definition.actions.flatMap((action) => action.returnPoms)
       );
     }
@@ -90,13 +122,6 @@ function addNode(
 }
 
 function definitionFor(node: DefinitionNode): PomDefinition {
-  const children = [
-    ...new Set(
-      node.members.flatMap((member) =>
-        member.kind === "component" ? [member.componentClassName] : []
-      )
-    ),
-  ];
   const actions: PomDefinitionAction[] = node.tools.map((tool) => ({
     name: tool.methodName,
     description: tool.description,
@@ -108,7 +133,7 @@ function definitionFor(node: DefinitionNode): PomDefinition {
     ...(node.description === undefined
       ? {}
       : { description: node.description }),
-    children,
+    children: node.members,
     actions,
   };
 }

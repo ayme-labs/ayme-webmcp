@@ -235,9 +235,10 @@ function toolsForClass(
       {
         methodName,
         toolName: `${className}.${methodName}`,
-        description:
-          description.authored ??
-          generatedToolDescription(methodName, returnPoms),
+        description: toolDescriptionText(
+          description.authored ?? `Run ${methodName}.`,
+          returnPoms
+        ),
         inputSchema: inputSchemaFor(parameters),
         parameters,
         returnPoms,
@@ -467,15 +468,14 @@ function toolDescription(
   return undefined;
 }
 
-function generatedToolDescription(
-  methodName: string,
+function toolDescriptionText(
+  description: string,
   returnPoms: readonly string[]
 ) {
-  const returns =
-    returnPoms.length === 0
-      ? ""
-      : ` It may return ${returnPoms.join(" or ")}. Rediscover POM definitions after execution.`;
-  return `Run ${methodName}.${returns}`;
+  if (returnPoms.length === 0) return description;
+  return `${description} Potential return POMs: ${returnPoms.join(
+    ", "
+  )}. Rediscover POM definitions after execution.`;
 }
 
 function toolParameter(

@@ -24,6 +24,9 @@ type ListActions = {
 
 const initialToolNames = [
   "get_page_state",
+  "get_pom_definitions",
+  "click_page_state_ref",
+  "fill_page_state_ref",
   "ListPage.addItem",
   "ListPage.items.archive",
   "ListPage.items.rename",
@@ -165,6 +168,7 @@ test("derives nested object input schemas from POM action types", () => {
           },
         },
       ],
+      returnPoms: [],
     },
   ]);
 });
@@ -413,7 +417,13 @@ test("publishes collection tools only while a component root is live", async ({
   });
   await expect
     .poll(async () => await recordedToolNames(page))
-    .toEqual(["get_page_state", "ListPage.addItem"]);
+    .toEqual([
+      "get_page_state",
+      "get_pom_definitions",
+      "click_page_state_ref",
+      "fill_page_state_ref",
+      "ListPage.addItem",
+    ]);
 
   await executePublishedTool(page, "ListPage.addItem", {
     text: "Restore live component tools",
@@ -481,6 +491,42 @@ test("demonstrates the list app and invokes the generated POM tools from the deb
         type: "object",
         properties: {},
         required: [],
+        additionalProperties: false,
+      },
+    },
+    {
+      name: "get_pom_definitions",
+      description:
+        "Return one named POM definition or all definitions reachable from registered POMs, including referenced POMs that are not currently visible. Definitions describe possible structure and actions; use get_page_state to determine what is currently available.",
+      inputSchema: {
+        type: "object",
+        properties: { name: { type: "string" } },
+        required: [],
+        additionalProperties: false,
+      },
+    },
+    {
+      name: "click_page_state_ref",
+      description:
+        "Click a real element ref from get_page_state. The ref is resolved against a fresh capture before the action. Call get_page_state again afterward before choosing the next action.",
+      inputSchema: {
+        type: "object",
+        properties: { ref: { type: "string" } },
+        required: ["ref"],
+        additionalProperties: false,
+      },
+    },
+    {
+      name: "fill_page_state_ref",
+      description:
+        "Fill a real editable element ref from get_page_state with text. The ref is resolved against a fresh capture before the action. Call get_page_state again afterward before choosing the next action.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          ref: { type: "string" },
+          value: { type: "string" },
+        },
+        required: ["ref", "value"],
         additionalProperties: false,
       },
     },
