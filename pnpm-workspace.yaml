@@ -2,6 +2,7 @@ packages:
   - apps/*
   - packages/*
 allowBuilds:
+  esbuild: true
   lefthook: true
 minimumReleaseAgeExclude:
   - "@vue/compiler-core@3.5.42"
