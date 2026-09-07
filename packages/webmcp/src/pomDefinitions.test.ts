@@ -98,7 +98,15 @@ describe("POM definition catalog", () => {
         {
           name: "StartPage",
           description: "Start here.",
-          children: ["Sidebar"],
+          children: [
+            {
+              memberName: "sidebar",
+              kind: "component",
+              access: "field",
+              componentClassName: "Sidebar",
+              collection: false,
+            },
+          ],
           actions: [
             {
               name: "open",
@@ -137,7 +145,7 @@ describe("POM definition catalog", () => {
     expect(definitions.getPomDefinitions()).toEqual({ definitions: [] });
   });
 
-  it("returns explicit unknown and ambiguous lookup outcomes while deduplicating identical definitions", async () => {
+  it("uses one result shape for all, named, unknown, and duplicate definitions", async () => {
     const { definitions, registry } = await setup();
     class FirstPage {}
     class SecondPage {}
@@ -146,19 +154,9 @@ describe("POM definition catalog", () => {
     const shared = manifest("SharedPage", { description: "Shared." });
     registry.registerCompiledPom(FirstPage, shared);
     registry.registerCompiledPom(SecondPage, shared);
-    registry.registerCompiledPom(
-      ConflictingPage,
-      manifest("ConflictingPage", { description: "First definition." })
-    );
-    registry.registerCompiledPom(
-      OtherConflictingPage,
-      manifest("ConflictingPage", { description: "Second definition." })
-    );
     const registrations = [
       registry.createPageRegistration(FirstPage),
       registry.createPageRegistration(SecondPage),
-      registry.createPageRegistration(ConflictingPage),
-      registry.createPageRegistration(OtherConflictingPage),
     ];
 
     expect(definitions.getPomDefinitions()).toEqual({
@@ -171,14 +169,39 @@ describe("POM definition catalog", () => {
         },
       ],
     });
-    expect(definitions.getPomDefinition("MissingPom")).toEqual({
-      status: "unknown",
-      name: "MissingPom",
+    expect(definitions.getPomDefinitions("SharedPage")).toEqual({
+      definitions: [
+        {
+          name: "SharedPage",
+          description: "Shared.",
+          children: [],
+          actions: [],
+        },
+      ],
     });
-    expect(definitions.getPomDefinition("ConflictingPage")).toEqual({
-      status: "ambiguous",
-      name: "ConflictingPage",
+    expect(definitions.getPomDefinitions("MissingPom")).toEqual({
+      definitions: [],
     });
+
+    registry.registerCompiledPom(
+      ConflictingPage,
+      manifest("ConflictingPage", { description: "First definition." })
+    );
+    registry.registerCompiledPom(
+      OtherConflictingPage,
+      manifest("ConflictingPage", { description: "Second definition." })
+    );
+    registrations.push(
+      registry.createPageRegistration(ConflictingPage),
+      registry.createPageRegistration(OtherConflictingPage)
+    );
+
+    expect(() => definitions.getPomDefinitions("ConflictingPage")).toThrow(
+      'POM definition "ConflictingPage" is ambiguous.'
+    );
+    expect(() => definitions.getPomDefinitions()).toThrow(
+      'POM definition "ConflictingPage" is ambiguous.'
+    );
 
     registrations.forEach((registration) => registration.dispose());
   });
@@ -197,22 +220,23 @@ describe("POM definition catalog", () => {
     );
     const registration = registry.createPageRegistration(ToolPage);
 
-    const definition = definitions.getPomDefinition("ToolPage");
+    const definition = definitions.getPomDefinitions("ToolPage");
     const callable = registry.listRegisteredPomTools()[0];
     expect(definition).toEqual({
-      status: "found",
-      definition: {
-        name: "ToolPage",
-        children: [],
-        actions: [
-          {
-            name: "run",
-            description: callable?.description,
-            inputSchema: callable?.inputSchema,
-            returnPoms: [],
-          },
-        ],
-      },
+      definitions: [
+        {
+          name: "ToolPage",
+          children: [],
+          actions: [
+            {
+              name: "run",
+              description: callable?.description,
+              inputSchema: callable?.inputSchema,
+              returnPoms: [],
+            },
+          ],
+        },
+      ],
     });
 
     registration.dispose();

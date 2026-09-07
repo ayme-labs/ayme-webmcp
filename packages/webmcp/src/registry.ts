@@ -86,6 +86,12 @@ function resetRegisteredPoms() {
   if (hadRegistrations) notifySubscribers();
 }
 
+export function requireAymeRuntimePage(): Page {
+  if (!browserPage)
+    throw new Error("Configure the Ayme browser runtime before interacting.");
+  return browserPage;
+}
+
 export function registerCompiledPom(PomClass: object, manifest: PomManifest) {
   compiledPoms.set(PomClass, manifest);
 }

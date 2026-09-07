@@ -11,6 +11,7 @@ export {
   listRegisteredPoms,
   probeRegisteredPomMembers,
   registerCompiledPom,
+  requireAymeRuntimePage,
   subscribeToRegisteredPoms,
 } from "./registry";
 export type {

@@ -81,18 +81,13 @@ export type PomDefinitionAction = {
 export type PomDefinition = {
   name: string;
   description?: string;
-  children: readonly string[];
+  children: readonly PomMemberManifest[];
   actions: readonly PomDefinitionAction[];
 };
 
 export type PomDefinitionsResult = {
   definitions: readonly PomDefinition[];
 };
-
-export type PomDefinitionLookupResult =
-  | { status: "found"; definition: PomDefinition }
-  | { status: "unknown"; name: string }
-  | { status: "ambiguous"; name: string };
 
 export type RegisteredPomTool = ModelContextTool<
   Record<string, unknown>,

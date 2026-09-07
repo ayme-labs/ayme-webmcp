@@ -2,7 +2,7 @@ import { WebMCP } from "@ayme-dev/webmcp";
 
 @WebMCP({ description: "A page that opens related POMs." })
 export class ReturningPom {
-  @WebMCP.tool()
+  @WebMCP.tool({ description: "Open a related POM." })
   async open(): Promise<FirstReturnPom | Promise<SecondReturnPom> | string> {
     return new FirstReturnPom();
   }
