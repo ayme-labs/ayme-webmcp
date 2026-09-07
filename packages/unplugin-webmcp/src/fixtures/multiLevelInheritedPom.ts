@@ -1,12 +1,12 @@
-import type { BrowserLocator } from "@ayme-dev/webmcp";
+import type { Locator } from "@playwright/test";
 
 import { WebMCP } from "./webmcp";
 
 class BasePom {
-  readonly inheritedButton!: BrowserLocator;
-  declare readonly overriddenButton: BrowserLocator;
-  private readonly basePrivateButton!: BrowserLocator;
-  protected readonly baseProtectedButton!: BrowserLocator;
+  readonly inheritedButton!: Locator;
+  declare readonly overriddenButton: Locator;
+  private readonly basePrivateButton!: Locator;
+  protected readonly baseProtectedButton!: Locator;
 
   @WebMCP.tool({ description: "Use the inherited base tool." })
   inheritedTool() {}
@@ -24,11 +24,10 @@ class BasePom {
 }
 
 class MiddlePom extends BasePom {
-  readonly middleButton!: BrowserLocator;
-  override readonly overriddenButton: BrowserLocator =
-    undefined as unknown as BrowserLocator;
-  private readonly middlePrivateButton!: BrowserLocator;
-  protected readonly middleProtectedButton!: BrowserLocator;
+  readonly middleButton!: Locator;
+  override readonly overriddenButton: Locator = undefined as unknown as Locator;
+  private readonly middlePrivateButton!: Locator;
+  protected readonly middleProtectedButton!: Locator;
 
   @WebMCP.tool({ description: "Use the inherited middle tool." })
   middleTool() {}
@@ -41,11 +40,10 @@ class MiddlePom extends BasePom {
 
 @WebMCP
 export class MultiLevelInheritedPom extends MiddlePom {
-  readonly ownButton!: BrowserLocator;
-  override readonly overriddenButton: BrowserLocator =
-    undefined as unknown as BrowserLocator;
-  private readonly finalPrivateButton!: BrowserLocator;
-  protected readonly finalProtectedButton!: BrowserLocator;
+  readonly ownButton!: Locator;
+  override readonly overriddenButton: Locator = undefined as unknown as Locator;
+  private readonly finalPrivateButton!: Locator;
+  protected readonly finalProtectedButton!: Locator;
 
   @WebMCP.tool({ description: "Use the final override tool." })
   override overriddenTool(value: string) {

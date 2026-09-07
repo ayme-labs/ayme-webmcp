@@ -1,5 +1,5 @@
 import { WebMCP } from "@ayme-dev/webmcp";
-import type { Locator } from "playwright";
+import type { Locator } from "@playwright/test";
 
 @WebMCP
 export class ArchiveDialog {

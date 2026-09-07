@@ -7,7 +7,7 @@ This is a throwaway browser-side experiment for the Ayme WebMCP design. The page
 - `@WebMCP` and `@WebMCP.tool()` choose the production WebMCP surface. Tool descriptions come from the decorator.
 - Registered page tools use their fully qualified POM method name, such as `ListPage.addItem`. A collection component action is registered once, at its collection path, such as `ListPage.items.archive`.
 - A collection component action receives a generated `index` followed by an `args` object derived from its TypeScript method parameters: `ListPage.items.archive({ index: 0, args: {} })`.
-- The bundler-neutral POM compiler reads the nearest `tsconfig.json` and derives each decorated method's input schema and each public `BrowserLocator` member as POM metadata. The Vite plugin is a thin adapter that places this metadata in the browser bundle. It derives nested, JSON-shaped object inputs too; the decorator does not duplicate parameter types or schemas.
+- The bundler-neutral POM compiler reads the nearest `tsconfig.json` and derives each decorated method's input schema and each public `Locator` member as POM metadata. The Vite plugin is a thin adapter that places this metadata in the browser bundle. It derives nested, JSON-shaped object inputs too; the decorator does not duplicate parameter types or schemas.
 - POM metadata also describes components constructed from a locator root, including repeated components exposed as paths such as `items[0].archiveButton`.
 - The Vue-only `useAymeExperiment()` composable registers the imported POM instance. No `.ayme/index.ts` participates in browser registration.
 - The runtime publishes the same registered tool objects to `document.modelContext` and the in-page debug console.

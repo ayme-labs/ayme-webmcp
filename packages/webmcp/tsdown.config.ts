@@ -1,8 +1,8 @@
-import { playwrightInjectedPlugin } from "@ayme-dev/playwright-browser/tsdown";
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
   clean: true,
+  copy: ["THIRD_PARTY_NOTICES.txt"],
   deps: {
     alwaysBundle: [
       "@ayme-dev/playwright-browser",
@@ -12,5 +12,4 @@ export default defineConfig({
   dts: true,
   entry: ["src/index.ts", "src/internal.ts"],
   format: ["esm"],
-  plugins: [playwrightInjectedPlugin()],
 });

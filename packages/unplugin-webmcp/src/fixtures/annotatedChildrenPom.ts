@@ -1,15 +1,11 @@
-import type { BrowserLocator } from "@ayme-dev/webmcp";
+import type { Locator } from "@playwright/test";
 
 import { WebMCP } from "./webmcp";
 
-interface Locator {
-  count(): Promise<number>;
-}
-
 @WebMCP
 class AnnotatedComponent {
-  readonly root!: BrowserLocator;
-  readonly child!: BrowserLocator;
+  readonly root!: Locator;
+  readonly child!: Locator;
 }
 
 class DerivedComponent extends AnnotatedComponent {}
@@ -50,7 +46,7 @@ export class AnnotatedChildrenPom {
   readonly setChildren!: Set<AnnotatedComponent>;
   readonly iterableChildren!: Iterable<AnnotatedComponent>;
 
-  readonly browserLocator!: BrowserLocator;
+  readonly browserLocator!: Locator;
 
   get locatorGetter(): Locator {
     return undefined as unknown as Locator;

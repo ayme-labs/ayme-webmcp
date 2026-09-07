@@ -11,11 +11,10 @@ import type {
   ToolManifest,
 } from "./contracts";
 import {
-  BrowserLocatorImpl,
-  type BrowserLocator,
-  type BrowserPage,
-} from "./browserPage";
-import type { Page } from "@playwright/test";
+  isAymeLocator,
+  resolveLocatorElements,
+} from "@ayme-dev/playwright-browser";
+import type { Locator, Page } from "@playwright/test";
 
 export type PageObjectConstructor<T extends object = object> = new (
   page: Page
@@ -43,14 +42,14 @@ export type RegisteredPomTarget = {
   element: Element;
 };
 
-let browserPage: BrowserPage | undefined;
+let browserPage: Page | undefined;
 const compiledPoms = new WeakMap<object, PomManifest>();
 const registeredPoms = new Set<RegisteredPom>();
 const subscribers = new Set<() => void>();
 let mutationObserver: MutationObserver | undefined;
 let probeTimer: ReturnType<typeof setTimeout> | undefined;
 
-export function configureAymeRuntime(page: BrowserPage) {
+export function configureAymeRuntime(page: Page) {
   browserPage = page;
 }
 
@@ -73,7 +72,7 @@ export function createPageRegistration<T extends object>(
       "The imported page object has no compiler-derived Ayme metadata."
     );
 
-  const instance = new PomClass(page as unknown as Page);
+  const instance = new PomClass(page);
   const registration: RegisteredPom = {
     id: compiledPom.className,
     instance,
@@ -509,7 +508,7 @@ async function collectRegisteredPomRoots(
         const path = member.collection
           ? `${prefix}.${member.memberName}[${index}]`
           : `${prefix}.${member.memberName}`;
-        const elements = browserLocatorElements(candidate.root);
+        const elements = locatorElements(candidate.root);
         if (elements.length === 1) {
           const element = elements[0];
           if (element) roots.push({ label: path, element });
@@ -550,8 +549,8 @@ async function collectPomTargets(
     try {
       const value = await readMember(instance, member);
       if (member.kind === "locator") {
-        if (!isBrowserLocator(value)) continue;
-        for (const element of browserLocatorElements(value)) {
+        if (!isLocator(value)) continue;
+        for (const element of locatorElements(value)) {
           targets.push({ path: memberPath, element });
           for (const aliasPath of memberAliasPaths)
             targets.push({ path: aliasPath, element });
@@ -572,7 +571,7 @@ async function collectPomTargets(
           ...memberAliasPaths,
           component.className,
         ];
-        for (const element of browserLocatorElements(candidate.root)) {
+        for (const element of locatorElements(candidate.root)) {
           targets.push({ path: `${componentPath}.root`, element });
           for (const aliasPath of componentAliases) {
             targets.push({ path: aliasPath, element });
@@ -616,7 +615,7 @@ async function probeMembers(
     try {
       const value = await readMember(instance, member);
       if (member.kind === "locator") {
-        if (!isBrowserLocator(value))
+        if (!isLocator(value))
           throw new Error(`POM member ${memberPath} is not a browser locator.`);
         observations.push({
           memberName: memberPath,
@@ -814,16 +813,16 @@ function isCallable(value: unknown): value is (...args: unknown[]) => unknown {
   return typeof value === "function";
 }
 
-function isBrowserLocator(value: unknown): value is BrowserLocator {
-  return isRecord(value) && typeof value.count === "function";
+function isLocator(value: unknown): value is Locator {
+  return isAymeLocator(value);
 }
 
-function browserLocatorElements(locator: BrowserLocator): Element[] {
-  return locator instanceof BrowserLocatorImpl ? locator.resolveElements() : [];
+function locatorElements(locator: Locator): Element[] {
+  return resolveLocatorElements(locator);
 }
 
-function isPomComponent(value: unknown): value is { root: BrowserLocator } {
-  return isRecord(value) && isBrowserLocator(value.root);
+function isPomComponent(value: unknown): value is { root: Locator } {
+  return isRecord(value) && isLocator(value.root);
 }
 
 function asComponents(value: unknown): unknown[] {
