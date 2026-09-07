@@ -1,37 +1,11 @@
 import type {
-  JsonValue,
   PomComponentManifest,
   PomDefinition,
   PomDefinitionAction,
   PomDefinitionsResult,
   PomManifest,
 } from "./contracts";
-import type { ModelContextTool } from "@mcp-b/webmcp-types";
 import { listRegisteredPoms } from "./registry";
-
-type GetPomDefinitionsInput = { name?: string };
-
-export const getPomDefinitionsTool = {
-  name: "get_pom_definitions",
-  description:
-    "Return one named POM definition or all definitions reachable from registered POMs, including referenced POMs that are not currently visible. Definitions describe possible structure and actions; use get_page_state to determine what is currently available.",
-  inputSchema: {
-    type: "object",
-    properties: { name: { type: "string" } },
-    required: [],
-    additionalProperties: false,
-  } as const,
-  execute: async (input: unknown): Promise<JsonValue> => {
-    const name =
-      typeof input === "object" &&
-      input !== null &&
-      "name" in input &&
-      typeof input.name === "string"
-        ? input.name
-        : undefined;
-    return JSON.parse(JSON.stringify(getPomDefinitions(name))) as JsonValue;
-  },
-} satisfies ModelContextTool<GetPomDefinitionsInput, JsonValue>;
 
 type DefinitionNode = {
   name: string;

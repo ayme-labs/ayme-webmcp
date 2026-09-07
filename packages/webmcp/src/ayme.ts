@@ -1,4 +1,5 @@
 import type { PomDefinitionsResult } from "./contracts";
+import { getPageContextForDocument, type PageContext } from "./pageContext";
 import { getPomDefinitions } from "./pomDefinitions";
 import {
   getPageStateForDocument,
@@ -9,6 +10,7 @@ import { createRefInteractions } from "./refInteractions";
 import { requireAymeRuntimePage } from "./registry";
 
 export type Ayme = {
+  getPageContext(name?: string): Promise<PageContext>;
   getPageState(): Promise<PageState>;
   getPomDefinitions(name?: string): PomDefinitionsResult;
   click(ref: AriaRef): Promise<void>;
@@ -16,6 +18,8 @@ export type Ayme = {
 };
 
 export const ayme: Ayme = {
+  getPageContext: (name) =>
+    getPageContextForDocument(requireCurrentDocument(), name),
   getPageState: async () => getPageStateForDocument(requireCurrentDocument()),
   getPomDefinitions,
   click: async (ref) =>

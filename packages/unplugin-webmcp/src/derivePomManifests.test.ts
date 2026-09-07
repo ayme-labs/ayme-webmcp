@@ -244,7 +244,7 @@ describe("derivePomManifests", () => {
           methodName: "open",
           returnPoms: ["FirstReturnPom", "SecondReturnPom"],
           description:
-            "Open a related POM. Potential return POMs: FirstReturnPom, SecondReturnPom. Rediscover POM definitions after execution.",
+            "Open a related POM. Potential return POMs: FirstReturnPom, SecondReturnPom.",
         },
       ],
       components: expect.arrayContaining([

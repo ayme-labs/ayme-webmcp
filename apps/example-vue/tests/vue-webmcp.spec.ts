@@ -23,8 +23,7 @@ type ListActions = {
 };
 
 const initialToolNames = [
-  "get_page_state",
-  "get_pom_definitions",
+  "get_page_context",
   "click_page_state_ref",
   "fill_page_state_ref",
   "ListPage.addItem",
@@ -204,23 +203,32 @@ test("publishes the current page as ref-bearing ARIA state", async ({
   await page.goto("/");
   await expect
     .poll(async () =>
-      (await recordedToolNames(page)).includes("get_page_state")
+      (await recordedToolNames(page)).includes("get_page_context")
     )
     .toBe(true);
 
   const result = await page.evaluate(async () => {
     const tool = (
       document.modelContext as unknown as RecordingDriver
-    ).tools.find((candidate) => candidate.name === "get_page_state");
-    if (!tool) throw new Error("get_page_state WebMCP tool was not published.");
+    ).tools.find((candidate) => candidate.name === "get_page_context");
+    if (!tool)
+      throw new Error("get_page_context WebMCP tool was not published.");
     return {
       hasPomIdentity: "pomId" in tool,
-      snapshot: await tool.execute({}),
+      context: await tool.execute({}),
     };
   });
 
   expect(result.hasPomIdentity).toBe(false);
-  const { snapshot } = result;
+  const context = result.context;
+  expect(context).toBeTruthy();
+  if (!context || typeof context !== "object" || Array.isArray(context)) return;
+  const payload = context as {
+    pomDefinitions?: unknown;
+    structure?: unknown;
+  };
+  expect(Array.isArray(payload.pomDefinitions)).toBe(true);
+  const snapshot = payload.structure;
   expect(typeof snapshot).toBe("string");
   if (typeof snapshot !== "string") return;
 
@@ -418,8 +426,7 @@ test("publishes collection tools only while a component root is live", async ({
   await expect
     .poll(async () => await recordedToolNames(page))
     .toEqual([
-      "get_page_state",
-      "get_pom_definitions",
+      "get_page_context",
       "click_page_state_ref",
       "fill_page_state_ref",
       "ListPage.addItem",
@@ -484,20 +491,9 @@ test("demonstrates the list app and invokes the generated POM tools from the deb
 
   expect(tools).toEqual([
     {
-      name: "get_page_state",
+      name: "get_page_context",
       description:
-        "Return the top-level structural page state, decorated with root POM labels. Real nodes use Playwright refs; synthetic POM roots use observation-only synthetic refs. Capture is limited to the top-level document.",
-      inputSchema: {
-        type: "object",
-        properties: {},
-        required: [],
-        additionalProperties: false,
-      },
-    },
-    {
-      name: "get_pom_definitions",
-      description:
-        "Return one named POM definition or all definitions reachable from registered POMs, including referenced POMs that are not currently visible. Definitions describe possible structure and actions; use get_page_state to determine what is currently available.",
+        "Return the current structural page state together with registered POM definitions, including referenced POMs that are not currently visible.",
       inputSchema: {
         type: "object",
         properties: { name: { type: "string" } },
@@ -508,7 +504,7 @@ test("demonstrates the list app and invokes the generated POM tools from the deb
     {
       name: "click_page_state_ref",
       description:
-        "Click a real element ref from get_page_state. The ref is resolved against a fresh capture before the action. Call get_page_state again afterward before choosing the next action.",
+        "Click a real element ref from get_page_context. The ref is resolved against a fresh capture before the action.",
       inputSchema: {
         type: "object",
         properties: { ref: { type: "string" } },
@@ -519,7 +515,7 @@ test("demonstrates the list app and invokes the generated POM tools from the deb
     {
       name: "fill_page_state_ref",
       description:
-        "Fill a real editable element ref from get_page_state with text. The ref is resolved against a fresh capture before the action. Call get_page_state again afterward before choosing the next action.",
+        "Fill a real editable element ref from get_page_context with text. The ref is resolved against a fresh capture before the action.",
       inputSchema: {
         type: "object",
         properties: {
