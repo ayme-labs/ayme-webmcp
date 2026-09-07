@@ -1,43 +1,43 @@
-// The virtual module declaration must follow this JIT entry into consumer typechecks.
-// eslint-disable-next-line @typescript-eslint/triple-slash-reference
-/// <reference path="./playwright-injected.d.ts" />
+import type { Page } from "@playwright/test";
 
-import {
-  InjectedScript,
-  type CaptureAriaSnapshotResult,
-} from "virtual:ayme-playwright-injected";
+import { injectedScriptFor } from "./injected";
+import { PageImpl } from "./page";
 
-export type { CaptureAriaSnapshotResult } from "virtual:ayme-playwright-injected";
+export { AdapterJSHandle } from "./page";
 
-const injectedScripts = new WeakMap<Window, InjectedScript>();
+export type {
+  BrowserInteractionPacing,
+  CaptureAriaSnapshotResult,
+  TraceEntry,
+} from "./types";
+
+export {
+  isAymeLocator,
+  LOCATOR_BRAND,
+  resolveLocatorElements,
+} from "./locator";
+
+// ── ARIA capture ────────────────────────────────────────────────────
 
 export function ariaSnapshot(root: Element) {
   return injectedScriptFor(root).ariaSnapshot(root, { mode: "ai" });
 }
 
-export function captureAriaSnapshot(root: Element): CaptureAriaSnapshotResult {
+export function captureAriaSnapshot(root: Element) {
   return injectedScriptFor(root).captureAriaSnapshot(root);
 }
 
-function injectedScriptFor(root: Element) {
-  const browserWindow = root.ownerDocument.defaultView;
-  if (!browserWindow)
-    throw new Error("Cannot capture ARIA state without a browser Window.");
+// ── Page factory ────────────────────────────────────────────────────
 
-  let injectedScript = injectedScripts.get(browserWindow);
-  if (!injectedScript) {
-    injectedScript = new InjectedScript(browserWindow, {
-      browserName: "chromium",
-      customEngines: [],
-      frameSeq: 0,
-      isUnderTest: false,
-      isUtilityWorld: false,
-      sdkLanguage: "javascript",
-      shouldPrependErrorPrefix: false,
-      stableRafCount: 0,
-      testIdAttributeName: "data-testid",
-    });
-    injectedScripts.set(browserWindow, injectedScript);
-  }
-  return injectedScript;
+type CreatePageOptions = {
+  onTrace?: (entry: import("./types").TraceEntry) => void;
+  pacing?: import("./types").BrowserInteractionPacing;
+};
+
+export function createPage(options: CreatePageOptions = {}): Page {
+  return PageImpl.fromWindow(
+    window,
+    options.onTrace,
+    options.pacing
+  ) as unknown as Page;
 }

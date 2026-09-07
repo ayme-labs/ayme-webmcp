@@ -19,14 +19,25 @@ export function playwrightInjectedPlugin() {
       if (id !== resolvedPlaywrightInjectedId) return;
       const source = readInjectedScriptSource();
       return [
+        `import yaml from ${JSON.stringify(yamlBrowserPath())};`,
         "const module = { exports: {} };",
         "const exports = module.exports;",
         source,
         "const AymeInjectedScript = module.exports.InjectedScript();",
-        "export { AymeInjectedScript as InjectedScript };",
+        "const aymeGetByTestIdSelector = getByTestIdSelector;",
+        "const aymeParseAriaSnapshot = (text) => { const result = parseAriaSnapshot(yaml, text); if (result.errors.length) throw new Error(result.errors[0].message); return result.fragment; };",
+        "export { AymeInjectedScript as InjectedScript, aymeGetByTestIdSelector as getByTestIdSelector, aymeParseAriaSnapshot as parseAriaSnapshot };",
       ].join("\n");
     },
   };
+}
+
+function yamlBrowserPath() {
+  const require = createRequire(import.meta.url);
+  return resolve(
+    dirname(require.resolve("yaml/package.json")),
+    "browser/index.js"
+  );
 }
 
 function readInjectedScriptSource() {
