@@ -41,6 +41,7 @@ export type PomMemberManifest =
 
 export type PomComponentManifest = {
   className: string;
+  description?: string;
   members: readonly PomMemberManifest[];
   tools: readonly ToolManifest[];
 };
@@ -59,14 +60,39 @@ export type ToolManifest = {
   description: string;
   inputSchema: JsonSchema;
   parameters: readonly ToolParameter[];
+  returnPoms?: readonly string[];
 };
 
 export type PomManifest = {
   className: string;
+  description?: string;
   members: readonly PomMemberManifest[];
   components: readonly PomComponentManifest[];
   tools: readonly ToolManifest[];
 };
+
+export type PomDefinitionAction = {
+  name: string;
+  description: string;
+  inputSchema: JsonSchema;
+  returnPoms: readonly string[];
+};
+
+export type PomDefinition = {
+  name: string;
+  description?: string;
+  children: readonly string[];
+  actions: readonly PomDefinitionAction[];
+};
+
+export type PomDefinitionsResult = {
+  definitions: readonly PomDefinition[];
+};
+
+export type PomDefinitionLookupResult =
+  | { status: "found"; definition: PomDefinition }
+  | { status: "unknown"; name: string }
+  | { status: "ambiguous"; name: string };
 
 export type RegisteredPomTool = ModelContextTool<
   Record<string, unknown>,
