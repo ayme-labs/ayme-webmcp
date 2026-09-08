@@ -36,6 +36,17 @@ async function applyPluginConfig(
 }
 
 describe("aymeWebMcp Vite integration", () => {
+  it("accepts projects with omitted and explicit default test IDs", async () => {
+    await expect(
+      applyPluginConfig(
+        { root: resolve(__dirname, "fixtures/playwright-default-projects") },
+        { playwright: { config: "playwright.config.ts" } }
+      )
+    ).resolves.toEqual({
+      define: { [TEST_ID_ATTRIBUTE_DEFINE]: '"data-testid"' },
+      optimizeDeps: { exclude: ["@playwright/test"] },
+    });
+  });
   it("adds the Playwright test runner exclusion when no optimizer config exists", async () => {
     await expect(applyPluginConfig({})).resolves.toEqual({
       define: { [TEST_ID_ATTRIBUTE_DEFINE]: '"data-testid"' },

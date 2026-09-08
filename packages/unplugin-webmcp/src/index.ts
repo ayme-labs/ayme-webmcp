@@ -3,7 +3,6 @@ import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { PlaywrightTestConfig } from "@playwright/test";
 import { createUnplugin, type UnpluginFactory } from "unplugin";
 
 import {
@@ -19,12 +18,13 @@ const ACTION_TIMEOUT_DEFINE = "__AYME_PLAYWRIGHT_ACTION_TIMEOUT__";
 const NAVIGATION_TIMEOUT_DEFINE = "__AYME_PLAYWRIGHT_NAVIGATION_TIMEOUT__";
 const SUPPORTED_PLAYWRIGHT_VERSION = /^1\.62\.\d+(?:[-+].*)?$/;
 
-type SupportedPlaywrightUse = Partial<
-  Pick<
-    NonNullable<PlaywrightTestConfig["use"]>,
-    "testIdAttribute" | "actionTimeout" | "navigationTimeout"
-  >
->;
+// Keep published declarations usable without the optional Playwright peer.
+// The type contract test checks this subset against Playwright's exported type.
+type SupportedPlaywrightUse = {
+  testIdAttribute?: string;
+  actionTimeout?: number;
+  navigationTimeout?: number;
+};
 
 export type AymePlaywrightOptions = {
   config?: string;
@@ -32,11 +32,7 @@ export type AymePlaywrightOptions = {
   use?: SupportedPlaywrightUse;
 };
 
-type SupportedPlaywrightSettings = {
-  testIdAttribute?: string;
-  actionTimeout?: number;
-  navigationTimeout?: number;
-};
+type SupportedPlaywrightSettings = SupportedPlaywrightUse;
 
 type PlaywrightConfigLoader = {
   loadConfigFromFile(configFile: string): Promise<unknown>;
@@ -331,6 +327,7 @@ function selectPlaywrightSettings(
     return {
       name: typeof name === "string" ? name : "",
       settings: {
+        testIdAttribute: DEFAULT_TEST_ID_ATTRIBUTE,
         ...topLevel,
         ...supportedSettingsFromUse(
           project.use,
