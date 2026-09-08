@@ -2,16 +2,21 @@ import { captureAriaSnapshot } from "@ayme-dev/playwright-browser";
 import {
   AriaRefSchema,
   renderCompactStructuralNodeForest,
-  StructuralProjection,
+  projectStructuralNodeForest,
   StructuralTree,
   SyntheticAriaRefFactory,
   type AriaRef as StructuralAriaRef,
-  type OmittedCapturedRoot,
-  type ReferencedCapturedRoot,
-  type StructuralNodeProperty,
-} from "@ayme-dev/structural-observation";
+  type ProjectedStructuralProperty,
+} from "@ayme-dev/core/structural-observation";
 import type { ModelContextTool } from "@mcp-b/webmcp-types";
 import { listRegisteredPomRoots } from "./registry";
+
+import {
+  placeCapturedRoots,
+  type OmittedCapturedRoot,
+  type ReferencedCapturedRoot,
+} from "./pomRootPlacement";
+import { parseCapturedTree } from "./capturedTree";
 
 const inputSchema = {
   type: "object",
@@ -329,14 +334,8 @@ async function captureCurrentPageState(
       root.contains(registration.element)
   );
   const capture = captureAriaSnapshot(root);
-  const retainedTree = StructuralTree.fromPlaywrightAriaSnapshotYaml(
-    capture.distilledText,
-    refFactory
-  );
-  const fullTree = StructuralTree.fromPlaywrightAriaSnapshotYaml(
-    capture.fullText,
-    refFactory
-  );
+  const retainedTree = parseCapturedTree(capture.distilledText, refFactory);
+  const fullTree = parseCapturedTree(capture.fullText, refFactory);
 
   const coalesced = coalesceByElement(registrations);
   const referenced: {
@@ -362,9 +361,11 @@ async function captureCurrentPageState(
 
   sortOuterToInner(omitted);
 
-  const refPlacement = retainedTree.placeCapturedRoots(
+  const refPlacement = placeCapturedRoots(
+    retainedTree,
     fullTree,
-    referenced.map((r) => r.candidate)
+    referenced.map((r) => r.candidate),
+    refFactory
   );
   let currentTree = refPlacement.tree;
   const labelsByRef = new Map<StructuralAriaRef, string[]>();
@@ -382,7 +383,12 @@ async function captureCurrentPageState(
       currentTree,
       fullTree
     );
-    const placement = currentTree.placeCapturedRoots(fullTree, [candidate]);
+    const placement = placeCapturedRoots(
+      currentTree,
+      fullTree,
+      [candidate],
+      refFactory
+    );
     currentTree = placement.tree;
     const ref = placement.refs[0] ?? null;
     if (ref !== null) {
@@ -391,21 +397,41 @@ async function captureCurrentPageState(
     }
   }
 
-  const properties = new Map<StructuralAriaRef, StructuralNodeProperty[]>();
+  const inlineLabels = new Map<StructuralAriaRef, string>();
+  const properties = new Map<
+    StructuralAriaRef,
+    ProjectedStructuralProperty[]
+  >();
   for (const [ref, labels] of labelsByRef) {
     const sorted = [...labels].sort();
-    const value: string | readonly string[] =
-      sorted.length === 1 ? sorted[0]! : sorted;
-    properties.set(ref, [{ name: "pom", value }]);
+    const value = sorted.length === 1 ? sorted[0]! : sorted;
+    if (
+      typeof value === "string" &&
+      /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[\d+\])*$/.test(value)
+    )
+      inlineLabels.set(ref, value);
+    else properties.set(ref, [{ key: "pom", label: "pom", value }]);
   }
-
-  const projected = new StructuralProjection().project(currentTree, properties);
-  const text = renderCompactStructuralNodeForest({
-    roots: projected,
-    structuralNode: (node) => node.node,
-    children: (node) => node.children,
-    properties: (node) => node.properties,
-  });
+  const projected = projectStructuralNodeForest(
+    {
+      roots: currentTree.getRootNodes(),
+      structuralNode: (node) =>
+        inlineLabels.has(node.ref) || node.ref.startsWith("s_")
+          ? node.copy({ role: "generic" })
+          : node,
+      children: (node) => node.children,
+    },
+    {
+      includeIdentity: false,
+      includeStatus: false,
+      prefixes: (node) => [
+        node.ref,
+        ...(inlineLabels.has(node.ref) ? [inlineLabels.get(node.ref)!] : []),
+      ],
+      properties: (node) => properties.get(node.ref) ?? [],
+    }
+  );
+  const text = renderCompactStructuralNodeForest(projected);
   const currentRefs = new Set<AriaRef>(currentTree.getAllRefs());
   const elementsByRef = new Map<AriaRef, Element>(elementsBySyntheticRef);
   for (const [element, rawRef] of capture.refsByElement) {

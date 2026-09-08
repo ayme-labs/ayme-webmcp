@@ -36,7 +36,7 @@ function renderNode(
   }
 
   const header = [...node.prefixes, statusToken, formatNodeHeader(node)]
-    .filter((value): value is string => value !== undefined)
+    .filter((value): value is string => value !== undefined && value !== "")
     .join(" ");
   const inlineText = node.children.filter(
     (child): child is string => typeof child === "string"

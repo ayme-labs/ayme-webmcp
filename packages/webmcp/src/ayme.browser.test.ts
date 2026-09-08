@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import ayme from "./index";
-import { AriaRefSchema } from "@ayme-dev/structural-observation";
+import { AriaRefSchema } from "@ayme-dev/core/structural-observation";
 
 describe("the public Ayme page state facade in Chromium", () => {
   it("resolves live elements and retargets historical refs through replacements", async () => {
