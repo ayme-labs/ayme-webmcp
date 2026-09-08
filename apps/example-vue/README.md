@@ -9,18 +9,36 @@ This is a throwaway browser-side experiment for the Ayme WebMCP design. The page
 - A collection component action receives a generated `index` followed by an `args` object derived from its TypeScript method parameters: `ListPage.items.archive({ index: 0, args: {} })`.
 - The bundler-neutral POM compiler reads the nearest `tsconfig.json` and derives each decorated method's input schema and each public `Locator` member as POM metadata. The Vite plugin is a thin adapter that places this metadata in the browser bundle. It derives nested, JSON-shaped object inputs too; the decorator does not duplicate parameter types or schemas.
 - POM metadata also describes components constructed from a locator root, including repeated components exposed as paths such as `items[0].archiveButton`.
-- The Vue-only `useAymeExperiment()` composable registers the imported POM instance. No `.ayme/index.ts` participates in browser registration.
+- `App.vue` calls `useAymeWebMcp()` to own the runtime and `usePageObject(ListPage)` to register the imported POM instance.
 - The runtime publishes the same registered tool objects to `document.modelContext` and the in-page debug console.
 - The in-page inspector separates the App Model view (POM metadata, actions, executions, and traces) from the Page State view, which renders a YAML snapshot of the demo application with capture-scoped refs and POM decorations.
 - The POM inspector probes registered members against the current DOM and refreshes when the demo changes. It does not use framework bindings or element identity.
 - The browser runtime is DOM-backed. It supports the locator operations used by the POM, including role/name lookup, filling, clicking, and visible/hidden waits, without requiring Playwright at runtime.
 
-Run from this directory:
+## Application setup
+
+Call the lifecycle API once in the application root, before registering Page Objects:
+
+```ts
+import { useAymeWebMcp, usePageObject } from "@ayme-dev/webmcp-vue";
+import { ListPage } from "./playwright/pom/ListPage";
+
+useAymeWebMcp();
+usePageObject(ListPage);
+```
+
+Enable publication with `aymeWebMcp({ publish: true })` in Vite configuration. No page argument or application watcher is required. Components can call `usePageObject` for their own scope, and disposal is automatic.
+
+This example passes a custom page from `useDemoTrace` to add slow typing, click cues, and trace recording. `useDemoRelay` loads the local relay after publication becomes active. `useDemoInspector` manages the debug panel and DOM highlights. These helpers support the demo and are optional for applications.
+
+Disabling publication does not remove Ayme or Page Object code from the bundle. Production code removal is tracked separately in issue #39.
+
+Run from this directory inside the repository's Devbox shell:
 
 ```sh
 pnpm install
 pnpm run typecheck
-pnpm run test:browser
+pnpm run test:e2e
 ```
 
 The browser test injects a minimal `document.modelContext`, verifies the two published tools and their compiler-derived schemas, exercises direct list interaction, then invokes the published collection WebMCP tool and the same tool through the debug console against the real DOM-backed runtime.

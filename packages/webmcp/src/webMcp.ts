@@ -14,8 +14,14 @@ export type WebMcpRegistration = {
   dispose(): void;
 };
 
+export type WebMcpSynchronizationOptions = {
+  signal?: AbortSignal;
+  onError?: (error: unknown) => void;
+};
+
 export async function synchronizeWebMcpTools(
-  driver: WebMcpDriver
+  driver: WebMcpDriver,
+  options: WebMcpSynchronizationOptions = {}
 ): Promise<WebMcpRegistration> {
   const published = new Map<
     string,
@@ -24,6 +30,20 @@ export async function synchronizeWebMcpTools(
   let disposed = false;
   let syncing = false;
   let syncAgain = false;
+  let unsubscribe = () => {};
+
+  const dispose = () => {
+    if (disposed) return;
+    disposed = true;
+    options.signal?.removeEventListener("abort", dispose);
+    unsubscribe();
+    for (const registration of published.values())
+      registration.controller.abort();
+    published.clear();
+  };
+
+  if (options.signal?.aborted) dispose();
+  else options.signal?.addEventListener("abort", dispose, { once: true });
 
   const synchronize = async () => {
     if (syncing) {
@@ -66,39 +86,53 @@ export async function synchronizeWebMcpTools(
     }
   };
 
-  const unsubscribe = subscribeToRegisteredPoms(() => {
-    void synchronize().catch((error) => console.error(error));
-  });
-  await synchronize();
+  if (!disposed) {
+    unsubscribe = subscribeToRegisteredPoms(() => {
+      void synchronize().catch((error) => {
+        dispose();
+        options.onError?.(error);
+      });
+    });
+    try {
+      await synchronize();
+    } catch (error) {
+      dispose();
+      throw error;
+    }
+  }
 
   return {
     message: `Registered ${published.size} WebMCP tools and watching for changes.`,
-    dispose() {
-      if (disposed) return;
-      disposed = true;
-      unsubscribe();
-      for (const registration of published.values())
-        registration.controller.abort();
-      published.clear();
-    },
+    dispose,
   };
 }
 
-export function waitForWebMcpDriver(timeoutMs = 2_000) {
+export function waitForWebMcpDriver(timeoutMs = 2_000, signal?: AbortSignal) {
   const deadline = Date.now() + timeoutMs;
 
   return new Promise<WebMcpDriver | undefined>((resolve) => {
+    let timer: number | undefined;
+    const finish = (driver: WebMcpDriver | undefined) => {
+      if (timer !== undefined) window.clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
+      resolve(driver);
+    };
+    const abort = () => finish(undefined);
     const check = () => {
       if (document.modelContext) {
-        resolve(document.modelContext);
+        finish(document.modelContext);
         return;
       }
       if (Date.now() >= deadline) {
-        resolve(undefined);
+        finish(undefined);
         return;
       }
-      window.setTimeout(check, 50);
+      timer = window.setTimeout(check, 50);
     };
-    check();
+    if (signal?.aborted) finish(undefined);
+    else {
+      signal?.addEventListener("abort", abort, { once: true });
+      check();
+    }
   });
 }

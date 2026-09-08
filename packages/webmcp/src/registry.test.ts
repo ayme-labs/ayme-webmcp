@@ -63,6 +63,33 @@ describe("live Page Object registry", () => {
     vi.unstubAllGlobals();
   });
 
+  it("allows one runtime owner and permits a fresh owner after disposal", async () => {
+    const registry = await import("./registry");
+    const firstPage = {} as Page;
+    const first = registry.createAymeRuntime(firstPage);
+
+    expect(first.page).toBe(firstPage);
+    expect(() => registry.createAymeRuntime({} as Page)).toThrow(
+      "The Ayme runtime already has an active owner."
+    );
+
+    class OwnedPage {}
+    registry.registerCompiledPom(OwnedPage, emptyManifest("OwnedPage"));
+    registry.createPageRegistration(OwnedPage);
+    expect(registry.listRegisteredPoms()).toHaveLength(1);
+
+    first.dispose();
+    expect(registry.listRegisteredPoms()).toHaveLength(0);
+    expect(
+      FakeMutationObserver.instances[0]?.disconnect
+    ).toHaveBeenCalledOnce();
+
+    const secondPage = {} as Page;
+    const second = registry.createAymeRuntime(secondPage);
+    expect(second.page).toBe(secondPage);
+    second.dispose();
+  });
+
   it("observes while at least one Page Object is registered", async () => {
     const registry = await import("./registry");
     const page = {} as Page;
