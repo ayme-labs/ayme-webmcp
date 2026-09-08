@@ -85,11 +85,11 @@ export const test = base.extend<
         ? configuredTestIdAttribute
         : undefined
     );
-    const proxyPage = await createAdapterPage(page, {
-      actionTimeout,
-      navigationTimeout,
-    });
     try {
+      const proxyPage = await createAdapterPage(page, {
+        actionTimeout,
+        navigationTimeout,
+      });
       await use(proxyPage);
     } finally {
       await resetTestIdAttribute();
