@@ -11,7 +11,7 @@ vi.mock("@ayme-dev/playwright-browser", () => ({ captureAriaSnapshot }));
 vi.mock("./registry", () => ({ listRegisteredPomRoots }));
 
 import ayme, { ayme as namedAyme } from "./index";
-import { AriaRefSchema } from "@ayme-dev/structural-observation";
+import { AriaRefSchema } from "@ayme-dev/core/structural-observation";
 
 describe("the public Ayme page state facade", () => {
   beforeEach(() => {

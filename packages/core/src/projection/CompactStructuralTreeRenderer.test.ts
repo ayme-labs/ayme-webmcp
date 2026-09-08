@@ -52,6 +52,21 @@ function renderIncremental(tree: StructuralTree, triggerRef?: AriaRef): string {
 }
 
 describe("CompactStructuralTreeRenderer", () => {
+  it("does not separate a custom prefix from an empty generic header", () => {
+    const tree = parse('- generic [ref=e1]:\n  - button "Save" [ref=e2]');
+    const projected = projectStructuralNodeForest(
+      {
+        roots: tree.getRootNodes(),
+        structuralNode: (node) => node,
+        children: (node) => node.children,
+      },
+      { includeIdentity: false, prefixes: (node) => [node.ref] }
+    );
+    expect(renderCompactStructuralNodeForest(projected)).toBe(
+      '- e1:\n  - e2 button "Save"'
+    );
+  });
+
   it("formats projected structural nodes", () => {
     expect(renderBase(parse('- button "Create" [ref=e1]'))).toBe(
       '- [ref=e1] button "Create"'
