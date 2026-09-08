@@ -1,6 +1,7 @@
 Playwright browser runtime
-Source: https://github.com/enekesabel/playwright/tree/b25d782e3fbdf21abdae60e974e49b78ca07e828
+Source: https://github.com/ayme-labs/playwright/tree/b25d782e3fbdf21abdae60e974e49b78ca07e828
 
+Ayme Labs maintains this fork as the canonical source for the pinned runtime and compatibility corpus.
 This package includes browser runtime code from Playwright, adapted and bundled by Ayme.
 The upstream license and notice follow unchanged.
 

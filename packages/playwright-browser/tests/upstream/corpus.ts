@@ -1,6 +1,7 @@
 export const corpus = {
   source: {
-    repository: "enekesabel/playwright",
+    // Ayme Labs owns the fork used by both the runtime and compatibility corpus.
+    repository: "ayme-labs/playwright",
     commit: "b25d782e3fbdf21abdae60e974e49b78ca07e828",
     basePath: "tests/page",
   },
