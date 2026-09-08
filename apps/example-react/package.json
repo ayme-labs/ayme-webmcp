@@ -1,0 +1,32 @@
+{
+  "name": "@ayme-dev/example-react",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 4191 --strictPort",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings 0",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@ayme-dev/webmcp": "workspace:*",
+    "@ayme-dev/webmcp-react": "workspace:*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@ayme-dev/eslint-config": "workspace:*",
+    "@ayme-dev/typescript-config": "workspace:*",
+    "@ayme-dev/unplugin-webmcp": "workspace:*",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@playwright/test": "^1.62.1",
+    "playwright": "^1.62.1",
+    "@vitejs/plugin-react": "^6.1.1",
+    "vite": "^8.2.2",
+    "typescript": "^6.0.3",
+    "eslint": "^10.9.1"
+  }
+}
