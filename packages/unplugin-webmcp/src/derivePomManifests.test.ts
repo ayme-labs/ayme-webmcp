@@ -40,6 +40,7 @@ describe("derivePomManifests", () => {
         methodName: "inheritedTool",
         toolName: "InheritedPom.inheritedTool",
         description: "Use the inherited tool.",
+        authoredDescription: "Use the inherited tool.",
         inputSchema: {
           type: "object",
           properties: {
@@ -246,6 +247,10 @@ describe("derivePomManifests", () => {
           description:
             "Open a related POM. Potential return POMs: FirstReturnPom, SecondReturnPom.",
         },
+        {
+          methodName: "status",
+          description: "Run status.",
+        },
       ],
       components: expect.arrayContaining([
         expect.objectContaining({
@@ -255,5 +260,7 @@ describe("derivePomManifests", () => {
         expect.objectContaining({ className: "SecondReturnPom" }),
       ]),
     });
+    const status = manifest.tools.find((tool) => tool.methodName === "status");
+    expect(status).not.toHaveProperty("authoredDescription");
   });
 });

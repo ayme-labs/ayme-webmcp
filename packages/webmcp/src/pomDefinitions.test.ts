@@ -16,6 +16,7 @@ const action = (
   methodName,
   toolName: methodName,
   description,
+  authoredDescription: description,
   inputSchema: {
     type: "object",
     properties: { value: { type: "string" } },
@@ -181,6 +182,17 @@ describe("POM definition catalog", () => {
     });
     expect(definitions.getPomDefinitions("MissingPom")).toEqual({
       definitions: [],
+    });
+
+    expect(definitions.getPomDefinitions("SharedPage", "MissingPom")).toEqual({
+      definitions: [
+        {
+          name: "SharedPage",
+          description: "Shared.",
+          children: [],
+          actions: [],
+        },
+      ],
     });
 
     registry.registerCompiledPom(

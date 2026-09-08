@@ -239,6 +239,9 @@ function toolsForClass(
           description.authored ?? `Run ${methodName}.`,
           returnPoms
         ),
+        ...(description.authored === undefined
+          ? {}
+          : { authoredDescription: description.authored }),
         inputSchema: inputSchemaFor(parameters),
         parameters,
         returnPoms,
