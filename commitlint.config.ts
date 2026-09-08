@@ -7,6 +7,7 @@ import { RuleConfigSeverity } from "@commitlint/types";
 
 const repoRoot = dirname(fileURLToPath(import.meta.url));
 const workspaceScopeRoots = ["apps", "packages"] as const;
+const additionalScopes = ["skills"] as const;
 const scopePattern = /^[a-z0-9-]+$/;
 
 function loadWorkspaceScopes(): string[] {
@@ -60,7 +61,9 @@ const allowedTypes = [
   "style",
   "test",
 ];
-const workspaceScopes = loadWorkspaceScopes();
+const workspaceScopes = [
+  ...new Set([...loadWorkspaceScopes(), ...additionalScopes]),
+].sort((left, right) => left.localeCompare(right));
 const scopeRules: UserConfig["rules"] =
   workspaceScopes.length === 0
     ? {
