@@ -662,6 +662,28 @@ describe("Single-document adapter contract", () => {
       ).rejects.toThrow(/unsupported Playwright option.*force/);
     });
 
+    it("ignores unsupported options whose values are undefined", async () => {
+      document.body.innerHTML = "<button>ok</button>";
+      const page = createPage();
+      let clicks = 0;
+      document.querySelector("button")!.addEventListener("click", () => {
+        clicks++;
+      });
+
+      await page.locator("button").click({ force: undefined } as any);
+      expect(clicks).toBe(1);
+    });
+
+    it("rejects defined unsupported option values, including false and null", async () => {
+      document.body.innerHTML = "<button>ok</button>";
+      const page = createPage();
+      for (const force of [false, null]) {
+        await expect(
+          page.locator("button").click({ force } as any)
+        ).rejects.toThrow(/unsupported Playwright option.*force/);
+      }
+    });
+
     it("rejects action options other than timeout", async () => {
       document.body.innerHTML = '<input type="text" />';
       const page = createPage();

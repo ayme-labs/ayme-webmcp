@@ -685,7 +685,7 @@ function rejectUnsupportedOptions(
 ): void {
   if (!options) return;
   const unsupported = Object.keys(options).filter(
-    (key) => !supported.includes(key)
+    (key) => options[key] !== undefined && !supported.includes(key)
   );
   if (unsupported.length > 0) {
     throw new Error(
