@@ -1,6 +1,6 @@
 # @ayme-dev/webmcp-vue
 
-Vue 3 integration for Ayme runtime ownership and Page Object registration.
+Vue integration for Ayme WebMCP. Use a root provider or the existing standalone composable. Both own the same shared runtime behavior.
 
 ## Install and configure
 
@@ -14,32 +14,83 @@ Configure the [Vite plugin](https://github.com/ayme-labs/ayme-webmcp/blob/main/p
 alongside `@vitejs/plugin-vue`, and annotate your POM as shown in the
 [core README](https://github.com/ayme-labs/ayme-webmcp/blob/main/packages/webmcp/README.md).
 
-## Own the runtime at the application root
+## Vite setup
 
-In the root component's setup, before registering POMs:
+```ts
+import vue from "@vitejs/plugin-vue";
+import { aymeWebMcp } from "@ayme-dev/unplugin-webmcp/vite";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [vue(), aymeWebMcp({ publish: true })],
+});
+```
+
+Keep decorated Page Object Models in separate `.ts` files with `experimentalDecorators` enabled. Use `@WebMCP` on the model and `@WebMCP.tool(...)` on exposed actions, as shown in [ListPage](../../apps/example-vue/playwright/pom/ListPage.ts).
+
+Publication is disabled unless enabled by the Vite plugin. Local Page Object calls remain available without publication or a WebMCP driver.
+
+## Provider setup
 
 ```vue
 <script setup lang="ts">
-import { useAymeWebMcp, usePageObject } from "@ayme-dev/webmcp-vue";
-import { GreetingPage } from "./GreetingPage";
-
-const { publicationStatus, retryPublication } = useAymeWebMcp();
-usePageObject(GreetingPage);
+import { AymeWebMcpProvider } from "@ayme-dev/webmcp-vue";
+import App from "./App.vue";
 </script>
+
+<template>
+  <AymeWebMcpProvider><App /></AymeWebMcpProvider>
+</template>
 ```
 
-Call `useAymeWebMcp()` once per application document. It owns runtime startup,
-publication, and cleanup on Vue scope disposal. Register each root POM with
-`usePageObject` in the component that owns its lifetime. Child POMs in compiled
-member metadata are discovered recursively; action return values do not
-register independent roots.
+The provider creates a Page for the current document. To supply a custom or decorated Page, create it once in the root setup and pass `:page="customPage"`. Keep that Page fixed while mounted; remount the provider and its consumers to change it. Wrappers must preserve the browser adapter's locator metadata for Ayme observation. Playwright `Page` type compatibility alone does not guarantee observation support.
 
-`publicationStatus.value.state` reports `disabled`, `waiting`, `active`,
-`unavailable`, `failed`, or `disposed`. `disabled` means the build's `publish`
-option is off. `unavailable` means the browser driver did not arrive within the
-initial wait. Load the driver before root setup, or call `retryPublication()`
-after it becomes available. The runtime and page-state API still work without
-a driver. No manual observer or synchronization loop is needed.
+Hooks in `App` and its descendants consume the provider:
+
+```ts
+import { useAymeWebMcp, usePageObject } from "@ayme-dev/webmcp-vue";
+import { ListPage } from "./playwright/pom/ListPage";
+
+const pom = usePageObject(ListPage);
+const { publicationStatus, retryPublication } = useAymeWebMcp();
+
+// Later, in an event handler:
+await pom.addItem("Write release notes");
+```
+
+The status is a read-only Vue ref: read `publicationStatus.value.state` in script, or `publicationStatus.state` in templates. States are `disabled`, `waiting`, `active`, `unavailable`, `failed`, and `disposed`. Enabled publication waits up to two seconds for a driver. `retryPublication()` retries after unavailability or failure; it shares pending attempts and does not duplicate active publication.
+
+## Standalone composable compatibility
+
+Existing root setup continues to work:
+
+```ts
+const { publicationStatus, retryPublication } = useAymeWebMcp({
+  page: customPage,
+});
+const pom = usePageObject(ListPage);
+```
+
+Omit the options to use the default Page. The standalone owner starts immediately in the Vue scope and provides its runtime to descendant components. It also continues to support `effectScope()` usage and Page Object registration in the owner's own setup.
+
+| Call                                                | Behavior                                                              |
+| --------------------------------------------------- | --------------------------------------------------------------------- |
+| `useAymeWebMcp()` beneath an owner                  | Consume its status and retry; do not start or dispose another runtime |
+| `useAymeWebMcp()` without an ancestor owner         | Start and own the default runtime in the current scope                |
+| `useAymeWebMcp({ page })` without an ancestor owner | Start and own the supplied Page's runtime                             |
+| `useAymeWebMcp({ page })` beneath an owner          | Throw; configure the Page on the ancestor owner                       |
+
+Ancestor lookup follows the component tree. It does not find a provider rendered below the calling component, or automatically share a runtime between unrelated `effectScope()` calls. Call standalone root setup once in its scope. A second active owner is rejected, including nested providers. Only the creator disposes the runtime. Descendant consumer cleanup removes its own subscriptions and Page Object registrations.
+
+`usePageObject(Model)` returns the concrete instance and disposes its registration with its Vue scope. Constructors should only initialize fields and compose locators; invoke actions later. A remount creates a new instance. The hooks require an active Vue effect scope.
+
+## Framework parity and example
+
+React has the same provider and Page Object/status/retry names. React requires an ancestor provider; it does not support Vue's standalone startup composable. React status is a plain snapshot instead of a Vue ref.
+
+The [Vue example](../../apps/example-vue) retains standalone setup and external demo feedback. From the workspace root, run `pnpm run build`, then `pnpm --filter @ayme-dev/example-vue dev`. Provider and standalone compatibility are checked by this package's tests.
+
+Register each root POM in the component that owns its lifetime. Child POMs in compiled member metadata are discovered recursively; action return values do not register independent roots.
 
 For Chrome or a coding agent connection, follow the skill's
 [browser setup reference](https://github.com/ayme-labs/ayme-webmcp/blob/main/skills/ayme/references/browser-setup.md).
