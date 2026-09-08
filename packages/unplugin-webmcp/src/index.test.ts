@@ -14,7 +14,7 @@ import { describe, expect, it } from "vitest";
 import { unpluginFactory } from "./index";
 
 describe("ayme WebMCP transform", () => {
-  it("loads testIdAttribute through the consumer's @playwright/test dependency", async () => {
+  it("loads testIdAttribute through the consumer dependency with Playwright precedence", async () => {
     const root = mkdtempSync(join(tmpdir(), "ayme-webmcp-playwright-"));
     const playwrightRoot = join(
       root,
@@ -24,6 +24,7 @@ describe("ayme WebMCP transform", () => {
       mkdirSync(join(playwrightRoot, "lib/common"), { recursive: true });
       writeFileSync(join(root, "package.json"), "{}");
       writeFileSync(join(root, "playwright.config.js"), "module.exports = {};");
+      writeFileSync(join(root, "playwright.config.mts"), "export default {};");
       writeFileSync(
         join(root, "node_modules/@playwright/test/package.json"),
         "{}"
@@ -31,7 +32,17 @@ describe("ayme WebMCP transform", () => {
       writeFileSync(join(playwrightRoot, "package.json"), "{}");
       writeFileSync(
         join(playwrightRoot, "lib/common/index.js"),
-        "exports.configLoader = { loadConfigFromFile: async () => ({ projects: [{ project: { use: { testIdAttribute: 'data-qa' } } }] }) };"
+        `exports.configLoader = {
+  loadConfigFromFile: async (configFile) => ({
+    projects: [{
+      project: {
+        use: {
+          testIdAttribute: configFile.endsWith(".js") ? "data-qa" : "data-mts",
+        },
+      },
+    }],
+  }),
+};`
       );
 
       const pluginResult = unpluginFactory(

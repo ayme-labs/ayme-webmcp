@@ -16,10 +16,10 @@ const DEFAULT_TEST_ID_ATTRIBUTE = "data-testid";
 const TEST_ID_ATTRIBUTE_DEFINE = "__AYME_PLAYWRIGHT_TEST_ID_ATTRIBUTE__";
 const PLAYWRIGHT_CONFIG_NAMES = [
   "playwright.config.ts",
-  "playwright.config.mts",
-  "playwright.config.cts",
   "playwright.config.js",
+  "playwright.config.mts",
   "playwright.config.mjs",
+  "playwright.config.cts",
   "playwright.config.cjs",
 ];
 
