@@ -1,135 +1,104 @@
-import { getCurrentScope, onScopeDispose, readonly, ref } from "vue";
-
 import {
-  createAymeRuntime,
+  defineComponent,
+  getCurrentInstance,
+  getCurrentScope,
+  inject,
+  onScopeDispose,
+  provide,
+  readonly,
+  shallowRef,
+  watch,
+  type InjectionKey,
+  type PropType,
+} from "vue";
+import {
+  createRuntimeSession,
   createPageRegistration,
-  synchronizeWebMcpTools,
+  type AymePage,
+  type RuntimeSession,
   type PageObjectConstructor,
-  type WebMcpRegistration,
-  waitForWebMcpDriver,
 } from "@ayme-dev/webmcp/internal";
 
-declare const __AYME_WEBMCP_PUBLISH__: boolean | undefined;
+export type { AymeWebMcpPublicationStatus } from "@ayme-dev/webmcp/internal";
+export type UseAymeWebMcpOptions = { page?: AymePage };
+const runtimeKey: InjectionKey<RuntimeSession> = Symbol("Ayme runtime");
 
-export type AymeWebMcpPublicationStatus = {
-  state:
-    "disabled" | "waiting" | "active" | "unavailable" | "failed" | "disposed";
-  message: string;
-};
+function inheritedRuntime() {
+  return getCurrentInstance() ? inject(runtimeKey, undefined) : undefined;
+}
 
-export type UseAymeWebMcpOptions = {
-  page?: ConstructorParameters<PageObjectConstructor>[0];
-};
+function ownRuntime(page?: AymePage) {
+  const runtime = createRuntimeSession(page);
+  const stop = runtime.start();
+  onScopeDispose(stop);
+  if (getCurrentInstance()) provide(runtimeKey, runtime);
+  return runtime;
+}
+
+function consumeRuntime(runtime: RuntimeSession) {
+  const publicationStatus = shallowRef(runtime.getSnapshot());
+  const unsubscribe = runtime.subscribe(() => {
+    publicationStatus.value = runtime.getSnapshot();
+  });
+  onScopeDispose(unsubscribe);
+  return {
+    publicationStatus: readonly(publicationStatus),
+    retryPublication: runtime.retryPublication,
+  };
+}
+
+export const AymeWebMcpProvider = defineComponent({
+  name: "AymeWebMcpProvider",
+  props: { page: { type: Object as PropType<AymePage>, required: false } },
+  setup(props, { slots }) {
+    if (inheritedRuntime())
+      throw new Error(
+        "AymeWebMcpProvider cannot be nested beneath another Ayme runtime owner."
+      );
+    const page = props.page;
+    ownRuntime(page);
+    watch(
+      () => props.page,
+      (next) => {
+        if (next !== page)
+          throw new Error(
+            "The provider page must stay fixed while mounted. Remount the provider to change it."
+          );
+      },
+      { flush: "sync" }
+    );
+    return () => slots.default?.();
+  },
+});
 
 export function useAymeWebMcp(options: UseAymeWebMcpOptions = {}) {
-  if (!getCurrentScope()) {
+  if (!getCurrentScope())
     throw new Error(
       "useAymeWebMcp must be called within an active Vue effect scope"
     );
-  }
-
-  const runtime = createAymeRuntime(options.page);
-  const publicationEnabled =
-    typeof __AYME_WEBMCP_PUBLISH__ !== "undefined" && __AYME_WEBMCP_PUBLISH__;
-  const publicationStatus = ref<AymeWebMcpPublicationStatus>({
-    state: publicationEnabled ? "waiting" : "disabled",
-    message: publicationEnabled
-      ? "Waiting for the WebMCP driver."
-      : "WebMCP publication is disabled.",
-  });
-  const controller = new AbortController();
-  let disposed = false;
-  let pendingPublication: Promise<void> | undefined;
-  let publication: WebMcpRegistration | undefined;
-
-  const startPublication = () => {
-    if (!publicationEnabled || disposed || publication)
-      return Promise.resolve();
-    if (pendingPublication) return pendingPublication;
-
-    publicationStatus.value = {
-      state: "waiting",
-      message: "Waiting for the WebMCP driver.",
-    };
-    const attempt = (async () => {
-      const driver = await waitForWebMcpDriver(2_000, controller.signal);
-      if (disposed) return;
-      if (!driver) {
-        publicationStatus.value = {
-          state: "unavailable",
-          message: "The WebMCP driver is unavailable.",
-        };
-        return;
-      }
-
-      try {
-        let attemptFailed = false;
-        const registration = await synchronizeWebMcpTools(driver, {
-          signal: controller.signal,
-          onError(error) {
-            attemptFailed = true;
-            if (disposed) return;
-            publication = undefined;
-            publicationStatus.value = failedStatus(error);
-          },
-        });
-        if (disposed || attemptFailed) {
-          registration.dispose();
-          return;
-        }
-        publication = registration;
-        publicationStatus.value = {
-          state: "active",
-          message: registration.message,
-        };
-      } catch (error) {
-        if (!disposed) publicationStatus.value = failedStatus(error);
-      }
-    })();
-    pendingPublication = attempt;
-    void attempt.then(() => {
-      if (pendingPublication === attempt) pendingPublication = undefined;
-    });
-    return attempt;
-  };
-
-  onScopeDispose(() => {
-    disposed = true;
-    controller.abort();
-    publication?.dispose();
-    runtime.dispose();
-    publicationStatus.value = {
-      state: "disposed",
-      message: "The Ayme runtime was disposed.",
-    };
-  });
-
-  if (publicationEnabled) void startPublication();
-
-  return {
-    publicationStatus: readonly(publicationStatus),
-    retryPublication: startPublication,
-  };
-}
-
-function failedStatus(error: unknown): AymeWebMcpPublicationStatus {
-  return {
-    state: "failed",
-    message: `WebMCP publication failed: ${error instanceof Error ? error.message : String(error)}`,
-  };
+  const inherited = inheritedRuntime();
+  if (inherited && options.page !== undefined)
+    throw new Error(
+      "Configure page on the ancestor AymeWebMcpProvider or standalone useAymeWebMcp owner."
+    );
+  return consumeRuntime(inherited ?? ownRuntime(options.page));
 }
 
 export function usePageObject<T extends object>(
-  PageObjectModel: PageObjectConstructor<T>
+  model: PageObjectConstructor<T>
 ): T {
-  if (!getCurrentScope()) {
+  if (!getCurrentScope())
     throw new Error(
       "usePageObject must be called within an active Vue effect scope"
     );
+  const runtime = inheritedRuntime();
+  if (runtime) {
+    const instance = runtime.construct(model);
+    onScopeDispose(runtime.register(model, instance));
+    return instance;
   }
-
-  const registration = createPageRegistration(PageObjectModel);
+  // Preserve same-scope and effectScope usage of the standalone Vue owner.
+  const registration = createPageRegistration(model);
   onScopeDispose(() => registration.dispose());
-
   return registration.instance;
 }
