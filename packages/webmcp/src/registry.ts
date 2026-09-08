@@ -105,7 +105,30 @@ export function createPageRegistration<T extends object>(
       "The imported page object has no compiler-derived Ayme metadata."
     );
 
-  const instance = new PomClass(page);
+  const instance = constructPageObject(PomClass, page);
+  return registerPageObject(PomClass, instance);
+}
+
+export function constructPageObject<T extends object>(
+  PomClass: PageObjectConstructor<T>,
+  page: Page
+): T {
+  if (!compiledPoms.has(PomClass))
+    throw new Error(
+      "The imported page object has no compiler-derived Ayme metadata."
+    );
+  return new PomClass(page);
+}
+
+export function registerPageObject<T extends object>(
+  PomClass: PageObjectConstructor<T>,
+  instance: T
+) {
+  const compiledPom = compiledPoms.get(PomClass);
+  if (!compiledPom)
+    throw new Error(
+      "The imported page object has no compiler-derived Ayme metadata."
+    );
   const registration: RegisteredPom = {
     id: compiledPom.className,
     instance,
