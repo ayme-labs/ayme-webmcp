@@ -95,6 +95,41 @@ describe.each(["Page", "Locator"] as const)("%s.click options", (owner) => {
     expect(point).toEqual({ x: bounds.x + 8 + 20, y: bounds.y + 8 + 10 });
   });
 
+  it.each([false, true])(
+    "scrolls an oversized target's requested point (nested: %s)",
+    async (nested) => {
+      document.body.innerHTML = `<div id="container" style="${nested ? "width:250px;height:200px;overflow:auto;" : ""}"><div id="target" style="margin-top:100px;width:${window.innerWidth * 3}px;height:${window.innerHeight * 3}px;border:8px solid black">Click</div></div>`;
+      const button = document.querySelector<HTMLDivElement>("#target")!;
+      const events: { x: number; y: number }[] = [];
+      button.addEventListener("click", (event) =>
+        events.push({ x: event.clientX, y: event.clientY })
+      );
+      const page = createPage();
+      const click =
+        owner === "Page"
+          ? page.click.bind(page, "#target")
+          : page.locator("#target").click.bind(page.locator("#target"));
+      for (const position of [
+        { x: 10, y: 10 },
+        { x: window.innerWidth * 2, y: window.innerHeight * 2 },
+      ]) {
+        const before = events.length;
+        await click({ position, trial: true, timeout: 1000 });
+        expect(events).toHaveLength(before);
+        await click({ position, timeout: 1000 });
+        const bounds = button.getBoundingClientRect();
+        expect(events.at(-1)).toEqual({
+          x: bounds.x + 8 + position.x,
+          y: bounds.y + 8 + position.y,
+        });
+        expect(events.at(-1)!.x).toBeGreaterThanOrEqual(0);
+        expect(events.at(-1)!.x).toBeLessThan(window.innerWidth);
+        expect(events.at(-1)!.y).toBeGreaterThanOrEqual(0);
+        expect(events.at(-1)!.y).toBeLessThan(window.innerHeight);
+      }
+    }
+  );
+
   it("validates new options and ignores undefined unsupported options", async () => {
     document.body.innerHTML = '<button id="target">Click</button>';
     const page = createPage();

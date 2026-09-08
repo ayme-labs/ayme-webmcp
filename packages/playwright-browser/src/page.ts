@@ -2219,7 +2219,8 @@ export class PageImpl {
         const element = this.requireSingle(selector, label);
         await this.ensureActionable(element, states, deadline, actionName);
         this.assertActionDeadline(deadline, actionName);
-        if (actionName !== "scroll into view") this.scrollIntoView(element);
+        if (actionName !== "scroll into view")
+          this.scrollIntoView(element, position);
         // Scrolling can change visibility or expose a covering element.
         await this.ensureActionable(element, states, deadline, actionName);
         const point = checkHitTarget
@@ -2241,9 +2242,46 @@ export class PageImpl {
     }
   }
 
-  private scrollIntoView(element: Element) {
+  private scrollIntoView(element: Element, position?: ActionPoint) {
     if (typeof element.scrollIntoView !== "function") return;
-    element.scrollIntoView({ block: "center", inline: "center" });
+    element.scrollIntoView({
+      block: "center",
+      inline: "center",
+      behavior: "instant",
+    });
+    if (!position) return;
+
+    // Pinned ElementHandle._performPointerAction scrolls the requested point,
+    // not the whole element. DOM scrollIntoView has no rectangle parameter;
+    // adjust each containing scrollport, then the viewport, from inside out.
+    for (let node = element.parentNode; node; node = node.parentNode) {
+      if (node instanceof ShadowRoot) node = node.host;
+      if (!(node instanceof Element) || node === this.document.scrollingElement)
+        continue;
+      const point = actionPoint(element, position, this.window);
+      const bounds = node.getBoundingClientRect();
+      const left = bounds.left + node.clientLeft;
+      const top = bounds.top + node.clientTop;
+      node.scrollBy({
+        left:
+          point.x < left || point.x >= left + node.clientWidth
+            ? point.x - left - node.clientWidth / 2
+            : 0,
+        top:
+          point.y < top || point.y >= top + node.clientHeight
+            ? point.y - top - node.clientHeight / 2
+            : 0,
+        behavior: "instant",
+      });
+    }
+    const point = actionPoint(element, position, this.window);
+    const width = this.document.documentElement.clientWidth;
+    const height = this.document.documentElement.clientHeight;
+    this.window.scrollBy({
+      left: point.x < 0 || point.x >= width ? point.x - width / 2 : 0,
+      top: point.y < 0 || point.y >= height ? point.y - height / 2 : 0,
+      behavior: "instant",
+    });
   }
 
   private scrollIntoViewIfNeeded(element: Element) {
