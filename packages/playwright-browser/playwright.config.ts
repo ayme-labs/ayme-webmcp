@@ -6,7 +6,6 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 0,
-  workers: process.env.CI ? 1 : undefined,
   reporter: [["list"], ["json", { outputFile: "test-results/report.json" }]],
   use: {
     ...devices["Desktop Chrome"],
