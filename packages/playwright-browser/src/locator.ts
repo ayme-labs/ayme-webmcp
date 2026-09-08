@@ -6,6 +6,7 @@ import type {
   SelectOptionValue,
 } from "./page";
 import { AdapterElementHandle } from "./elementHandle";
+import type { InputFiles } from "./inputFiles";
 import { testIdAttributeNameFor } from "./injected";
 import {
   formatLocatorDescription,
@@ -413,13 +414,19 @@ export class LocatorImpl {
 
   // ── Terminal operations (delegated to Page) ───────────────────
 
-  async click(options?: LocatorActionOptions) {
-    rejectUnsupportedOptions("click", options, ["timeout"]);
+  async click(options?: PointerActionOptions) {
+    rejectUnsupportedOptions("click", options, [
+      "timeout",
+      "position",
+      "trial",
+    ]);
     this.record({ operation: "click" });
     await this.ownerPage.clickSelector(
       this.selector,
       this.label,
-      options?.timeout
+      options?.timeout,
+      undefined,
+      options
     );
   }
 
@@ -431,6 +438,16 @@ export class LocatorImpl {
       value,
       this.label,
       options?.timeout
+    );
+  }
+
+  async setInputFiles(files: InputFiles, options?: LocatorActionOptions) {
+    rejectUnsupportedOptions("setInputFiles", options, ["timeout"]);
+    await this.ownerPage.setInputFilesSelector(
+      this.selector,
+      files,
+      options,
+      true
     );
   }
 
@@ -587,12 +604,6 @@ export class LocatorImpl {
     } = {}
   ) {
     const state = options.state ?? "visible";
-    if (state === "attached" || state === "detached") {
-      throw new Error(
-        `waitFor(): state "${state}" is not supported by the single-document adapter. ` +
-          `Use "visible" or "hidden".`
-      );
-    }
     rejectUnsupportedOptions("waitFor", options, ["state", "timeout"]);
     this.record({ operation: "waitFor", state });
     await this.ownerPage.waitForState(

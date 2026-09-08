@@ -7,7 +7,7 @@ export type CaptureAriaSnapshotResult = {
 export type TraceEntry = {
   operation: "click" | "fill" | "waitFor" | "expect";
   locator: string;
-  state?: "visible" | "hidden";
+  state?: "attached" | "detached" | "visible" | "hidden";
   value?: string;
 };
 

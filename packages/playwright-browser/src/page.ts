@@ -5,6 +5,7 @@ import {
 } from "./injected";
 import { AdapterTimeoutError } from "./errors";
 import { AdapterElementHandle } from "./elementHandle";
+import { inputFilePayloads, type InputFiles } from "./inputFiles";
 import type { Page } from "@playwright/test";
 import type { ByRoleOptions, LocatorOptions } from "./locator";
 import { LocatorImpl } from "./locator";
@@ -490,6 +491,11 @@ export class PageImpl {
     } = {}
   ) {
     const actionName = options.actionName ?? "click";
+    assertPointerActionOptions(actionName, {
+      timeout,
+      position: options.position,
+      trial: options.trial,
+    });
     let target = await this.retryActionability(
       selector,
       label,
@@ -814,7 +820,10 @@ export class PageImpl {
 
   async waitForState(
     selector: string,
-    options: { state: "visible" | "hidden"; timeout?: number },
+    options: {
+      state: "attached" | "detached" | "visible" | "hidden";
+      timeout?: number;
+    },
     label: string
   ) {
     const timeout = this.resolveTimeout(
@@ -834,6 +843,48 @@ export class PageImpl {
         { cause: error }
       );
     }
+  }
+
+  async setInputFilesSelector(
+    selector: string,
+    files: InputFiles,
+    options: { timeout?: number; strict?: boolean } = {},
+    strict = false
+  ): Promise<void> {
+    assertPageActionOptions("setInputFiles", options, ["strict"]);
+    if (options.strict !== undefined && typeof options.strict !== "boolean")
+      throw new TypeError("setInputFiles strict must be a boolean");
+    const payloads = inputFilePayloads(files);
+    const deadline = this.createActionDeadline(options.timeout);
+    await this.query(
+      selector,
+      selector,
+      { timeout: options.timeout },
+      strict || options.strict === true,
+      (element) => {
+        this.assertActionDeadline(deadline, "setInputFiles");
+        // Mirrors pinned server/dom.ts _setInputFiles: label retargeting and
+        // input/multiple/directory validation, without visibility/enabled checks.
+        const input = (
+          this.injected as typeof this.injected & QueryCapableInjectedScript
+        ).retarget(element, "follow-label");
+        if (!input || !input.isConnected)
+          throw new Error("Element is not connected");
+        if (!(input instanceof this.window.HTMLInputElement))
+          throw new Error("Node is not an HTMLInputElement");
+        if (payloads.length > 1 && !input.multiple && !input.webkitdirectory)
+          throw new Error(
+            "Non-multiple file input can only accept single file"
+          );
+        if (input.webkitdirectory)
+          throw new Error(
+            "[webkitdirectory] input requires passing a path to a directory; directory uploads are not supported."
+          );
+        const error = this.injected.setInputFiles(input, payloads);
+        if (error) throw new Error(error);
+      },
+      deadline
+    );
   }
 
   // ── Pacing ──────────────────────────────────────────────────────
@@ -990,12 +1041,14 @@ export class PageImpl {
     return !(await this.isVisible(selector, options));
   }
 
-  async click(selector: string, options?: PageActionOptions): Promise<void> {
-    assertPageActionOptions("click", options);
+  async click(selector: string, options?: PointerActionOptions): Promise<void> {
+    assertPointerActionOptions("click", options);
     await this.clickSelector(
       selector,
       `page.click(${JSON.stringify(selector)})`,
-      options?.timeout
+      options?.timeout,
+      undefined,
+      options
     );
   }
 
@@ -1011,6 +1064,14 @@ export class PageImpl {
       `page.fill(${JSON.stringify(selector)})`,
       options?.timeout
     );
+  }
+
+  async setInputFiles(
+    selector: string,
+    files: InputFiles,
+    options?: { timeout?: number; strict?: boolean }
+  ): Promise<void> {
+    await this.setInputFilesSelector(selector, files, options);
   }
 
   async press(
@@ -2158,7 +2219,8 @@ export class PageImpl {
         const element = this.requireSingle(selector, label);
         await this.ensureActionable(element, states, deadline, actionName);
         this.assertActionDeadline(deadline, actionName);
-        if (actionName !== "scroll into view") this.scrollIntoView(element);
+        if (actionName !== "scroll into view")
+          this.scrollIntoView(element, position);
         // Scrolling can change visibility or expose a covering element.
         await this.ensureActionable(element, states, deadline, actionName);
         const point = checkHitTarget
@@ -2180,9 +2242,46 @@ export class PageImpl {
     }
   }
 
-  private scrollIntoView(element: Element) {
+  private scrollIntoView(element: Element, position?: ActionPoint) {
     if (typeof element.scrollIntoView !== "function") return;
-    element.scrollIntoView({ block: "center", inline: "center" });
+    element.scrollIntoView({
+      block: "center",
+      inline: "center",
+      behavior: "instant",
+    });
+    if (!position) return;
+
+    // Pinned ElementHandle._performPointerAction scrolls the requested point,
+    // not the whole element. DOM scrollIntoView has no rectangle parameter;
+    // adjust each containing scrollport, then the viewport, from inside out.
+    for (let node = element.parentNode; node; node = node.parentNode) {
+      if (node instanceof ShadowRoot) node = node.host;
+      if (!(node instanceof Element) || node === this.document.scrollingElement)
+        continue;
+      const point = actionPoint(element, position, this.window);
+      const bounds = node.getBoundingClientRect();
+      const left = bounds.left + node.clientLeft;
+      const top = bounds.top + node.clientTop;
+      node.scrollBy({
+        left:
+          point.x < left || point.x >= left + node.clientWidth
+            ? point.x - left - node.clientWidth / 2
+            : 0,
+        top:
+          point.y < top || point.y >= top + node.clientHeight
+            ? point.y - top - node.clientHeight / 2
+            : 0,
+        behavior: "instant",
+      });
+    }
+    const point = actionPoint(element, position, this.window);
+    const width = this.document.documentElement.clientWidth;
+    const height = this.document.documentElement.clientHeight;
+    this.window.scrollBy({
+      left: point.x < 0 || point.x >= width ? point.x - width / 2 : 0,
+      top: point.y < 0 || point.y >= height ? point.y - height / 2 : 0,
+      behavior: "instant",
+    });
   }
 
   private scrollIntoViewIfNeeded(element: Element) {
@@ -2678,7 +2777,10 @@ function assertPageActionOptions(
 ): void {
   if (!options) return;
   const unsupported = Object.keys(options).filter(
-    (key) => key !== "timeout" && !supported.includes(key)
+    (key) =>
+      options[key] !== undefined &&
+      key !== "timeout" &&
+      !supported.includes(key)
   );
   if (unsupported.length > 0)
     throw new Error(
