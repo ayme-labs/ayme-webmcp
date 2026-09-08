@@ -120,6 +120,7 @@ test("derives nested object input schemas from POM action types", () => {
       methodName: "archive",
       toolName: "ObjectInputPom.archive",
       description: "Archive with structured options.",
+      authoredDescription: "Archive with structured options.",
       inputSchema: {
         type: "object",
         properties: {
@@ -227,7 +228,10 @@ test("publishes the current page as ref-bearing ARIA state", async ({
     pomDefinitions?: unknown;
     structure?: unknown;
   };
-  expect(Array.isArray(payload.pomDefinitions)).toBe(true);
+  expect(typeof payload.pomDefinitions).toBe("string");
+  if (typeof payload.pomDefinitions !== "string") return;
+  expect(payload.pomDefinitions).toContain("POM ListPage");
+  expect(payload.pomDefinitions).toContain("newItemInput");
   const snapshot = payload.structure;
   expect(typeof snapshot).toBe("string");
   if (typeof snapshot !== "string") return;
@@ -493,10 +497,12 @@ test("demonstrates the list app and invokes the generated POM tools from the deb
     {
       name: "get_page_context",
       description:
-        "Return the current structural page state together with registered POM definitions, including referenced POMs that are not currently visible.",
+        "Return the current structural page state together with compact POM definitions. A bare member is a Locator; member: ChildPom is a child POM; [] marks collections; and action(args): this | OtherPom is an action with possible next POMs. Action comments are authored descriptions, and this means the current POM. Definitions can include referenced POMs that are not currently visible; registered tool schemas remain authoritative.",
       inputSchema: {
         type: "object",
-        properties: { name: { type: "string" } },
+        properties: {
+          names: { type: "array", items: { type: "string" } },
+        },
         required: [],
         additionalProperties: false,
       },

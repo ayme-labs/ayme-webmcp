@@ -10,16 +10,16 @@ import { createRefInteractions } from "./refInteractions";
 import { requireAymeRuntimePage } from "./registry";
 
 export type Ayme = {
-  getPageContext(name?: string): Promise<PageContext>;
+  getPageContext(...names: readonly string[]): Promise<PageContext>;
   getPageState(): Promise<PageState>;
-  getPomDefinitions(name?: string): PomDefinitionsResult;
+  getPomDefinitions(...names: readonly string[]): PomDefinitionsResult;
   click(ref: AriaRef): Promise<void>;
   fill(ref: AriaRef, value: string): Promise<void>;
 };
 
 export const ayme: Ayme = {
-  getPageContext: (name) =>
-    getPageContextForDocument(requireCurrentDocument(), name),
+  getPageContext: (...names) =>
+    getPageContextForDocument(requireCurrentDocument(), ...names),
   getPageState: async () => getPageStateForDocument(requireCurrentDocument()),
   getPomDefinitions,
   click: async (ref) =>

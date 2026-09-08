@@ -45,7 +45,11 @@ describe("get_page_context", () => {
       text: '- e1 button "Save changes"',
       resolve,
     });
-    const context = await getPageContextForDocument(document);
+    const context = await getPageContextForDocument(
+      document,
+      "ProfileMenu",
+      "DocumentPage"
+    );
 
     expect(context.structure).toBe('- e1 button "Save changes"');
     expect(context.pomDefinitions).toEqual([
@@ -57,23 +61,118 @@ describe("get_page_context", () => {
       },
     ]);
     expect(context.resolve).toBe(resolve);
-    expect(getPomDefinitions).toHaveBeenCalledWith(undefined);
+    expect(getPomDefinitions).toHaveBeenCalledWith(
+      "ProfileMenu",
+      "DocumentPage"
+    );
   });
 
   it("returns a JSON-safe context payload and forwards a named definition filter", async () => {
     await expect(
-      getPageContextTool.execute({ name: "ProfileMenu" })
+      getPageContextTool.execute({ names: ["ProfileMenu"] })
     ).resolves.toEqual({
       structure: '- e1 button "Save changes"',
-      pomDefinitions: [
+      pomDefinitions: "POM ProfileMenu // The user profile menu.",
+    });
+    expect(getPomDefinitions).toHaveBeenCalledWith("ProfileMenu");
+  });
+
+  it("renders child members and action signatures without empty sections", async () => {
+    getPomDefinitions.mockReturnValue({
+      definitions: [
         {
-          name: "ProfileMenu",
-          description: "The user profile menu.",
+          name: "AppTopBar",
+          description: "Application top bar.",
+          children: [
+            { memberName: "helpButton", kind: "locator", access: "field" },
+            {
+              memberName: "helpMenu",
+              kind: "component",
+              access: "field",
+              componentClassName: "AppTopBarHelpMenu",
+              collection: false,
+            },
+            {
+              memberName: "notifications",
+              kind: "component",
+              access: "getter",
+              componentClassName: "NotificationItem",
+              collection: true,
+            },
+          ],
+          actions: [
+            {
+              name: "openHelp",
+              description: "Open the help menu.",
+              inputSchema: {
+                type: "object",
+                properties: {},
+                required: [],
+                additionalProperties: false,
+              },
+              returnPoms: ["AppTopBarHelpMenu"],
+            },
+            {
+              name: "openDocument",
+              description: "Open a document.",
+              inputSchema: {
+                type: "object",
+                properties: { documentName: { type: "string" } },
+                required: ["documentName"],
+                additionalProperties: false,
+              },
+              returnPoms: ["DocumentPage"],
+            },
+            {
+              name: "refresh",
+              inputSchema: {
+                type: "object",
+                properties: {},
+                required: [],
+                additionalProperties: false,
+              },
+              returnPoms: [],
+            },
+          ],
+        },
+        {
+          name: "AppTopBarHelpMenu",
           children: [],
-          actions: [],
+          actions: [
+            {
+              name: "close",
+              description: "Close the help menu.",
+              inputSchema: {
+                type: "object",
+                properties: {},
+                required: [],
+                additionalProperties: false,
+              },
+              returnPoms: ["AppTopBarHelpMenu"],
+            },
+          ],
         },
       ],
     });
-    expect(getPomDefinitions).toHaveBeenCalledWith("ProfileMenu");
+
+    await expect(getPageContextTool.execute({})).resolves.toEqual({
+      structure: '- e1 button "Save changes"',
+      pomDefinitions: `POM AppTopBar // Application top bar.
+  helpButton
+  helpMenu: AppTopBarHelpMenu
+  notifications: NotificationItem[]
+
+  // Open the help menu.
+  openHelp(): AppTopBarHelpMenu
+
+  // Open a document.
+  openDocument(documentName: string): DocumentPage
+
+  refresh()
+
+POM AppTopBarHelpMenu
+  // Close the help menu.
+  close(): this`,
+    });
   });
 });

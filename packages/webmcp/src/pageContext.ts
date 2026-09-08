@@ -6,8 +6,9 @@ import {
   type PageState,
 } from "./pageState";
 import { getPomDefinitions } from "./pomDefinitions";
+import { renderPomDefinitions } from "./pomDefinitionText";
 
-type GetPageContextInput = { name?: string };
+type GetPageContextInput = { names?: string[] };
 
 export type PageContext = {
   readonly structure: string;
@@ -15,51 +16,55 @@ export type PageContext = {
   resolve(...refs: AriaRef[]): ReturnType<PageState["resolve"]>;
 };
 
-export type PageContextPayload = Pick<
-  PageContext,
-  "structure" | "pomDefinitions"
->;
+export type PageContextPayload = {
+  readonly structure: string;
+  readonly pomDefinitions: string;
+};
 
 export const getPageContextTool = {
   name: "get_page_context",
   description:
-    "Return the current structural page state together with registered POM definitions, including referenced POMs that are not currently visible.",
+    "Return the current structural page state together with compact POM definitions. A bare member is a Locator; member: ChildPom is a child POM; [] marks collections; and action(args): this | OtherPom is an action with possible next POMs. Action comments are authored descriptions, and this means the current POM. Definitions can include referenced POMs that are not currently visible; registered tool schemas remain authoritative.",
   inputSchema: {
     type: "object",
-    properties: { name: { type: "string" } },
+    properties: {
+      names: { type: "array", items: { type: "string" } },
+    },
     required: [],
     additionalProperties: false,
   } as const,
   execute: async (input: unknown): Promise<JsonValue> => {
     const context = await getPageContextForDocument(
       document,
-      definitionNameFrom(input)
+      ...definitionNamesFrom(input)
     );
-    return JSON.parse(
-      JSON.stringify({
-        structure: context.structure,
-        pomDefinitions: context.pomDefinitions,
-      })
-    ) as JsonValue;
+    const payload: PageContextPayload = {
+      structure: context.structure,
+      pomDefinitions: renderPomDefinitions(context.pomDefinitions),
+    };
+    return JSON.parse(JSON.stringify(payload)) as JsonValue;
   },
 } satisfies ModelContextTool<GetPageContextInput, JsonValue>;
 
 export async function getPageContextForDocument(
   currentDocument: Document,
-  name?: string
+  ...names: readonly string[]
 ): Promise<PageContext> {
   const pageState = await getPageStateForDocument(currentDocument);
   return Object.freeze({
     structure: pageState.text,
-    pomDefinitions: getPomDefinitions(name).definitions,
+    pomDefinitions: getPomDefinitions(...names).definitions,
     resolve: pageState.resolve,
   });
 }
 
-function definitionNameFrom(input: unknown): string | undefined {
+function definitionNamesFrom(input: unknown): string[] {
   if (input === undefined || input === null || typeof input !== "object")
-    return undefined;
-  if (!("name" in input) || input.name === undefined) return undefined;
-  if (typeof input.name === "string") return input.name;
-  throw new Error("POM definition name must be a string.");
+    return [];
+  if (!("names" in input) || input.names === undefined) return [];
+  if (!Array.isArray(input.names))
+    throw new Error("POM definition names must be an array.");
+  if (!input.names.every((name) => typeof name === "string"))
+    throw new Error("POM definition names must be strings.");
+  return input.names;
 }

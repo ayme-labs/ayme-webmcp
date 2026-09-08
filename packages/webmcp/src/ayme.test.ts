@@ -57,7 +57,7 @@ describe("the public Ayme page state facade", () => {
       },
     ]);
 
-    const context = await ayme.getPageContext("ProfileMenu");
+    const context = await ayme.getPageContext("ProfileMenu", "DocumentPage");
 
     expect(context.structure).toContain('e2 button "Save changes"');
     expect(context.pomDefinitions).toEqual([

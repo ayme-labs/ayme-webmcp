@@ -14,10 +14,16 @@ type DefinitionNode = {
   tools: PomManifest["tools"];
 };
 
-export function getPomDefinitions(name?: string): PomDefinitionsResult {
+export function getPomDefinitions(
+  ...names: readonly string[]
+): PomDefinitionsResult {
   const index = definitionIndex();
-  if (name !== undefined)
-    return { definitions: unambiguousDefinitions(name, index.get(name) ?? []) };
+  if (names.length > 0)
+    return {
+      definitions: names.flatMap((name) =>
+        unambiguousDefinitions(name, index.get(name) ?? [])
+      ),
+    };
 
   return {
     definitions: [...index.entries()].flatMap(([definitionName, candidates]) =>
@@ -98,7 +104,9 @@ function addNode(
 function definitionFor(node: DefinitionNode): PomDefinition {
   const actions: PomDefinitionAction[] = node.tools.map((tool) => ({
     name: tool.methodName,
-    description: tool.description,
+    ...(tool.authoredDescription === undefined
+      ? {}
+      : { description: tool.authoredDescription }),
     inputSchema: tool.inputSchema,
     returnPoms: tool.returnPoms ?? [],
   }));

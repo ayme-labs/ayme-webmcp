@@ -6,6 +6,9 @@ export class ReturningPom {
   async open(): Promise<FirstReturnPom | Promise<SecondReturnPom> | string> {
     return new FirstReturnPom();
   }
+
+  @WebMCP.tool({})
+  status() {}
 }
 
 @WebMCP({ description: "The first returned POM." })
