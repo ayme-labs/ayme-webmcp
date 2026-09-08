@@ -65,7 +65,7 @@ export class LocatorImpl {
    * Brand property carrying the structured payload.
    * Validated through {@link requireBrand} — no private-field casts needed.
    *
-   * Pinned source ref: enekesabel/playwright@b25d782, Locator class uses
+   * Pinned source ref: ayme-labs/playwright@b25d782, Locator class uses
    * `_frame` and `_selector` directly; we expose equivalent access through
    * the brand payload instead.
    */

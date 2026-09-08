@@ -1,6 +1,6 @@
 {
   "source": {
-    "repository": "enekesabel/playwright",
+    "repository": "ayme-labs/playwright",
     "commit": "b25d782e3fbdf21abdae60e974e49b78ca07e828"
   },
   "selectedTestCount": 519,
@@ -18,12 +18,12 @@
     {
       "id": "locator-convenience.spec.ts > allInnerTexts should work",
       "method": "Locator.allInnerTexts",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "With three divs containing A, B, and C, Locator.allInnerTexts returns ['A', 'B', 'C']."
     },
     {
       "id": "locator-convenience.spec.ts > allTextContents should work",
       "method": "Locator.allTextContents",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "With three divs containing A, B, and C, Locator.allTextContents returns ['A', 'B', 'C']."
     },
     {
       "id": "locator-convenience.spec.ts > innerText should produce log",
@@ -33,7 +33,7 @@
     {
       "id": "locator-convenience.spec.ts > innerText should throw",
       "method": "Page.innerText",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Page.innerText and Locator.innerText both reject an SVG node with an error containing 'Node is not an HTMLElement'."
     },
     {
       "id": "locator-convenience.spec.ts > isChecked should work",
@@ -43,12 +43,12 @@
     {
       "id": "locator-convenience.spec.ts > isChecked should work for indeterminate input",
       "method": "Locator.isChecked",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "For a checked, indeterminate checkbox, Locator.isChecked and toBeChecked report true; after Locator.uncheck, both report false."
     },
     {
       "id": "locator-convenience.spec.ts > isEditable should work",
       "method": "Locator.isEditable",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Locator.isEditable and Page.isEditable classify disabled and readonly controls as false, editable controls as true, and reject a button with the expected error."
     },
     {
       "id": "locator-convenience.spec.ts > isEnabled and isDisabled should work",
@@ -58,7 +58,7 @@
     {
       "id": "locator-is-visible.spec.ts > isVisible and isHidden should work",
       "method": "Locator.isVisible",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Locator and Page visibility checks report a div visible, an empty span hidden, and a missing selector not visible and hidden."
     },
     {
       "id": "locator-is-visible.spec.ts > isVisible and isHidden should work with details",
@@ -68,12 +68,12 @@
     {
       "id": "locator-is-visible.spec.ts > isVisible inside a button",
       "method": "Locator.isVisible",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Locator.isVisible reports an empty span inside a button as not visible; the paired hidden checks agree and the button reaches the visible wait state."
     },
     {
       "id": "locator-is-visible.spec.ts > isVisible inside a role=button",
       "method": "Locator.isVisible",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Locator.isVisible reports an empty span inside a role=button element as not visible; the paired hidden checks agree and the role button reaches the visible wait state."
     },
     {
       "id": "locator-is-visible.spec.ts > isVisible should be true for element outside view",
@@ -88,7 +88,7 @@
     {
       "id": "locator-is-visible.spec.ts > isVisible with invalid selector should throw",
       "method": "Locator.isVisible",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Locator.isVisible rejects hey=what with an error containing 'Unknown engine \"hey\" while parsing selector hey=what'."
     },
     {
       "id": "locator-list.spec.ts > locator.all should work",
@@ -103,17 +103,17 @@
     {
       "id": "locator-misc-1.spec.ts > should check the box",
       "method": "Locator.check",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Locator.check changes an unchecked checkbox so the checked DOM property is true."
     },
     {
       "id": "locator-misc-1.spec.ts > should check the box using setChecked",
       "method": "Locator.setChecked",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Locator.setChecked(true) and Locator.setChecked(false) change the checkbox's checked DOM property to true and then false."
     },
     {
       "id": "locator-misc-1.spec.ts > should uncheck the box",
       "method": "Locator.uncheck",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Locator.uncheck changes a checked checkbox so the checked DOM property is false."
     },
     {
       "id": "locator-misc-2.spec.ts > press should throw on unknown keys",
@@ -138,7 +138,7 @@
     {
       "id": "locator-misc-2.spec.ts > should pressSequentially",
       "method": "Locator.pressSequentially",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Locator.pressSequentially('hello') leaves the input value equal to 'hello'."
     },
     {
       "id": "locator-misc-2.spec.ts > should scroll zero-sized element into view",
@@ -233,27 +233,27 @@
     {
       "id": "locator-query.spec.ts > should support has:locator",
       "method": "Locator._expect",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Locator._expect verifies the expected counts for has locators, while exact outerHTML assertions identify the world, hello, and partial-text matches."
     },
     {
       "id": "locator-query.spec.ts > should support locator.and",
       "method": "Locator.and",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Locator.and intersections return the asserted counts and exact hello, world, and world2 texts."
     },
     {
       "id": "locator-query.spec.ts > should support locator.filter",
       "method": "Locator.filter",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Locator.filter returns the asserted 0, 1, and 2 match counts for hasText, has, hasNot, and hasNotText combinations."
     },
     {
       "id": "locator-query.spec.ts > should support locator.locator with and/or",
       "method": "Locator.locator",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Locator.locator compositions with and and or return the asserted exact text arrays for nested buttons and spans."
     },
     {
       "id": "locator-query.spec.ts > should support locator.or",
       "method": "Locator.or",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Locator.or returns the asserted counts and exact text results for matching and missing div, span, and article locators."
     },
     {
       "id": "locator-query.spec.ts > should throw on capture w/ nth()",
@@ -418,7 +418,7 @@
     {
       "id": "page-aria-snapshot-ai.spec.ts > should update active element on focus",
       "method": "Page.ariaSnapshot",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Two Page.ariaSnapshot calls return the expected initial and post-focus YAML, with the second input becoming the active textbox after Locator.focus."
     },
     {
       "id": "page-aria-snapshot.spec.ts > auto-waits the locator and does not include iframes",
@@ -883,7 +883,7 @@
     {
       "id": "page-wait-for-function.spec.ts > should return the window as a success value",
       "method": "Page.waitForFunction",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Page.waitForFunction(() => window) returns a truthy adapter value; the assertion does not verify Window identity."
     },
     {
       "id": "page-wait-for-function.spec.ts > should throw negative polling interval",
@@ -918,12 +918,12 @@
     {
       "id": "retarget.spec.ts > check retargeting",
       "method": "Locator.isChecked",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Across six label and control cases, Locator.isChecked observes false then true after direct mutation; uncheck, check, and setChecked(false) drive the input to false, true, then false."
     },
     {
       "id": "retarget.spec.ts > direct actions retargeting",
       "method": "Locator.innerText",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Across six DOM arrangements, Locator.innerText returns 'content'; the same div locator passes text, focus, count, JS-property, class, id, and attribute assertions after mutations."
     },
     {
       "id": "retarget.spec.ts > editable retargeting",
@@ -933,7 +933,7 @@
     {
       "id": "retarget.spec.ts > element state checks should work as expected for label with zero-sized input",
       "method": "Page.isVisible",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "For a visible label wrapping a disabled zero-sized input, Page.isVisible and Page.isHidden report true and false for the label, while enabled and disabled checks report false and true for the input."
     },
     {
       "id": "retarget.spec.ts > enabled/disabled retargeting",
@@ -958,7 +958,7 @@
     {
       "id": "retarget.spec.ts > should check the box outside shadow dom label",
       "method": "Page.check",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Page.check('label') checks the checkbox associated with that label inside an open shadow root."
     },
     {
       "id": "retarget.spec.ts > should not retarget anchor into parent label",
@@ -1288,7 +1288,7 @@
     {
       "id": "selectors-text.spec.ts > should work with paired quotes in the middle of selector",
       "method": "Locator.isVisible",
-      "evidence": "W-52 individually reviewed the unchanged copied assertions and matching adapter execution evidence."
+      "evidence": "Locator.isVisible resolves all three paired-quote selector forms to the div, and the matching visibility assertions also pass."
     },
     {
       "id": "selectors-text.spec.ts > should work with text nodes in quoted mode",
