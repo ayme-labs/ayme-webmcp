@@ -1,5 +1,47 @@
 import { expect, test } from "./pageTest";
 
+let originalTestIdAttributeSetter: unknown;
+let forcedAdapterSetupFailureObserved = false;
+
+const testWithBrokenAdapterSetup = test.extend({
+  context: async ({ context, playwright }, use) => {
+    originalTestIdAttributeSetter ??= playwright.selectors.setTestIdAttribute;
+    const originalNewPage = context.newPage.bind(context);
+    (context as any).newPage = async () => {
+      const page = await originalNewPage();
+      (page as any).addInitScript = async () => {
+        forcedAdapterSetupFailureObserved = true;
+        throw new Error("forced adapter page setup failure");
+      };
+      return page;
+    };
+    try {
+      await use(context);
+    } finally {
+      (context as any).newPage = originalNewPage;
+    }
+  },
+});
+
+test.describe.serial("page fixture setup cleanup", () => {
+  testWithBrokenAdapterSetup.fail(
+    "restores the test ID setter when adapter setup fails",
+    async ({ page }) => {
+      expect(page).toBeDefined();
+    }
+  );
+
+  test("allows the restored test ID setter in a subsequent test", async ({
+    playwright,
+  }) => {
+    expect(forcedAdapterSetupFailureObserved).toBe(true);
+    expect(playwright.selectors.setTestIdAttribute).toBe(
+      originalTestIdAttributeSetter
+    );
+    playwright.selectors.setTestIdAttribute("data-testid");
+  });
+});
+
 test.describe("pageTest timeout configuration", () => {
   test.use({ actionTimeout: 15, navigationTimeout: 20 });
 
