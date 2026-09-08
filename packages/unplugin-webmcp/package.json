@@ -34,7 +34,7 @@
     "unplugin": "^3.3.0"
   },
   "peerDependencies": {
-    "@playwright/test": "^1.62.1"
+    "@playwright/test": ">=1.62.0 <1.63.0"
   },
   "peerDependenciesMeta": {
     "@playwright/test": {
@@ -44,9 +44,9 @@
   "devDependencies": {
     "@ayme-dev/eslint-config": "workspace:*",
     "@ayme-dev/typescript-config": "workspace:*",
-    "@playwright/test": "^1.62.1",
+    "@playwright/test": "~1.62.1",
     "eslint": "^10.9.1",
-    "playwright": "^1.62.1",
+    "playwright": "~1.62.1",
     "tsdown": "^0.22.14",
     "vitest": "^4.1.11"
   }
