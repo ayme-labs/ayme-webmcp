@@ -1,4 +1,17 @@
 {
   "extends": ["//"],
-  "tags": ["core"]
+  "tags": ["core"],
+  "tasks": {
+    "test": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/packages/webmcp-vue/src/**",
+        "$TURBO_ROOT$/packages/webmcp-vue/package.json",
+        "$TURBO_ROOT$/packages/webmcp-vue/tsdown.config.ts",
+        "$TURBO_ROOT$/packages/unplugin-webmcp/src/**",
+        "$TURBO_ROOT$/packages/unplugin-webmcp/package.json",
+        "$TURBO_ROOT$/packages/unplugin-webmcp/tsdown.config.ts"
+      ]
+    }
+  }
 }
