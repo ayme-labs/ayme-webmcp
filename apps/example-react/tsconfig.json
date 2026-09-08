@@ -1,0 +1,9 @@
+{
+  "extends": "@ayme-dev/typescript-config/library.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "experimentalDecorators": true,
+    "types": ["vite/client"]
+  },
+  "include": ["src", "playwright", "tests", "*.ts"]
+}
