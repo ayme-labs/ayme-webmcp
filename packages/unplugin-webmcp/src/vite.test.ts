@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { type AymeWebMcpOptions } from "./index";
 import { aymeWebMcp } from "./vite";
 
 type VitePlugin = Extract<ReturnType<typeof aymeWebMcp>, { config?: unknown }>;
@@ -15,8 +16,11 @@ type UserConfig = Parameters<ConfigHook>[0];
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEST_ID_ATTRIBUTE_DEFINE = "__AYME_PLAYWRIGHT_TEST_ID_ATTRIBUTE__";
 
-async function applyPluginConfig(config: UserConfig) {
-  const plugin = aymeWebMcp();
+async function applyPluginConfig(
+  config: UserConfig,
+  options: AymeWebMcpOptions = {}
+) {
+  const plugin = aymeWebMcp(options);
   if (Array.isArray(plugin)) {
     throw new Error("Expected a single Vite plugin");
   }
@@ -32,6 +36,17 @@ async function applyPluginConfig(config: UserConfig) {
 }
 
 describe("aymeWebMcp Vite integration", () => {
+  it("accepts projects with omitted and explicit default test IDs", async () => {
+    await expect(
+      applyPluginConfig(
+        { root: resolve(__dirname, "fixtures/playwright-default-projects") },
+        { playwright: { config: "playwright.config.ts" } }
+      )
+    ).resolves.toEqual({
+      define: { [TEST_ID_ATTRIBUTE_DEFINE]: '"data-testid"' },
+      optimizeDeps: { exclude: ["@playwright/test"] },
+    });
+  });
   it("adds the Playwright test runner exclusion when no optimizer config exists", async () => {
     await expect(applyPluginConfig({})).resolves.toEqual({
       define: { [TEST_ID_ATTRIBUTE_DEFINE]: '"data-testid"' },
@@ -63,13 +78,27 @@ describe("aymeWebMcp Vite integration", () => {
     });
   });
 
-  it("compiles the consumer's Playwright test-id attribute into the browser bundle", async () => {
+  it("loads top-level settings from a real config with explicit empty projects", async () => {
     await expect(
-      applyPluginConfig({
-        root: resolve(__dirname, "fixtures/playwright-test-id"),
-      })
+      applyPluginConfig(
+        {
+          root: resolve(__dirname, "fixtures/playwright-test-id"),
+        },
+        {
+          playwright: {
+            config: resolve(
+              __dirname,
+              "fixtures/playwright-test-id/playwright.config.ts"
+            ),
+          },
+        }
+      )
     ).resolves.toEqual({
-      define: { [TEST_ID_ATTRIBUTE_DEFINE]: '"data-pw,data-ti"' },
+      define: {
+        [TEST_ID_ATTRIBUTE_DEFINE]: '"data-pw,data-ti"',
+        __AYME_PLAYWRIGHT_ACTION_TIMEOUT__: "11",
+        __AYME_PLAYWRIGHT_NAVIGATION_TIMEOUT__: "22",
+      },
       optimizeDeps: { exclude: ["@playwright/test"] },
     });
   });

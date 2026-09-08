@@ -34,10 +34,14 @@ type CreatePageOptions = {
   pacing?: import("./types").BrowserInteractionPacing;
 };
 
+declare const __AYME_PLAYWRIGHT_ACTION_TIMEOUT__: number | undefined;
+declare const __AYME_PLAYWRIGHT_NAVIGATION_TIMEOUT__: number | undefined;
+
 export function createPage(options: CreatePageOptions = {}): Page {
-  return PageImpl.fromWindow(
-    window,
-    options.onTrace,
-    options.pacing
-  ) as unknown as Page;
+  const page = PageImpl.fromWindow(window, options.onTrace, options.pacing);
+  if (typeof __AYME_PLAYWRIGHT_ACTION_TIMEOUT__ === "number")
+    page.setDefaultTimeout(__AYME_PLAYWRIGHT_ACTION_TIMEOUT__);
+  if (typeof __AYME_PLAYWRIGHT_NAVIGATION_TIMEOUT__ === "number")
+    page.setDefaultNavigationTimeout(__AYME_PLAYWRIGHT_NAVIGATION_TIMEOUT__);
+  return page as unknown as Page;
 }
