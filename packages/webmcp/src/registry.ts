@@ -86,6 +86,12 @@ function resetRegisteredPoms() {
   if (hadRegistrations) notifySubscribers();
 }
 
+export function requireAymeRuntimePage(): Page {
+  if (!browserPage)
+    throw new Error("Configure the Ayme browser runtime before interacting.");
+  return browserPage;
+}
+
 export function registerCompiledPom(PomClass: object, manifest: PomManifest) {
   compiledPoms.set(PomClass, manifest);
 }
@@ -748,6 +754,7 @@ async function executeTool(
 
   const result = await method.apply(instance, validatedArguments(tool, args));
   if (result === undefined) return { ok: true };
+  if (isReturnedPom(result, tool.returnPoms ?? [])) return { ok: true };
   if (isJsonValue(result)) return { ok: true, result };
   return { ok: true, result: String(result) };
 }
@@ -869,6 +876,14 @@ function isJsonValue(value: unknown): value is JsonValue {
   if (Array.isArray(value)) return value.every(isJsonValue);
   if (!isRecord(value)) return false;
   return Object.values(value).every(isJsonValue);
+}
+
+function isReturnedPom(value: unknown, returnPoms: readonly string[]) {
+  if (!isRecord(value) || returnPoms.length === 0) return false;
+  const constructor = value.constructor;
+  return (
+    typeof constructor === "function" && returnPoms.includes(constructor.name)
+  );
 }
 
 function isJsonPrimitive(value: unknown): value is JsonPrimitive {

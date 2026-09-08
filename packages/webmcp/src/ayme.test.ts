@@ -2,13 +2,15 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { captureAriaSnapshot, listRegisteredPomRoots } = vi.hoisted(() => ({
-  captureAriaSnapshot: vi.fn(),
-  listRegisteredPomRoots: vi.fn(),
-}));
+const { captureAriaSnapshot, listRegisteredPomRoots, listRegisteredPoms } =
+  vi.hoisted(() => ({
+    captureAriaSnapshot: vi.fn(),
+    listRegisteredPomRoots: vi.fn(),
+    listRegisteredPoms: vi.fn(),
+  }));
 
 vi.mock("@ayme-dev/playwright-browser", () => ({ captureAriaSnapshot }));
-vi.mock("./registry", () => ({ listRegisteredPomRoots }));
+vi.mock("./registry", () => ({ listRegisteredPomRoots, listRegisteredPoms }));
 
 import ayme, { ayme as namedAyme } from "./index";
 import { AriaRefSchema } from "@ayme-dev/structural-observation";
@@ -20,6 +22,8 @@ describe("the public Ayme page state facade", () => {
       document.implementation.createHTMLDocument("Ayme test")
     );
     document.body.innerHTML = '<button id="save">Save changes</button>';
+    listRegisteredPomRoots.mockResolvedValue([]);
+    listRegisteredPoms.mockReturnValue([]);
     vi.clearAllMocks();
   });
 
@@ -29,6 +33,40 @@ describe("the public Ayme page state facade", () => {
 
   it("exports the facade by name as well as by default", () => {
     expect(namedAyme).toBe(ayme);
+  });
+
+  it("combines the current structure with the named POM definition", async () => {
+    const button = document.querySelector("#save");
+    if (!button) throw new Error("Expected the save button.");
+    captureAriaSnapshot.mockReturnValue({
+      distilledText: '- generic [ref=e1]:\n  - button "Save changes" [ref=e2]',
+      fullText: '- generic [ref=e1]:\n  - button "Save changes" [ref=e2]',
+      refsByElement: new Map([
+        [document.body, "e1"],
+        [button, "e2"],
+      ]),
+    });
+    listRegisteredPoms.mockReturnValue([
+      {
+        manifest: {
+          className: "ProfileMenu",
+          members: [],
+          components: [],
+          tools: [],
+        },
+      },
+    ]);
+
+    const context = await ayme.getPageContext("ProfileMenu", "DocumentPage");
+
+    expect(context.structure).toContain('e2 button "Save changes"');
+    expect(context.pomDefinitions).toEqual([
+      {
+        name: "ProfileMenu",
+        children: [],
+        actions: [],
+      },
+    ]);
   });
 
   it("captures rendered state and resolves each current requested ref in order", async () => {

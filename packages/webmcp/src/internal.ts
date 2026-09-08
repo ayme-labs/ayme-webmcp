@@ -3,6 +3,7 @@ export {
   getPageStateForElements,
   resolvePageStateRef,
 } from "./pageState";
+export { getPageContextForDocument } from "./pageContext";
 export {
   configureAymeRuntime,
   createAymeRuntime,
@@ -11,6 +12,7 @@ export {
   listRegisteredPoms,
   probeRegisteredPomMembers,
   registerCompiledPom,
+  requireAymeRuntimePage,
   subscribeToRegisteredPoms,
 } from "./registry";
 export type {
