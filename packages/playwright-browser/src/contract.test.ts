@@ -10,6 +10,36 @@ import {
 import { AdapterJSHandle, PageImpl } from "./page";
 import { ADAPTER_TIMEOUT_ERROR } from "./errors";
 
+const compiledTimeoutGlobals = {
+  action: "__AYME_PLAYWRIGHT_ACTION_TIMEOUT__",
+  navigation: "__AYME_PLAYWRIGHT_NAVIGATION_TIMEOUT__",
+} as const;
+
+function installCompiledTimeouts(
+  actionTimeout: number | undefined,
+  navigationTimeout: number | undefined
+) {
+  const previous = new Map<string, PropertyDescriptor | undefined>();
+  const values = [
+    [compiledTimeoutGlobals.action, actionTimeout],
+    [compiledTimeoutGlobals.navigation, navigationTimeout],
+  ] as const;
+
+  for (const [name, value] of values) {
+    previous.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
+    if (value === undefined) delete (globalThis as any)[name];
+    else (globalThis as any)[name] = value;
+  }
+
+  return () => {
+    for (const [name] of values) {
+      const descriptor = previous.get(name);
+      if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+      else delete (globalThis as any)[name];
+    }
+  };
+}
+
 describe("Single-document adapter contract", () => {
   describe("ARIA snapshots", () => {
     it("captures the current document through the compiled InjectedScript", async () => {
@@ -415,6 +445,57 @@ describe("Single-document adapter contract", () => {
       expect(waitForFunctionError.message).toBe(
         "page.waitForFunction: Timeout 20ms exceeded."
       );
+    });
+
+    it("applies compiled defaults to the page returned by createPage", async () => {
+      const restoreCompiledTimeouts = installCompiledTimeouts(5, undefined);
+
+      try {
+        document.body.innerHTML = "";
+        const page = createPage();
+
+        await expect(page.locator("#missing").click()).rejects.toThrow(
+          "Timeout 5ms exceeded"
+        );
+      } finally {
+        restoreCompiledTimeouts();
+      }
+    });
+
+    it("applies compiled and runtime navigation defaults to same-document goto", async () => {
+      const restoreCompiledTimeouts = installCompiledTimeouts(undefined, 7);
+      const originalSetTimeout = window.setTimeout;
+      const navigationTimeouts: number[] = [];
+      window.setTimeout = ((
+        handler: TimerHandler,
+        timeout?: number,
+        ...args: any[]
+      ) => {
+        if (timeout !== undefined) navigationTimeouts.push(timeout);
+        return originalSetTimeout(handler, timeout, ...args);
+      }) as typeof window.setTimeout;
+
+      try {
+        const page = createPage();
+
+        await expect(page.goto("#compiled")).resolves.toBeNull();
+        expect(navigationTimeouts).toContain(7);
+
+        page.setDefaultNavigationTimeout(11);
+        await expect(page.goto("#runtime")).resolves.toBeNull();
+        expect(navigationTimeouts).toContain(11);
+
+        await expect(
+          page.goto("#explicit", { timeout: 13 })
+        ).resolves.toBeNull();
+        expect(navigationTimeouts).toContain(13);
+        const scheduledBeforeZero = navigationTimeouts.length;
+        await expect(page.goto("#zero", { timeout: 0 })).resolves.toBeNull();
+        expect(navigationTimeouts).toHaveLength(scheduledBeforeZero);
+      } finally {
+        window.setTimeout = originalSetTimeout;
+        restoreCompiledTimeouts();
+      }
     });
   });
 

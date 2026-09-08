@@ -1,8 +1,9 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import type { PlaywrightTestConfig } from "@playwright/test";
 import { createUnplugin, type UnpluginFactory } from "unplugin";
 
 import {
@@ -14,24 +15,36 @@ import { rewritePomImports } from "./rewritePomImports";
 const PLAYWRIGHT_TEST_PACKAGE = "@playwright/test";
 const DEFAULT_TEST_ID_ATTRIBUTE = "data-testid";
 const TEST_ID_ATTRIBUTE_DEFINE = "__AYME_PLAYWRIGHT_TEST_ID_ATTRIBUTE__";
-const PLAYWRIGHT_CONFIG_NAMES = [
-  "playwright.config.ts",
-  "playwright.config.js",
-  "playwright.config.mts",
-  "playwright.config.mjs",
-  "playwright.config.cts",
-  "playwright.config.cjs",
-];
+const ACTION_TIMEOUT_DEFINE = "__AYME_PLAYWRIGHT_ACTION_TIMEOUT__";
+const NAVIGATION_TIMEOUT_DEFINE = "__AYME_PLAYWRIGHT_NAVIGATION_TIMEOUT__";
+const SUPPORTED_PLAYWRIGHT_VERSION = /^1\.62\.\d+(?:[-+].*)?$/;
 
-type LoadedPlaywrightConfig = {
-  projects: Array<{ project: { use?: { testIdAttribute?: unknown } } }>;
+type SupportedPlaywrightUse = Partial<
+  Pick<
+    NonNullable<PlaywrightTestConfig["use"]>,
+    "testIdAttribute" | "actionTimeout" | "navigationTimeout"
+  >
+>;
+
+export type AymePlaywrightOptions = {
+  config?: string;
+  project?: string;
+  use?: SupportedPlaywrightUse;
+};
+
+type SupportedPlaywrightSettings = {
+  testIdAttribute?: string;
+  actionTimeout?: number;
+  navigationTimeout?: number;
 };
 
 type PlaywrightConfigLoader = {
-  loadConfigFromFile(configFile: string): Promise<LoadedPlaywrightConfig>;
+  loadConfigFromFile(configFile: string): Promise<unknown>;
 };
 
-export type AymeWebMcpOptions = PomCompilerOptions;
+export type AymeWebMcpOptions = PomCompilerOptions & {
+  playwright?: AymePlaywrightOptions;
+};
 
 export const unpluginFactory: UnpluginFactory<AymeWebMcpOptions | undefined> = (
   options = {}
@@ -44,13 +57,27 @@ export const unpluginFactory: UnpluginFactory<AymeWebMcpOptions | undefined> = (
     vite: {
       async config(config) {
         const exclude = config.optimizeDeps?.exclude ?? [];
-        const testIdAttribute = await testIdAttributeFor(config.root);
+        const settings = await resolvePlaywrightSettings(
+          options.playwright,
+          config.root ?? process.cwd()
+        );
+        const define: Record<string, unknown> = {
+          ...config.define,
+          [TEST_ID_ATTRIBUTE_DEFINE]: JSON.stringify(
+            settings.testIdAttribute ?? DEFAULT_TEST_ID_ATTRIBUTE
+          ),
+        };
+        if (settings.actionTimeout !== undefined)
+          define[ACTION_TIMEOUT_DEFINE] = JSON.stringify(
+            settings.actionTimeout
+          );
+        if (settings.navigationTimeout !== undefined)
+          define[NAVIGATION_TIMEOUT_DEFINE] = JSON.stringify(
+            settings.navigationTimeout
+          );
 
         return {
-          define: {
-            ...config.define,
-            [TEST_ID_ATTRIBUTE_DEFINE]: JSON.stringify(testIdAttribute),
-          },
+          define,
           optimizeDeps: {
             ...config.optimizeDeps,
             exclude: [...new Set([...exclude, PLAYWRIGHT_TEST_PACKAGE])],
@@ -88,32 +115,273 @@ export const unpluginFactory: UnpluginFactory<AymeWebMcpOptions | undefined> = (
   };
 };
 
-async function testIdAttributeFor(root: string | undefined): Promise<string> {
-  const configRoot = root ?? process.cwd();
-  const configPath = PLAYWRIGHT_CONFIG_NAMES.map((name) =>
-    resolve(configRoot, name)
-  ).find(existsSync);
-  if (!configPath) return DEFAULT_TEST_ID_ATTRIBUTE;
-
-  const require = createRequire(resolve(configRoot, "package.json"));
-  const playwrightTestPackagePath =
-    require.resolve("@playwright/test/package.json");
-  const playwrightTestRequire = createRequire(playwrightTestPackagePath);
-  const playwrightPackagePath = playwrightTestRequire.resolve(
-    "playwright/package.json"
+async function resolvePlaywrightSettings(
+  options: AymePlaywrightOptions | undefined,
+  root: string
+): Promise<SupportedPlaywrightSettings> {
+  if (options !== undefined) {
+    if (!isRecord(options))
+      throw new TypeError("playwright options must be an object");
+    const unsupported = Object.keys(options).filter(
+      (key) => !["config", "project", "use"].includes(key)
+    );
+    if (unsupported.length > 0)
+      throw new TypeError(
+        `playwright contains unsupported option(s): ${unsupported.join(", ")}`
+      );
+  }
+  const overrides = supportedSettingsFromUse(
+    options?.use,
+    "playwright.use",
+    true
   );
-  const playwrightCommonPath = resolve(
+  const configPath = options?.config;
+  if (configPath === undefined) {
+    if (options?.project !== undefined)
+      throw new TypeError(
+        "playwright.project requires an explicit playwright.config path"
+      );
+    return overrides;
+  }
+
+  if (typeof configPath !== "string" || configPath.trim() === "")
+    throw new TypeError("playwright.config must be a non-empty string");
+  if (
+    options?.project !== undefined &&
+    (typeof options.project !== "string" || options.project.length === 0)
+  )
+    throw new TypeError("playwright.project must be a non-empty string");
+
+  const absoluteConfigPath = resolve(root, configPath);
+  const loadedConfig = await loadPlaywrightConfig(absoluteConfigPath, root);
+  const configSettings = selectPlaywrightSettings(
+    loadedConfig,
+    options?.project,
+    absoluteConfigPath
+  );
+  return {
+    ...configSettings,
+    ...overrides,
+  };
+}
+
+async function loadPlaywrightConfig(
+  configPath: string,
+  root: string
+): Promise<unknown> {
+  if (!existsSync(configPath))
+    throw new Error(
+      `Could not load Playwright config "${configPath}": file does not exist.`
+    );
+
+  const consumerRequire = createRequire(resolve(root, "package.json"));
+  let playwrightTestPackagePath: string;
+  try {
+    playwrightTestPackagePath = consumerRequire.resolve(
+      `${PLAYWRIGHT_TEST_PACKAGE}/package.json`
+    );
+  } catch (error) {
+    throw new Error(
+      `Could not load Playwright config "${configPath}": ${errorMessage(error)}`,
+      { cause: error }
+    );
+  }
+
+  let playwrightPackagePath: string;
+  try {
+    playwrightPackagePath = createRequire(playwrightTestPackagePath).resolve(
+      "playwright/package.json"
+    );
+  } catch (error) {
+    throw new Error(
+      `Could not load Playwright config "${configPath}": could not resolve the consumer's playwright package (${errorMessage(error)}).`,
+      { cause: error }
+    );
+  }
+
+  const playwrightVersion = readPackageVersion(playwrightPackagePath);
+  if (!SUPPORTED_PLAYWRIGHT_VERSION.test(playwrightVersion))
+    throw new Error(
+      `Unsupported Playwright config loader version ${playwrightVersion}. Ayme supports Playwright 1.62.x only.`
+    );
+
+  // Playwright does not expose its config loader publicly. Keep this one
+  // private import in the explicit-config path and guard the pinned boundary.
+  const loaderPath = resolve(
     dirname(playwrightPackagePath),
     "lib/common/index.js"
   );
-  const { configLoader } = (await import(
-    pathToFileURL(playwrightCommonPath).href
-  )) as { configLoader: PlaywrightConfigLoader };
-  const config = await configLoader.loadConfigFromFile(configPath);
-  const testIdAttribute = config.projects
-    .map((project) => project.project.use?.testIdAttribute)
-    .find((attribute): attribute is string => typeof attribute === "string");
-  return testIdAttribute ?? DEFAULT_TEST_ID_ATTRIBUTE;
+  if (!existsSync(loaderPath))
+    throw new Error(
+      `Unsupported Playwright config loader: ${loaderPath} does not exist. Ayme supports Playwright 1.62.x only.`
+    );
+
+  let loaderModule: { configLoader?: PlaywrightConfigLoader };
+  try {
+    loaderModule = (await import(
+      pathToFileURL(loaderPath).href
+    )) as typeof loaderModule;
+  } catch (error) {
+    throw new Error(
+      `Unsupported Playwright config loader at ${loaderPath}: ${errorMessage(error)}`,
+      { cause: error }
+    );
+  }
+  if (
+    !loaderModule.configLoader ||
+    typeof loaderModule.configLoader.loadConfigFromFile !== "function"
+  )
+    throw new Error(
+      `Unsupported Playwright config loader at ${loaderPath}: expected configLoader.loadConfigFromFile for Playwright 1.62.x.`
+    );
+
+  try {
+    return await loaderModule.configLoader.loadConfigFromFile(configPath);
+  } catch (error) {
+    throw new Error(
+      `Could not load Playwright config "${configPath}": ${errorMessage(error)}`,
+      { cause: error }
+    );
+  }
+}
+
+function readPackageVersion(packagePath: string): string {
+  try {
+    const packageJson = JSON.parse(readFileSync(packagePath, "utf8")) as {
+      version?: unknown;
+    };
+    if (typeof packageJson.version !== "string")
+      throw new Error("package.json has no string version");
+    return packageJson.version;
+  } catch (error) {
+    throw new Error(
+      `Unsupported Playwright config loader: could not read ${packagePath} (${errorMessage(error)}).`,
+      { cause: error }
+    );
+  }
+}
+
+function selectPlaywrightSettings(
+  loadedConfig: unknown,
+  projectName: string | undefined,
+  configPath: string
+): SupportedPlaywrightSettings {
+  if (!isRecord(loadedConfig))
+    throw invalidLoadedConfig(configPath, "the loader returned a non-object");
+
+  const topLevel = supportedSettingsFromUse(
+    loadedConfig.use,
+    "top-level playwright.use"
+  );
+  const projectEntries = loadedConfig.projects;
+  if (projectEntries !== undefined && !Array.isArray(projectEntries))
+    throw invalidLoadedConfig(configPath, "projects must be an array");
+
+  const projects = (projectEntries ?? ([] as unknown[])).map(
+    (entry: unknown, index: number) => {
+      if (!isRecord(entry))
+        throw invalidLoadedConfig(
+          configPath,
+          `projects[${index}] is not an object`
+        );
+      const project = isRecord(entry.project) ? entry.project : entry;
+      const name = project.name;
+      if (name !== undefined && typeof name !== "string")
+        throw invalidLoadedConfig(
+          configPath,
+          `projects[${index}].name must be a string`
+        );
+      return {
+        name: typeof name === "string" ? name : "",
+        settings: {
+          ...topLevel,
+          ...supportedSettingsFromUse(project.use, `projects[${index}].use`),
+        },
+      };
+    }
+  );
+
+  if (projectName !== undefined) {
+    const matches = projects.filter((project) => project.name === projectName);
+    if (matches.length !== 1)
+      throw new Error(
+        `Playwright project "${projectName}" must exist exactly once in ${configPath}; found ${matches.length}.`
+      );
+    return matches[0]!.settings;
+  }
+
+  if (projects.length === 0) return topLevel;
+  if (projects.length === 1) return projects[0]!.settings;
+
+  const common = projects[0]!.settings;
+  const differingFields = SUPPORTED_SETTING_KEYS.filter((key) =>
+    projects.some((project) => project.settings[key] !== common[key])
+  );
+  if (differingFields.length > 0)
+    throw new Error(
+      `Playwright projects have different supported settings (${differingFields.join(", ")}); set playwright.project explicitly.`
+    );
+  return common;
+}
+
+const SUPPORTED_SETTING_KEYS = [
+  "testIdAttribute",
+  "actionTimeout",
+  "navigationTimeout",
+] as const;
+
+function supportedSettingsFromUse(
+  value: unknown,
+  label: string,
+  rejectUnsupported = false
+): SupportedPlaywrightSettings {
+  if (value === undefined) return {};
+  if (!isRecord(value)) throw new TypeError(`${label} must be an object`);
+
+  const unsupported = Object.keys(value).filter(
+    (key) =>
+      !SUPPORTED_SETTING_KEYS.includes(
+        key as (typeof SUPPORTED_SETTING_KEYS)[number]
+      )
+  );
+  if (rejectUnsupported && unsupported.length > 0)
+    throw new TypeError(
+      `${label} contains unsupported option(s): ${unsupported.join(", ")}`
+    );
+
+  const settings: SupportedPlaywrightSettings = {};
+  const testIdAttribute = value.testIdAttribute;
+  if (testIdAttribute !== undefined) {
+    if (typeof testIdAttribute !== "string" || testIdAttribute.length === 0)
+      throw new TypeError(
+        `${label}.testIdAttribute must be a non-empty string`
+      );
+    settings.testIdAttribute = testIdAttribute;
+  }
+  for (const key of ["actionTimeout", "navigationTimeout"] as const) {
+    const timeout = value[key];
+    if (timeout === undefined) continue;
+    if (typeof timeout !== "number" || !Number.isFinite(timeout) || timeout < 0)
+      throw new TypeError(
+        `${label}.${key} must be a non-negative finite number`
+      );
+    settings[key] = timeout;
+  }
+  return settings;
+}
+
+function invalidLoadedConfig(configPath: string, detail: string): Error {
+  return new Error(
+    `Invalid Playwright configuration "${configPath}": ${detail}.`
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 export const unplugin = /* #__PURE__ */ createUnplugin(unpluginFactory);
