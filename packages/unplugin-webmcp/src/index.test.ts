@@ -37,7 +37,10 @@ async function applyPluginConfig(
 
 function writeFakeLoader(
   root: string,
-  source = `exports.configLoader = {
+  source = `exports.transform = {
+  requireOrImport: async () => ({ default: {} }),
+};
+exports.configLoader = {
   loadConfigFromFile: async () => ({ projects: [] }),
 };`,
   version = "1.62.1"
@@ -137,7 +140,10 @@ describe("ayme WebMCP transform", () => {
       writeFileSync(configPath, "export default {};");
       writeFakeLoader(
         root,
-        `exports.configLoader = {
+        `exports.transform = {
+  requireOrImport: async () => ({ default: {} }),
+};
+exports.configLoader = {
   loadConfigFromFile: async () => ({
     projects: [{
       project: {
@@ -221,7 +227,10 @@ describe("ayme WebMCP transform", () => {
       writeFileSync(join(root, "playwright.config.ts"), "export default {};");
       writeFakeLoader(
         root,
-        `exports.configLoader = {
+        `exports.transform = {
+  requireOrImport: async () => ({ default: {} }),
+};
+exports.configLoader = {
   loadConfigFromFile: async () => ({
     projects: [
       { project: { name: "chromium", use: { actionTimeout: 10 } } },
@@ -253,6 +262,31 @@ describe("ayme WebMCP transform", () => {
       ).rejects.toThrow(/found 0/);
     } finally {
       rmSync(root, { recursive: true, force: true });
+    }
+
+    const malformedRoot = mkdtempSync(join(tmpdir(), "ayme-webmcp-shape-"));
+    try {
+      writePackage(malformedRoot);
+      writeFileSync(
+        join(malformedRoot, "playwright.config.ts"),
+        "export default {};"
+      );
+      writeFakeLoader(
+        malformedRoot,
+        `exports.transform = {
+  requireOrImport: async () => ({ default: {} }),
+};
+exports.configLoader = {
+  loadConfigFromFile: async () => ({ projects: [{ use: {} }] }),
+};`
+      );
+      await expect(
+        applyPluginConfig(malformedRoot, {
+          playwright: { config: "playwright.config.ts" },
+        })
+      ).rejects.toThrow(/projects\[0\]\.project must be an object/);
+    } finally {
+      rmSync(malformedRoot, { recursive: true, force: true });
     }
   });
 

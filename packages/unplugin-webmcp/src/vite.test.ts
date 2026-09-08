@@ -67,7 +67,7 @@ describe("aymeWebMcp Vite integration", () => {
     });
   });
 
-  it("compiles the consumer's Playwright test-id attribute into the browser bundle", async () => {
+  it("loads top-level settings from a real config with explicit empty projects", async () => {
     await expect(
       applyPluginConfig(
         {

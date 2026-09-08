@@ -42,6 +42,20 @@ type PlaywrightConfigLoader = {
   loadConfigFromFile(configFile: string): Promise<unknown>;
 };
 
+type PlaywrightTransform = {
+  requireOrImport(file: string): Promise<unknown>;
+};
+
+type PlaywrightLoaderModule = {
+  configLoader?: PlaywrightConfigLoader;
+  transform?: PlaywrightTransform;
+};
+
+type LoadedPlaywrightConfig = {
+  fullConfig: unknown;
+  rawConfig: unknown;
+};
+
 export type AymeWebMcpOptions = PomCompilerOptions & {
   playwright?: AymePlaywrightOptions;
 };
@@ -168,7 +182,7 @@ async function resolvePlaywrightSettings(
 async function loadPlaywrightConfig(
   configPath: string,
   root: string
-): Promise<unknown> {
+): Promise<LoadedPlaywrightConfig> {
   if (!existsSync(configPath))
     throw new Error(
       `Could not load Playwright config "${configPath}": file does not exist.`
@@ -216,7 +230,7 @@ async function loadPlaywrightConfig(
       `Unsupported Playwright config loader: ${loaderPath} does not exist. Ayme supports Playwright 1.62.x only.`
     );
 
-  let loaderModule: { configLoader?: PlaywrightConfigLoader };
+  let loaderModule: PlaywrightLoaderModule;
   try {
     loaderModule = (await import(
       pathToFileURL(loaderPath).href
@@ -229,20 +243,37 @@ async function loadPlaywrightConfig(
   }
   if (
     !loaderModule.configLoader ||
-    typeof loaderModule.configLoader.loadConfigFromFile !== "function"
+    typeof loaderModule.configLoader.loadConfigFromFile !== "function" ||
+    !loaderModule.transform ||
+    typeof loaderModule.transform.requireOrImport !== "function"
   )
     throw new Error(
-      `Unsupported Playwright config loader at ${loaderPath}: expected configLoader.loadConfigFromFile for Playwright 1.62.x.`
+      `Unsupported Playwright config loader at ${loaderPath}: expected configLoader.loadConfigFromFile and transform.requireOrImport for Playwright 1.62.x.`
     );
 
+  let fullConfig: unknown;
   try {
-    return await loaderModule.configLoader.loadConfigFromFile(configPath);
+    fullConfig = await loaderModule.configLoader.loadConfigFromFile(configPath);
   } catch (error) {
     throw new Error(
       `Could not load Playwright config "${configPath}": ${errorMessage(error)}`,
       { cause: error }
     );
   }
+
+  let rawConfig: unknown;
+  try {
+    rawConfig = normalizeDefaultExport(
+      await loaderModule.transform.requireOrImport(configPath)
+    );
+  } catch (error) {
+    throw new Error(
+      `Could not load Playwright config "${configPath}": ${errorMessage(error)}`,
+      { cause: error }
+    );
+  }
+
+  return { fullConfig, rawConfig };
 }
 
 function readPackageVersion(packagePath: string): string {
@@ -269,37 +300,45 @@ function selectPlaywrightSettings(
   if (!isRecord(loadedConfig))
     throw invalidLoadedConfig(configPath, "the loader returned a non-object");
 
+  const rawConfig = loadedConfig.rawConfig;
+  if (!isRecord(rawConfig))
+    throw invalidLoadedConfig(configPath, "the raw config is not an object");
+
   const topLevel = supportedSettingsFromUse(
-    loadedConfig.use,
+    rawConfig.use,
     "top-level playwright.use"
   );
-  const projectEntries = loadedConfig.projects;
-  if (projectEntries !== undefined && !Array.isArray(projectEntries))
+  const fullConfig = loadedConfig.fullConfig;
+  if (!isRecord(fullConfig))
+    throw invalidLoadedConfig(configPath, "the loader returned no full config");
+  const projectEntries = fullConfig.projects;
+  if (!Array.isArray(projectEntries))
     throw invalidLoadedConfig(configPath, "projects must be an array");
 
-  const projects = (projectEntries ?? ([] as unknown[])).map(
-    (entry: unknown, index: number) => {
-      if (!isRecord(entry))
-        throw invalidLoadedConfig(
-          configPath,
-          `projects[${index}] is not an object`
-        );
-      const project = isRecord(entry.project) ? entry.project : entry;
-      const name = project.name;
-      if (name !== undefined && typeof name !== "string")
-        throw invalidLoadedConfig(
-          configPath,
-          `projects[${index}].name must be a string`
-        );
-      return {
-        name: typeof name === "string" ? name : "",
-        settings: {
-          ...topLevel,
-          ...supportedSettingsFromUse(project.use, `projects[${index}].use`),
-        },
-      };
-    }
-  );
+  const projects = projectEntries.map((entry: unknown, index: number) => {
+    if (!isRecord(entry) || !isRecord(entry.project))
+      throw invalidLoadedConfig(
+        configPath,
+        `projects[${index}].project must be an object`
+      );
+    const project = entry.project;
+    const name = project.name;
+    if (name !== undefined && typeof name !== "string")
+      throw invalidLoadedConfig(
+        configPath,
+        `projects[${index}].project.name must be a string`
+      );
+    return {
+      name: typeof name === "string" ? name : "",
+      settings: {
+        ...topLevel,
+        ...supportedSettingsFromUse(
+          project.use,
+          `projects[${index}].project.use`
+        ),
+      },
+    };
+  });
 
   if (projectName !== undefined) {
     const matches = projects.filter((project) => project.name === projectName);
@@ -382,6 +421,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function normalizeDefaultExport(value: unknown): unknown {
+  if (isRecord(value) && "default" in value) return value.default;
+  return value;
 }
 
 export const unplugin = /* #__PURE__ */ createUnplugin(unpluginFactory);

@@ -7,4 +7,5 @@ export default defineConfig({
     navigationTimeout: 22,
     baseURL: "https://not-in-the-browser-bundle.example",
   },
+  projects: [],
 });
