@@ -1,5 +1,11 @@
 # ayme-webmcp
 
+Start with the [core package README](packages/webmcp/README.md) for consumer setup.
+
+## Coding agent skill
+
+> Install the `ayme` skill from https://github.com/ayme-labs/ayme-webmcp/tree/main/skills/ayme into this project's skill directory, including its references. Then use it to set up Ayme WebMCP here.
+
 ## Playwright compatibility
 
 For Page Object Models, install `@playwright/test` as a development dependency.
