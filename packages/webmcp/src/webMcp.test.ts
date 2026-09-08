@@ -231,4 +231,83 @@ describe("WebMCP publisher", () => {
     expect(registrations[0]?.signal.aborted).toBe(true);
     expect(registrations[2]?.signal.aborted).toBe(true);
   });
+
+  it("cleans up partial publication when a tool registration fails", async () => {
+    const signals: AbortSignal[] = [];
+    const registerTool = vi.fn(
+      async (_tool: PublishedTool, options: { signal: AbortSignal }) => {
+        signals.push(options.signal);
+        if (signals.length === 2) throw new Error("registration failed");
+      }
+    );
+    vi.stubGlobal("document", { documentElement: {} });
+
+    const registry = await import("./registry");
+    const { synchronizeWebMcpTools } = await import("./webMcp");
+    registry.configureAymeRuntime({} as Page);
+
+    class FailingPage {
+      readonly run = vi.fn();
+    }
+    registry.registerCompiledPom(FailingPage, {
+      className: "FailingPage",
+      tools: [action("run")],
+      members: [],
+      components: [],
+    });
+    const registration = registry.createPageRegistration(FailingPage);
+
+    await expect(synchronizeWebMcpTools({ registerTool })).rejects.toThrow(
+      "registration failed"
+    );
+    expect(signals).toHaveLength(2);
+    expect(signals.every((signal) => signal.aborted)).toBe(true);
+
+    registration.dispose();
+    await flushPublisher();
+    expect(registerTool).toHaveBeenCalledTimes(2);
+  });
+
+  it("aborts publication while initial registration is pending", async () => {
+    let finishRegistration: (() => void) | undefined;
+    let registrationSignal: AbortSignal | undefined;
+    const registerTool = vi.fn(
+      async (_tool: PublishedTool, options: { signal: AbortSignal }) => {
+        registrationSignal = options.signal;
+        await new Promise<void>((resolve) => {
+          finishRegistration = resolve;
+        });
+      }
+    );
+    vi.stubGlobal("document", { documentElement: {} });
+
+    const { synchronizeWebMcpTools } = await import("./webMcp");
+    const controller = new AbortController();
+    const pending = synchronizeWebMcpTools(
+      { registerTool },
+      { signal: controller.signal }
+    );
+    await flushPublisher();
+
+    controller.abort();
+    expect(registrationSignal?.aborted).toBe(true);
+
+    finishRegistration?.();
+    const publication = await pending;
+    publication.dispose();
+  });
+
+  it("cancels a pending bounded driver wait", async () => {
+    vi.stubGlobal("document", {});
+    vi.stubGlobal("window", { setTimeout, clearTimeout });
+    const { waitForWebMcpDriver } = await import("./webMcp");
+    const controller = new AbortController();
+
+    const driver = waitForWebMcpDriver(2_000, controller.signal);
+    expect(vi.getTimerCount()).toBe(1);
+
+    controller.abort();
+    await expect(driver).resolves.toBeUndefined();
+    expect(vi.getTimerCount()).toBe(0);
+  });
 });

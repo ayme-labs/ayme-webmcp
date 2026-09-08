@@ -5,6 +5,7 @@ export {
 } from "./pageState";
 export {
   configureAymeRuntime,
+  createAymeRuntime,
   createPageRegistration,
   listRegisteredPomTargets,
   listRegisteredPoms,

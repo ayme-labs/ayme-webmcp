@@ -2,14 +2,11 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { defineComponent, h } from "vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  createPageRegistration,
-  registerCompiledPom,
-} from "@ayme-dev/webmcp/internal";
+import { registerCompiledPom } from "@ayme-dev/webmcp/internal";
 import { ListPage } from "../../playwright/pom/ListPage";
-import { useAymeExperiment } from "./useAymeExperiment";
+import { useAymeWebMcp, usePageObject } from "@ayme-dev/webmcp-vue";
 
-describe("useAymeExperiment", () => {
+describe("example lifecycle", () => {
   afterEach(() => {
     vi.useRealTimers();
     Object.defineProperty(document, "modelContext", {
@@ -19,7 +16,7 @@ describe("useAymeExperiment", () => {
     delete window.__AYME_DISABLE_RELAY__;
   });
 
-  it("disposes WebMCP publication that finishes after unmount", async () => {
+  it("does not publish when the driver appears after unmount", async () => {
     vi.useFakeTimers();
     registerCompiledPom(ListPage, {
       className: "ListPage",
@@ -45,7 +42,8 @@ describe("useAymeExperiment", () => {
     const wrapper = mount(
       defineComponent({
         setup() {
-          useAymeExperiment();
+          useAymeWebMcp();
+          usePageObject(ListPage);
           return () => h("div");
         },
       })
@@ -53,10 +51,10 @@ describe("useAymeExperiment", () => {
     await flushPromises();
     wrapper.unmount();
 
-    const signals: AbortSignal[] = [];
     const registerTool = vi.fn(
-      async (_tool: unknown, options: { signal: AbortSignal }) => {
-        signals.push(options.signal);
+      async (tool: unknown, options: { signal: AbortSignal }) => {
+        void tool;
+        void options;
       }
     );
     Object.defineProperty(document, "modelContext", {
@@ -66,10 +64,7 @@ describe("useAymeExperiment", () => {
     await vi.advanceTimersByTimeAsync(50);
     await flushPromises();
 
-    const lateRegistration = createPageRegistration(ListPage);
     await flushPromises();
-    expect(registerTool).toHaveBeenCalledOnce();
-    expect(signals[0]?.aborted).toBe(true);
-    lateRegistration.dispose();
+    expect(registerTool).not.toHaveBeenCalled();
   });
 });

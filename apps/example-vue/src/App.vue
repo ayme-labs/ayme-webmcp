@@ -1,8 +1,18 @@
 <script setup lang="ts">
-import { useAymeExperiment } from "./ayme/useAymeExperiment";
+import { useAymeWebMcp, usePageObject } from "@ayme-dev/webmcp-vue";
+import { ListPage } from "../playwright/pom/ListPage";
+import { useDemoTrace } from "./ayme/useDemoTrace";
+import { useDemoRelay } from "./ayme/useDemoRelay";
+import { useDemoInspector } from "./ayme/useDemoInspector";
 import DebugPanel from "./debug/DebugPanel.vue";
 import ListDemo from "./demo/ListDemo.vue";
 
+// Ordinary apps call useAymeWebMcp() without options. This demo adds tracing and pacing.
+const { page, trace, resetTrace } = useDemoTrace();
+const { publicationStatus } = useAymeWebMcp({ page });
+usePageObject(ListPage);
+
+const webMcpStatus = useDemoRelay(publicationStatus);
 const {
   pageState,
   pageStateCapturedAt,
@@ -12,13 +22,10 @@ const {
   refreshPageState,
   refreshPomMembers,
   registeredPoms,
-  resetTrace,
-  trace,
-  webMcpStatus,
   previewApplicationModelTarget,
   clearApplicationModelPreview,
   pinApplicationModelTarget,
-} = useAymeExperiment();
+} = useDemoInspector();
 </script>
 
 <template>

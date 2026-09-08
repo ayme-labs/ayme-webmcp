@@ -15,6 +15,7 @@ type UserConfig = Parameters<ConfigHook>[0];
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEST_ID_ATTRIBUTE_DEFINE = "__AYME_PLAYWRIGHT_TEST_ID_ATTRIBUTE__";
+const PUBLISH_DEFINE = "__AYME_WEBMCP_PUBLISH__";
 
 async function applyPluginConfig(
   config: UserConfig,
@@ -36,6 +37,20 @@ async function applyPluginConfig(
 }
 
 describe("aymeWebMcp Vite integration", () => {
+  it("disables publication by default and enables it explicitly", async () => {
+    const defaultConfig = await applyPluginConfig({});
+    const publishingConfig = await applyPluginConfig({}, { publish: true });
+
+    expect(defaultConfig?.define?.[PUBLISH_DEFINE]).toBe("false");
+    expect(publishingConfig?.define?.[PUBLISH_DEFINE]).toBe("true");
+  });
+
+  it("rejects a non-boolean publication policy", async () => {
+    await expect(
+      applyPluginConfig({}, { publish: "yes" } as never)
+    ).rejects.toThrow("publish must be a boolean");
+  });
+
   it("accepts projects with omitted and explicit default test IDs", async () => {
     await expect(
       applyPluginConfig(
@@ -43,13 +58,19 @@ describe("aymeWebMcp Vite integration", () => {
         { playwright: { config: "playwright.config.ts" } }
       )
     ).resolves.toEqual({
-      define: { [TEST_ID_ATTRIBUTE_DEFINE]: '"data-testid"' },
+      define: {
+        [PUBLISH_DEFINE]: "false",
+        [TEST_ID_ATTRIBUTE_DEFINE]: '"data-testid"',
+      },
       optimizeDeps: { exclude: ["@playwright/test"] },
     });
   });
   it("adds the Playwright test runner exclusion when no optimizer config exists", async () => {
     await expect(applyPluginConfig({})).resolves.toEqual({
-      define: { [TEST_ID_ATTRIBUTE_DEFINE]: '"data-testid"' },
+      define: {
+        [PUBLISH_DEFINE]: "false",
+        [TEST_ID_ATTRIBUTE_DEFINE]: '"data-testid"',
+      },
       optimizeDeps: { exclude: ["@playwright/test"] },
     });
   });
@@ -60,7 +81,10 @@ describe("aymeWebMcp Vite integration", () => {
         optimizeDeps: { exclude: ["existing-dependency"] },
       })
     ).resolves.toEqual({
-      define: { [TEST_ID_ATTRIBUTE_DEFINE]: '"data-testid"' },
+      define: {
+        [PUBLISH_DEFINE]: "false",
+        [TEST_ID_ATTRIBUTE_DEFINE]: '"data-testid"',
+      },
       optimizeDeps: {
         exclude: ["existing-dependency", "@playwright/test"],
       },
@@ -73,7 +97,10 @@ describe("aymeWebMcp Vite integration", () => {
         optimizeDeps: { exclude: ["@playwright/test"] },
       })
     ).resolves.toEqual({
-      define: { [TEST_ID_ATTRIBUTE_DEFINE]: '"data-testid"' },
+      define: {
+        [PUBLISH_DEFINE]: "false",
+        [TEST_ID_ATTRIBUTE_DEFINE]: '"data-testid"',
+      },
       optimizeDeps: { exclude: ["@playwright/test"] },
     });
   });
@@ -95,6 +122,7 @@ describe("aymeWebMcp Vite integration", () => {
       )
     ).resolves.toEqual({
       define: {
+        [PUBLISH_DEFINE]: "false",
         [TEST_ID_ATTRIBUTE_DEFINE]: '"data-pw,data-ti"',
         __AYME_PLAYWRIGHT_ACTION_TIMEOUT__: "11",
         __AYME_PLAYWRIGHT_NAVIGATION_TIMEOUT__: "22",

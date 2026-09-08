@@ -11,6 +11,7 @@ import type {
   ToolManifest,
 } from "./contracts";
 import {
+  createPage,
   isAymeLocator,
   resolveLocatorElements,
 } from "@ayme-dev/playwright-browser";
@@ -43,6 +44,7 @@ export type RegisteredPomTarget = {
 };
 
 let browserPage: Page | undefined;
+let runtimeOwner: object | undefined;
 const compiledPoms = new WeakMap<object, PomManifest>();
 const registeredPoms = new Set<RegisteredPom>();
 const subscribers = new Set<() => void>();
@@ -50,7 +52,38 @@ let mutationObserver: MutationObserver | undefined;
 let probeTimer: ReturnType<typeof setTimeout> | undefined;
 
 export function configureAymeRuntime(page: Page) {
+  if (runtimeOwner)
+    throw new Error("The Ayme runtime already has an active owner.");
   browserPage = page;
+}
+
+export function createAymeRuntime(page?: object) {
+  if (runtimeOwner)
+    throw new Error("The Ayme runtime already has an active owner.");
+
+  resetRegisteredPoms();
+  browserPage = undefined;
+  const owner = {};
+  const runtimePage = page ?? createPage();
+  runtimeOwner = owner;
+  browserPage = runtimePage as Page;
+
+  return {
+    page: runtimePage,
+    dispose() {
+      if (runtimeOwner !== owner) return;
+      resetRegisteredPoms();
+      browserPage = undefined;
+      runtimeOwner = undefined;
+    },
+  };
+}
+
+function resetRegisteredPoms() {
+  const hadRegistrations = registeredPoms.size > 0;
+  registeredPoms.clear();
+  stopObservingPage();
+  if (hadRegistrations) notifySubscribers();
 }
 
 export function registerCompiledPom(PomClass: object, manifest: PomManifest) {

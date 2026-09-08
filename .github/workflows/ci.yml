@@ -113,8 +113,8 @@ jobs:
         run: |
           pnpm --dir packages/webmcp-vue pkg set devDependencies.vue=3.2.0
           pnpm install --no-frozen-lockfile
-      - name: Build core package
-        run: pnpm --filter @ayme-dev/webmcp build
+      - name: Build core package and dependencies
+        run: pnpm exec turbo run build --filter=@ayme-dev/webmcp
       - name: Typecheck Vue package
         run: pnpm --filter @ayme-dev/webmcp-vue typecheck
       - name: Test Vue package

@@ -16,6 +16,7 @@ const DEFAULT_TEST_ID_ATTRIBUTE = "data-testid";
 const TEST_ID_ATTRIBUTE_DEFINE = "__AYME_PLAYWRIGHT_TEST_ID_ATTRIBUTE__";
 const ACTION_TIMEOUT_DEFINE = "__AYME_PLAYWRIGHT_ACTION_TIMEOUT__";
 const NAVIGATION_TIMEOUT_DEFINE = "__AYME_PLAYWRIGHT_NAVIGATION_TIMEOUT__";
+const PUBLISH_DEFINE = "__AYME_WEBMCP_PUBLISH__";
 const SUPPORTED_PLAYWRIGHT_VERSION = /^1\.62\.\d+(?:[-+].*)?$/;
 
 // Keep published declarations usable without the optional Playwright peer.
@@ -54,11 +55,14 @@ type LoadedPlaywrightConfig = {
 
 export type AymeWebMcpOptions = PomCompilerOptions & {
   playwright?: AymePlaywrightOptions;
+  publish?: boolean;
 };
 
 export const unpluginFactory: UnpluginFactory<AymeWebMcpOptions | undefined> = (
   options = {}
 ) => {
+  if (options.publish !== undefined && typeof options.publish !== "boolean")
+    throw new TypeError("publish must be a boolean");
   const compiler = createPomCompiler(options);
 
   return {
@@ -73,6 +77,7 @@ export const unpluginFactory: UnpluginFactory<AymeWebMcpOptions | undefined> = (
         );
         const define: Record<string, unknown> = {
           ...config.define,
+          [PUBLISH_DEFINE]: JSON.stringify(options.publish ?? false),
           [TEST_ID_ATTRIBUTE_DEFINE]: JSON.stringify(
             settings.testIdAttribute ?? DEFAULT_TEST_ID_ATTRIBUTE
           ),
