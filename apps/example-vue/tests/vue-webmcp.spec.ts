@@ -567,14 +567,39 @@ test("demonstrates the list app and invokes the generated POM tools from the deb
   await expect(page.locator(".archived-label")).toHaveCount(1);
 
   const addTool = page.locator('[data-tool-name="ListPage.addItem"]');
+  await page.evaluate(() => {
+    const observer = new MutationObserver((records) => {
+      if (
+        records.some((record) =>
+          [...record.addedNodes].some(
+            (node) =>
+              node instanceof Element &&
+              node.hasAttribute("data-demo-click-cue")
+          )
+        )
+      ) {
+        document.body.dataset.demoCueSeen = "true";
+        observer.disconnect();
+      }
+    });
+    observer.observe(document.body, { childList: true });
+  });
   await addTool.getByLabel("text").fill("Added from debug console");
   await addTool.getByRole("button", { name: "Invoke tool" }).click();
   await expect(
     page.getByText("Added from debug console", { exact: true })
   ).toBeVisible();
   await expect(page.locator(".execution-card").first()).toContainText(
-    "page.getByRole("
+    "getByRole('textbox', { name: 'New item' })"
   );
+  await expect(page.locator(".execution-card").first()).toContainText(
+    "pressSequentially"
+  );
+  await expect(page.locator("body")).toHaveAttribute(
+    "data-demo-cue-seen",
+    "true"
+  );
+  await expect(page.locator("[data-demo-click-cue]")).toHaveCount(0);
 
   const renameTool = page.locator('[data-tool-name="ListPage.items.rename"]');
   await renameTool.getByLabel("index").fill("0");

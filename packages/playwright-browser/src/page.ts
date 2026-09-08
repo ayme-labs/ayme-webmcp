@@ -19,8 +19,6 @@ import {
   getByTitleSelector,
 } from "./selectors";
 
-import type { BrowserInteractionPacing, TraceEntry } from "./types";
-
 type InjectedExpectation = {
   matches: boolean;
   received?: { value?: unknown; ariaSnapshot?: string };
@@ -202,11 +200,7 @@ export class PageImpl {
   private defaultTimeout: number | undefined;
   private defaultNavigationTimeout: number | undefined;
 
-  constructor(
-    browserWindow: Window & typeof globalThis,
-    private readonly onTrace?: (entry: TraceEntry) => void,
-    private readonly pacing: BrowserInteractionPacing = {}
-  ) {
+  constructor(browserWindow: Window & typeof globalThis) {
     this.window = browserWindow;
     this.document = browserWindow.document;
   }
@@ -223,12 +217,8 @@ export class PageImpl {
     return this._injected;
   }
 
-  static fromWindow(
-    browserWindow: Window & typeof globalThis = window,
-    onTrace?: (entry: TraceEntry) => void,
-    pacing?: BrowserInteractionPacing
-  ) {
-    return new PageImpl(browserWindow, onTrace, pacing);
+  static fromWindow(browserWindow: Window & typeof globalThis = window) {
+    return new PageImpl(browserWindow);
   }
 
   // ── Resolution ──────────────────────────────────────────────────
@@ -496,19 +486,7 @@ export class PageImpl {
       position: options.position,
       trial: options.trial,
     });
-    let target = await this.retryActionability(
-      selector,
-      label,
-      actionName,
-      ["visible", "enabled", "stable"],
-      true,
-      deadline,
-      options.position
-    );
-    await this.waitBeforeClick(target.element, deadline, actionName);
-    // The pacing cue can itself yield to the page, so use the same locator
-    // retry path again before sending events.
-    target = await this.retryActionability(
+    const target = await this.retryActionability(
       selector,
       label,
       actionName,
@@ -549,7 +527,6 @@ export class PageImpl {
     timeout?: number,
     deadline = this.createActionDeadline(timeout)
   ) {
-    await this.waitBeforeAction(deadline, "fill");
     const { element } = await this.retryActionability(
       selector,
       label,
@@ -579,7 +556,7 @@ export class PageImpl {
     ).retarget(element, "follow-label");
     if (!inputTarget)
       throw new Error(`Element is not connected for locator ${label}`);
-    await this.insertFilledText(inputTarget, value, deadline, "fill");
+    this.insertFilledText(inputTarget, value, deadline, "fill");
   }
 
   async pressSelector(
@@ -589,7 +566,6 @@ export class PageImpl {
     timeout?: number,
     deadline = this.createActionDeadline(timeout)
   ) {
-    await this.waitBeforeAction(deadline, "press");
     const element = await this.query(
       selector,
       label,
@@ -886,55 +862,6 @@ export class PageImpl {
       deadline
     );
   }
-
-  // ── Pacing ──────────────────────────────────────────────────────
-
-  async waitBeforeAction(deadline?: ActionDeadline, actionName = "action") {
-    await this.waitWithinActionDeadline(
-      this.pacing.beforeActionMs,
-      deadline,
-      actionName
-    );
-  }
-
-  async waitBeforeClick(
-    element: Element,
-    deadline?: ActionDeadline,
-    actionName = "click"
-  ) {
-    const duration = this.pacing.beforeActionMs ?? 0;
-    const cueDuration = this.pacing.clickCue ? Math.min(duration, 160) : 0;
-
-    await this.waitWithinActionDeadline(
-      duration - cueDuration,
-      deadline,
-      actionName
-    );
-    if (!cueDuration) return;
-
-    const cue = this.createClickCue(element, cueDuration);
-    try {
-      await this.waitWithinActionDeadline(cueDuration, deadline, actionName);
-    } finally {
-      cue?.remove();
-    }
-  }
-
-  shouldTypeCharacterByCharacter() {
-    return (this.pacing.typingIntervalMs ?? 0) > 0;
-  }
-
-  async waitBetweenTypedCharacters(
-    deadline?: ActionDeadline,
-    actionName = "fill"
-  ) {
-    await this.waitWithinActionDeadline(
-      this.pacing.typingIntervalMs,
-      deadline,
-      actionName
-    );
-  }
-
   // ── Setup operations ─────────────────────────────────────────────
 
   /**
@@ -1652,8 +1579,7 @@ export class PageImpl {
     return new LocatorImpl(
       this,
       roleSelector,
-      `page.getByRole(${JSON.stringify(role)}${optString})`,
-      this.onTrace
+      `page.getByRole(${JSON.stringify(role)}${optString})`
     );
   }
 
@@ -1683,7 +1609,6 @@ export class PageImpl {
       this,
       selector,
       `page.locator(${JSON.stringify(selector)})`,
-      this.onTrace,
       options
     );
   }
@@ -2369,7 +2294,7 @@ export class PageImpl {
     this.actionableInjected.focusNode(element, true);
   }
 
-  private async insertFilledText(
+  private insertFilledText(
     element: Element,
     value: string,
     deadline: ActionDeadline,
@@ -2387,19 +2312,8 @@ export class PageImpl {
       return;
     }
 
-    if (!this.shouldTypeCharacterByCharacter()) {
-      this.assertActionDeadline(deadline, actionName);
-      this.replaceSelectedText(element, value);
-      return;
-    }
-
     this.assertActionDeadline(deadline, actionName);
-    this.replaceSelectedText(element, "");
-    for (const character of value) {
-      this.assertActionDeadline(deadline, actionName);
-      this.replaceSelectedText(element, character);
-      await this.waitBetweenTypedCharacters(deadline, actionName);
-    }
+    this.replaceSelectedText(element, value);
   }
 
   private insertPressedText(element: Element, text: string) {
@@ -2418,7 +2332,6 @@ export class PageImpl {
     label: string,
     deadline: ActionDeadline
   ) {
-    await this.waitBeforeAction(deadline, "press");
     const element = await this.query(
       selector,
       label,
@@ -2594,44 +2507,6 @@ export class PageImpl {
 
   private get actionableInjected() {
     return this.injected as typeof this.injected & ActionableInjectedScript;
-  }
-
-  private createClickCue(element: Element, duration: number) {
-    const bounds = element.getBoundingClientRect();
-    if (!bounds.width || !bounds.height) return undefined;
-
-    const cue = this.document.createElement("div");
-    cue.setAttribute("aria-hidden", "true");
-    cue.style.background = "rgb(77 126 219 / 18%)";
-    cue.style.border = "2px solid rgb(77 126 219 / 80%)";
-    cue.style.borderRadius = "999px";
-    cue.style.height = "2rem";
-    cue.style.left = `${bounds.left + bounds.width / 2}px`;
-    cue.style.pointerEvents = "none";
-    cue.style.position = "fixed";
-    cue.style.top = `${bounds.top + bounds.height / 2}px`;
-    cue.style.transform = "translate(-50%, -50%)";
-    cue.style.width = "2rem";
-    cue.style.zIndex = "2147483647";
-    this.document.body.append(cue);
-
-    const reducedMotion = this.window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-    cue.animate(
-      reducedMotion
-        ? [{ opacity: 0.9 }, { opacity: 0 }]
-        : [
-            { opacity: 0.9, transform: "translate(-50%, -50%) scale(0.95)" },
-            { opacity: 0, transform: "translate(-50%, -50%) scale(1.35)" },
-          ],
-      {
-        duration,
-        easing: "cubic-bezier(0.23, 1, 0.32, 1)",
-        fill: "forwards",
-      }
-    );
-    return cue;
   }
 }
 

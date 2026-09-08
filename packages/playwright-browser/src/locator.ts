@@ -22,7 +22,6 @@ import {
   getByTextSelector,
   getByTitleSelector,
 } from "./selectors";
-import type { TraceEntry } from "./types";
 
 /**
  * Cross-realm brand symbol. Any code can test for this with
@@ -76,7 +75,6 @@ export class LocatorImpl {
     private readonly ownerPage: PageImpl,
     private selector: string,
     private readonly label: string,
-    private readonly onTrace?: (entry: TraceEntry) => void,
     options?: LocatorOptions,
     private readonly customDescription?: string
   ) {
@@ -125,7 +123,6 @@ export class LocatorImpl {
       this.ownerPage,
       `${this.selector} >> internal:describe=${JSON.stringify(description)}`,
       this.label,
-      this.onTrace,
       undefined,
       description
     );
@@ -144,8 +141,7 @@ export class LocatorImpl {
     return new LocatorImpl(
       this.ownerPage,
       `${this.selector} >> ${roleSelector}`,
-      `${this.label}.getByRole(${JSON.stringify(role)}, ${JSON.stringify(options)})`,
-      this.onTrace
+      `${this.label}.getByRole(${JSON.stringify(role)}, ${JSON.stringify(options)})`
     );
   }
 
@@ -184,7 +180,6 @@ export class LocatorImpl {
         this.ownerPage,
         `${this.selector} >> ${selectorOrLocator}`,
         `${this.label}.locator(${JSON.stringify(selectorOrLocator)})`,
-        this.onTrace,
         options
       );
     }
@@ -196,7 +191,6 @@ export class LocatorImpl {
       `${this.selector} >> internal:chain=` +
         JSON.stringify(brand.getSelector()),
       `${this.label}.locator(locator)`,
-      this.onTrace,
       options
     );
   }
@@ -206,7 +200,6 @@ export class LocatorImpl {
       this.ownerPage,
       this.selector,
       `${this.label}.filter(...)`,
-      this.onTrace,
       options
     );
   }
@@ -219,8 +212,7 @@ export class LocatorImpl {
     return new LocatorImpl(
       this.ownerPage,
       this.selector + ` >> internal:and=` + JSON.stringify(brand.getSelector()),
-      `${this.label}.and(locator)`,
-      this.onTrace
+      `${this.label}.and(locator)`
     );
   }
 
@@ -232,8 +224,7 @@ export class LocatorImpl {
     return new LocatorImpl(
       this.ownerPage,
       this.selector + ` >> internal:or=` + JSON.stringify(brand.getSelector()),
-      `${this.label}.or(locator)`,
-      this.onTrace
+      `${this.label}.or(locator)`
     );
   }
 
@@ -241,8 +232,7 @@ export class LocatorImpl {
     return new LocatorImpl(
       this.ownerPage,
       `${this.selector} >> nth=${index}`,
-      `${this.label}.nth(${index})`,
-      this.onTrace
+      `${this.label}.nth(${index})`
     );
   }
 
@@ -383,7 +373,6 @@ export class LocatorImpl {
    * authority for text, count, and element-state expectations.
    */
   async _expect(expression: string, options: Record<string, unknown>) {
-    this.record({ operation: "expect" });
     return this.ownerPage.expect(this.selector, expression, options);
   }
 
@@ -420,7 +409,6 @@ export class LocatorImpl {
       "position",
       "trial",
     ]);
-    this.record({ operation: "click" });
     await this.ownerPage.clickSelector(
       this.selector,
       this.label,
@@ -432,7 +420,6 @@ export class LocatorImpl {
 
   async fill(value: string, options?: LocatorActionOptions) {
     rejectUnsupportedOptions("fill", options, ["timeout"]);
-    this.record({ operation: "fill", value });
     await this.ownerPage.fillSelector(
       this.selector,
       value,
@@ -605,18 +592,11 @@ export class LocatorImpl {
   ) {
     const state = options.state ?? "visible";
     rejectUnsupportedOptions("waitFor", options, ["state", "timeout"]);
-    this.record({ operation: "waitFor", state });
     await this.ownerPage.waitForState(
       this.selector,
       { state, timeout: options.timeout },
       this.label
     );
-  }
-
-  // ── Tracing ───────────────────────────────────────────────────
-
-  private record(entry: Omit<TraceEntry, "locator">) {
-    this.onTrace?.({ ...entry, locator: this.label });
   }
 }
 
