@@ -37,6 +37,33 @@ const test = base.extend<
 
 // ── Proxy presence ──────────────────────────────────────────────────
 
+for (const owner of ["Page", "Locator"] as const) {
+  test(`${owner}.setInputFiles transports bytes but executes in the browser`, async ({ page, adapterPage }) => {
+    await page.setContent('<input type="file">');
+    const nativeSetInputFiles = page.setInputFiles;
+    const nativeLocator = page.locator;
+    page.setInputFiles = async () => { throw new Error("native upload must not run"); };
+    page.locator = () => { throw new Error("native locator must not run"); };
+    try {
+      const payload = {
+        name: "bytes.bin",
+        mimeType: "application/octet-stream",
+        buffer: Buffer.from([99, 0, 128, 255, 99]).subarray(1, 4),
+      };
+      if (owner === "Page") await adapterPage.setInputFiles("input", payload);
+      else await adapterPage.locator("input").setInputFiles(payload);
+      expect(await page.evaluate(async () => {
+        const file = document.querySelector("input")!.files![0];
+        return { name: file.name, bytes: Array.from(new Uint8Array(await file.arrayBuffer())) };
+      })).toEqual({ name: "bytes.bin", bytes: [0, 128, 255] });
+      expect((page as any).__aymeNativeOperations).toEqual([]);
+    } finally {
+      page.setInputFiles = nativeSetInputFiles;
+      page.locator = nativeLocator;
+    }
+  });
+}
+
 test("all preserves the actual runtime-returned locators", async ({
   page,
   adapterPage,

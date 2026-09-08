@@ -3,7 +3,7 @@
     "repository": "ayme-labs/playwright",
     "commit": "b25d782e3fbdf21abdae60e974e49b78ca07e828"
   },
-  "selectedTestCount": 519,
+  "selectedTestCount": 539,
   "reviewed": [
     {
       "id": "locator-click.spec.ts > should click if the target element is removed in pointerdown event",
@@ -824,6 +824,11 @@
       "id": "page-fill.spec.ts > should throw on incorrect week",
       "method": "Page.fill",
       "evidence": "The entered fill operation rejects an invalid week representation."
+    },
+    {
+      "id": "page-set-input-files.spec.ts > should set from memory",
+      "method": "Page.setInputFiles",
+      "evidence": "Native setContent installs an input; adapter Page.setInputFiles assigns an in-memory payload. Adapter $eval assertions verify one selected file named test.txt, with no transport failures or native upload calls."
     },
     {
       "id": "page-wait-for-function.spec.ts > should accept a string",

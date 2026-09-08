@@ -187,6 +187,10 @@ function encodeBridgeValue(
   const previous = seen.get(value);
   if (previous !== undefined) return previous;
 
+  // Transport only. The runtime receives bytes and owns file assignment.
+  // Buffer extends Uint8Array; preserve subarray offsets by copying its view.
+  if (value instanceof Uint8Array) return { __aymeBytes: Array.from(value) };
+
   if (Array.isArray(value)) {
     const encoded: unknown[] = [];
     seen.set(value, encoded);
@@ -394,6 +398,8 @@ export async function createAdapterPage(
     host.__aymeDecodeBridgeValue = function decode(value: any): any {
       if (!value || typeof value !== "object") return value;
       if (Array.isArray(value)) return value.map(decode);
+      if (Array.isArray(value.__aymeBytes))
+        return Uint8Array.from(value.__aymeBytes);
       if (typeof value.__aymeElementHandleRef === "string")
         return host.__aymeElementHandleForId(value.__aymeElementHandleRef);
       if (Array.isArray(value.__aymeLocatorChain))

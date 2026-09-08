@@ -52,6 +52,10 @@ declare module "virtual:ayme-playwright-injected" {
       strict?: boolean
     ): Element | undefined;
     querySelectorAll(selector: ParsedSelector, root: Node): Element[];
+    setInputFiles(
+      node: Node,
+      payloads: { name: string; mimeType: string; buffer: string }[]
+    ): string | undefined;
     elementState(
       node: Element,
       state: "visible" | "hidden" | "enabled" | "disabled" | "editable"

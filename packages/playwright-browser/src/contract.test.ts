@@ -889,20 +889,20 @@ describe("Single-document adapter contract", () => {
       expect(input.value).toBe("a");
     });
 
-    it("waitFor rejects attached state", async () => {
-      document.body.innerHTML = "<div>visible</div>";
+    it("waitFor supports attached state even when hidden", async () => {
+      document.body.innerHTML = "<div hidden>attached</div>";
       const page = createPage();
       await expect(
-        page.locator("div").waitFor({ state: "attached" } as any)
-      ).rejects.toThrow(/state "attached" is not supported/);
+        page.locator("div").waitFor({ state: "attached" })
+      ).resolves.toBeUndefined();
     });
 
-    it("waitFor rejects detached state", async () => {
-      document.body.innerHTML = "<div>visible</div>";
+    it("waitFor supports detached state", async () => {
+      document.body.innerHTML = "";
       const page = createPage();
       await expect(
-        page.locator("div").waitFor({ state: "detached" } as any)
-      ).rejects.toThrow(/state "detached" is not supported/);
+        page.locator("div").waitFor({ state: "detached" })
+      ).resolves.toBeUndefined();
     });
 
     it("click succeeds without options", async () => {

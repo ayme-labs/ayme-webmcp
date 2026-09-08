@@ -5,6 +5,7 @@ import {
 } from "./injected";
 import { AdapterTimeoutError } from "./errors";
 import { AdapterElementHandle } from "./elementHandle";
+import { inputFilePayloads, type InputFiles } from "./inputFiles";
 import type { Page } from "@playwright/test";
 import type { ByRoleOptions, LocatorOptions } from "./locator";
 import { LocatorImpl } from "./locator";
@@ -490,6 +491,11 @@ export class PageImpl {
     } = {}
   ) {
     const actionName = options.actionName ?? "click";
+    assertPointerActionOptions(actionName, {
+      timeout,
+      position: options.position,
+      trial: options.trial,
+    });
     let target = await this.retryActionability(
       selector,
       label,
@@ -814,7 +820,10 @@ export class PageImpl {
 
   async waitForState(
     selector: string,
-    options: { state: "visible" | "hidden"; timeout?: number },
+    options: {
+      state: "attached" | "detached" | "visible" | "hidden";
+      timeout?: number;
+    },
     label: string
   ) {
     const timeout = this.resolveTimeout(
@@ -834,6 +843,48 @@ export class PageImpl {
         { cause: error }
       );
     }
+  }
+
+  async setInputFilesSelector(
+    selector: string,
+    files: InputFiles,
+    options: { timeout?: number; strict?: boolean } = {},
+    strict = false
+  ): Promise<void> {
+    assertPageActionOptions("setInputFiles", options, ["strict"]);
+    if (options.strict !== undefined && typeof options.strict !== "boolean")
+      throw new TypeError("setInputFiles strict must be a boolean");
+    const payloads = inputFilePayloads(files);
+    const deadline = this.createActionDeadline(options.timeout);
+    await this.query(
+      selector,
+      selector,
+      { timeout: options.timeout },
+      strict || options.strict === true,
+      (element) => {
+        this.assertActionDeadline(deadline, "setInputFiles");
+        // Mirrors pinned server/dom.ts _setInputFiles: label retargeting and
+        // input/multiple/directory validation, without visibility/enabled checks.
+        const input = (
+          this.injected as typeof this.injected & QueryCapableInjectedScript
+        ).retarget(element, "follow-label");
+        if (!input || !input.isConnected)
+          throw new Error("Element is not connected");
+        if (!(input instanceof this.window.HTMLInputElement))
+          throw new Error("Node is not an HTMLInputElement");
+        if (payloads.length > 1 && !input.multiple && !input.webkitdirectory)
+          throw new Error(
+            "Non-multiple file input can only accept single file"
+          );
+        if (input.webkitdirectory)
+          throw new Error(
+            "[webkitdirectory] input requires passing a path to a directory; directory uploads are not supported."
+          );
+        const error = this.injected.setInputFiles(input, payloads);
+        if (error) throw new Error(error);
+      },
+      deadline
+    );
   }
 
   // ── Pacing ──────────────────────────────────────────────────────
@@ -990,12 +1041,14 @@ export class PageImpl {
     return !(await this.isVisible(selector, options));
   }
 
-  async click(selector: string, options?: PageActionOptions): Promise<void> {
-    assertPageActionOptions("click", options);
+  async click(selector: string, options?: PointerActionOptions): Promise<void> {
+    assertPointerActionOptions("click", options);
     await this.clickSelector(
       selector,
       `page.click(${JSON.stringify(selector)})`,
-      options?.timeout
+      options?.timeout,
+      undefined,
+      options
     );
   }
 
@@ -1011,6 +1064,14 @@ export class PageImpl {
       `page.fill(${JSON.stringify(selector)})`,
       options?.timeout
     );
+  }
+
+  async setInputFiles(
+    selector: string,
+    files: InputFiles,
+    options?: { timeout?: number; strict?: boolean }
+  ): Promise<void> {
+    await this.setInputFilesSelector(selector, files, options);
   }
 
   async press(
@@ -2678,7 +2739,10 @@ function assertPageActionOptions(
 ): void {
   if (!options) return;
   const unsupported = Object.keys(options).filter(
-    (key) => key !== "timeout" && !supported.includes(key)
+    (key) =>
+      options[key] !== undefined &&
+      key !== "timeout" &&
+      !supported.includes(key)
   );
   if (unsupported.length > 0)
     throw new Error(

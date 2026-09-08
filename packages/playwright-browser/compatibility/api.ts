@@ -54,7 +54,7 @@ export const pageLedger = {
   check: implemented("Accepts timeout, position, and trial only."),
   clearConsoleMessages: undecided(),
   clearPageErrors: undecided(),
-  click: implemented("Accepts timeout only."),
+  click: implemented("Accepts timeout, position, and trial only."),
   clock: undecided(),
   close: undecided(),
   consoleMessages: undecided(),
@@ -157,8 +157,8 @@ export const pageLedger = {
   setDefaultNavigationTimeout: implemented(),
   setDefaultTimeout: implemented(),
   setExtraHTTPHeaders: undecided(),
-  setInputFiles: planned(
-    "Playwright in-memory payloads only; paths, File, and Blob throw."
+  setInputFiles: implemented(
+    "In-memory payloads with explicit non-empty mimeType, under 50Mb total; accepts timeout and strict. Paths, File, Blob, and directories throw."
   ),
   setViewportSize: outOfScope(
     "No single-document runtime implementation; native bridge calls are recorded and cannot certify browser behavior."
@@ -192,7 +192,7 @@ export const pageLedger = {
 
 export const locatorLedger = {
   all: implemented(
-    "Returns the runtime Locator objects selected at call time; they are not live-requeried."
+    "Captures the list length at call time and returns nth-index locators that re-query on use."
   ),
   allInnerTexts: implemented(),
   allTextContents: implemented(),
@@ -202,7 +202,7 @@ export const locatorLedger = {
   boundingBox: implemented(),
   check: implemented("Accepts timeout, position, and trial only."),
   clear: implemented("Accepts timeout only."),
-  click: implemented("Accepts timeout only."),
+  click: implemented("Accepts timeout, position, and trial only."),
   contentFrame: outOfScope(
     "Iframe realms are outside the single-document boundary."
   ),
@@ -262,15 +262,15 @@ export const locatorLedger = {
   ),
   selectText: implemented("Accepts timeout only."),
   setChecked: implemented("Accepts timeout, position, and trial only."),
-  setInputFiles: planned(
-    "Playwright in-memory payloads only; paths, File, and Blob throw."
+  setInputFiles: implemented(
+    "In-memory payloads with explicit non-empty mimeType, under 50Mb total; accepts timeout only. Paths, File, Blob, and directories throw."
   ),
   tap: undecided(),
   textContent: implemented(),
   toString: implemented(),
   type: implemented("Accepts timeout and delay only."),
   uncheck: implemented("Accepts timeout, position, and trial only."),
-  waitFor: implemented("Only visible and hidden states are supported."),
+  waitFor: implemented(),
   waitForFunction: undecided(),
 } as const satisfies Ledger<Locator>;
 

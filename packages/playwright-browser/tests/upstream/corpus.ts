@@ -6,6 +6,8 @@ export const corpus = {
     basePath: "tests/page",
   },
   specs: {
+    "page-set-input-files.spec.ts":
+      "d43d4b256d5b076695f87a9036a41bd3d0042e3a1eb2e934c77347b9b7f7e46c",
     "page-check.spec.ts":
       "2a828962b0beb2587db4de12477135a5c4519a959e3b3b8e425b54210837a9cb",
     "page-fill.spec.ts":
