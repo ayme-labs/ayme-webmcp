@@ -1,5 +1,32 @@
 # ayme-webmcp
 
+## Framework integrations
+
+- [Vue](packages/webmcp-vue/README.md): provider setup and compatible standalone composable setup.
+- [React](packages/webmcp-react/README.md): provider setup for React 19 and client-rendered Vite applications.
+
+Both packages return Page Object instances through `usePageObject` and share
+publication, retry, and runtime ownership behavior. The
+[React smoke app](apps/example-react/README.md) checks the integration with one
+counter; the Vue example retains its full inspector demo.
+
+## Browser page creation
+
+`createPage()` from `@ayme-dev/playwright-browser` takes no options. It creates
+a Playwright-compatible controller for the current browser document; it does
+not open a tab or create an isolated browser context. Configure supported
+timeouts through `page.setDefaultTimeout()` and
+`page.setDefaultNavigationTimeout()`.
+
+The Vue example owns its trace collection, action pauses, and click cues in
+`apps/example-vue/src/ayme/withDemoFeedback.ts`. The wrapper preserves the
+underlying locators for Ayme observation. Its pauses and advisory cues run
+before the delegated action and outside that action's timeout budget.
+
+The demo's text-entry actions explicitly use `pressSequentially(text, { delay })`.
+`fill()` keeps its normal text-replacement behavior. The former `createPage`
+options `pacing` and `onTrace`, and the browser package's demo-specific types,
+are no longer supported.
 Start with the [core package README](packages/webmcp/README.md) for consumer setup.
 
 ## Coding agent skill

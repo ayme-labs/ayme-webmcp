@@ -1,17 +1,19 @@
 import { computed, ref } from "vue";
-import { createPage, type TraceEntry } from "@ayme-dev/playwright-browser";
+import { createPage } from "@ayme-dev/playwright-browser";
+import { withDemoFeedback, type TraceEntry } from "./withDemoFeedback";
 
 export function useDemoTrace() {
   const revision = ref(0);
   const entries = ref<TraceEntry[]>([]);
-  const page = createPage({
+  const page = withDemoFeedback(createPage(), {
     onTrace(entry) {
       entries.value.push(entry);
       revision.value += 1;
     },
-    pacing: { beforeActionMs: 500, clickCue: true, typingIntervalMs: 60 },
+    beforeActionMs: 500,
+    clickCue: true,
   });
-  // Demo pacing takes longer than the adapter's normal action budget.
+  // The demo explicitly types characters through standard Playwright methods.
   page.setDefaultTimeout(10_000);
 
   return {

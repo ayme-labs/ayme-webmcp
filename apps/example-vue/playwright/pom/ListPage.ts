@@ -27,7 +27,8 @@ export class ListPage {
     description: "Add a new item to the list.",
   })
   async addItem(text: string) {
-    await this.newItemInput.fill(text);
+    await this.newItemInput.fill("");
+    await this.newItemInput.pressSequentially(text, { delay: 60 });
     await this.addItemButton.click();
   }
 }

@@ -6,11 +6,7 @@ import { PageImpl } from "./page";
 
 export { AdapterJSHandle } from "./page";
 
-export type {
-  BrowserInteractionPacing,
-  CaptureAriaSnapshotResult,
-  TraceEntry,
-} from "./types";
+export type { CaptureAriaSnapshotResult } from "./types";
 
 export {
   isAymeLocator,
@@ -30,16 +26,11 @@ export function captureAriaSnapshot(root: Element): CaptureAriaSnapshotResult {
 
 // ── Page factory ────────────────────────────────────────────────────
 
-type CreatePageOptions = {
-  onTrace?: (entry: import("./types").TraceEntry) => void;
-  pacing?: import("./types").BrowserInteractionPacing;
-};
-
 declare const __AYME_PLAYWRIGHT_ACTION_TIMEOUT__: number | undefined;
 declare const __AYME_PLAYWRIGHT_NAVIGATION_TIMEOUT__: number | undefined;
 
-export function createPage(options: CreatePageOptions = {}): Page {
-  const page = PageImpl.fromWindow(window, options.onTrace, options.pacing);
+export function createPage(): Page {
+  const page = PageImpl.fromWindow(window);
   if (typeof __AYME_PLAYWRIGHT_ACTION_TIMEOUT__ === "number")
     page.setDefaultTimeout(__AYME_PLAYWRIGHT_ACTION_TIMEOUT__);
   if (typeof __AYME_PLAYWRIGHT_NAVIGATION_TIMEOUT__ === "number")

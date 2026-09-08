@@ -32,7 +32,8 @@ export class ListItem {
   })
   async rename(text: string) {
     await this.nameButton.click();
-    await this.nameInput.fill(text);
+    await this.nameInput.fill("");
+    await this.nameInput.pressSequentially(text, { delay: 60 });
     await this.nameInput.press("Enter");
   }
 }

@@ -819,37 +819,6 @@ describe("Single-document adapter contract", () => {
       expect(clicks).toBe(1);
     });
 
-    it("uses one action deadline across click pacing and preserves per-call overrides", async () => {
-      document.body.innerHTML = '<button id="button">Click</button>';
-      const page = createPage({ pacing: { beforeActionMs: 100 } });
-      const button = document.querySelector("#button")!;
-      let clicks = 0;
-      button.addEventListener("click", () => clicks++);
-      page.setDefaultTimeout(20);
-
-      await expect(page.locator("#button").click()).rejects.toThrow(
-        "Timeout 20ms exceeded"
-      );
-      await page.waitForTimeout(120);
-      expect(clicks).toBe(0);
-
-      await page.locator("#button").click({ timeout: 0 } as any);
-      await page.locator("#button").click({ timeout: 300 } as any);
-      expect(clicks).toBe(2);
-    });
-
-    it("does not check controls after the shared deadline expires in click pacing", async () => {
-      document.body.innerHTML = '<input id="checkbox" type="checkbox" />';
-      const page = createPage({ pacing: { beforeActionMs: 100 } });
-      const checkbox = document.querySelector("#checkbox") as HTMLInputElement;
-
-      await expect(
-        page.locator("#checkbox").check({ timeout: 20 } as any)
-      ).rejects.toThrow("Timeout 20ms exceeded");
-      await page.waitForTimeout(120);
-      expect(checkbox.checked).toBe(false);
-    });
-
     it("bounds a suspended stability check without a late click", async () => {
       document.body.innerHTML = '<button id="button">Click</button>';
       const button = document.querySelector("#button")!;
@@ -869,17 +838,15 @@ describe("Single-document adapter contract", () => {
       }
     }, 500);
 
-    it("does not mutate later paced fill or type characters after timeout", async () => {
+    it("fills text in one input event and does not type later characters after timeout", async () => {
       document.body.innerHTML = '<input id="input" />';
-      const page = createPage({ pacing: { typingIntervalMs: 100 } });
+      const page = createPage();
       const input = document.querySelector("#input") as HTMLInputElement;
+      const values: string[] = [];
+      input.addEventListener("input", () => values.push(input.value));
+      await page.fill("#input", "ab");
+      expect(values).toEqual(["ab"]);
       page.setDefaultTimeout(20);
-
-      await expect(page.fill("#input", "ab")).rejects.toThrow(
-        "Timeout 20ms exceeded"
-      );
-      await page.waitForTimeout(120);
-      expect(input.value).toBe("a");
 
       input.value = "";
       await expect(page.type("#input", "ab", { delay: 100 })).rejects.toThrow(
@@ -1799,7 +1766,7 @@ describe("Single-document adapter contract", () => {
 
     it("uses one deadline for pressSequentially typing without a late character", async () => {
       document.body.innerHTML = `<input id=input />`;
-      const page = createPage({ pacing: { typingIntervalMs: 100 } });
+      const page = createPage();
       const input = document.querySelector("#input") as HTMLInputElement;
 
       await expect(
