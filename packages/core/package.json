@@ -20,7 +20,7 @@
     "typecheck": "tsc --noEmit",
     "build": "tsdown",
     "test:package": "node scripts/verify-package.mjs",
-    "test:e2e": "pnpm run test:package"
+    "test:e2e": "node scripts/verify-package.mjs --built"
   },
   "dependencies": {
     "zod": "^4.5.4"

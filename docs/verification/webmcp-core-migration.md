@@ -20,6 +20,8 @@ The baseline is public main `aaa0aa9b7f2403b7747be77f23fbce8347588cba`, the merg
 
 The only core correction removes an empty header segment when rendering a generic node with a custom prefix. A focused test first reproduced `- e1 :` and now expects `- e1:`. No POM, DOM, session alias, SVG presentation, or product policy moved into core.
 
+The package verification command also accepts `--built` for Turbo's e2e task, whose build prerequisite already supplies the artifact. This avoids cleaning shared `dist` during concurrent consumer builds and tests. Standalone candidate verification still rebuilds. WebMCP typechecking now waits for dependency builds because core exports compiled declarations.
+
 The superseded `packages/structural-observation` package was removed after core tests, focused consumer checks, browser facade, packed consumer checks, and demo workflows passed. The four consumer construction tests moved into WebMCP; private-style enrichment and SVG policy tests in the obsolete copy were not transplanted into the public consumer.
 
 ## Candidate handoff
@@ -35,3 +37,5 @@ Private Ayme must rerun its installed-artifact checks against the corrected cand
 All commands run in a persistent Devbox shell. A session-local `PNPM_HOME` avoided an unwritable user tool directory. Initial demo snapshot failures used the WebMCP build from before the core whitespace correction; rebuilding restored the unchanged snapshots. One debug-console workflow also failed on that first run and passed on the complete rerun.
 
 Builds report the existing Vue chunk-size and plugin-timing warnings. This work makes no latency or PR #553 compatibility claim.
+
+The full local `pnpm check` passed. The upstream compatibility report reconciled 519 cases with zero regressions against the 260-case reviewed baseline. It classified 274 candidate passes, 242 failures, one skip, and two diagnostic-only passes. These counts do not claim universal upstream support or promote unreviewed candidates. CI initially exposed the concurrent clean/build race described above; the affected-task command is rerun from absent core output to verify the dependency fix.

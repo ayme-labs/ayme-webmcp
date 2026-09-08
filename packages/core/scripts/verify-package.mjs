@@ -14,11 +14,15 @@ import { fileURLToPath } from "node:url";
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const consumer = mkdtempSync(join(tmpdir(), "ayme-core-consumer-"));
-const artifacts = resolve(process.argv[2] ?? join(consumer, "artifacts"));
+const useBuilt = process.argv[2] === "--built";
+const artifacts = resolve(
+  process.argv[useBuilt ? 3 : 2] ?? join(consumer, "artifacts")
+);
 mkdirSync(artifacts, { recursive: true });
 const run = (command, args, cwd = consumer) =>
   execFileSync(command, args, { cwd, stdio: "inherit" });
-run("pnpm", ["run", "build"], packageDir);
+// Turbo's test:e2e already depends on build; rebuilding would clean dist while consumers read it.
+if (!useBuilt) run("pnpm", ["run", "build"], packageDir);
 run("pnpm", ["pack", "--pack-destination", artifacts], packageDir);
 const version = JSON.parse(
   readFileSync(join(packageDir, "package.json"))
