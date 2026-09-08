@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import type { CaptureAriaSnapshotResult } from "./types";
 
 import { injectedScriptFor } from "./injected";
 import { PageImpl } from "./page";
@@ -23,7 +24,7 @@ export function ariaSnapshot(root: Element) {
   return injectedScriptFor(root).ariaSnapshot(root, { mode: "ai" });
 }
 
-export function captureAriaSnapshot(root: Element) {
+export function captureAriaSnapshot(root: Element): CaptureAriaSnapshotResult {
   return injectedScriptFor(root).captureAriaSnapshot(root);
 }
 

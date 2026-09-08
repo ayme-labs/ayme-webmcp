@@ -1,5 +1,57 @@
 # ayme-webmcp
 
+## Playwright compatibility
+
+For Page Object Models, install `@playwright/test` as a development dependency.
+A separate direct installation of `playwright` is unnecessary. Import `Page`
+and `Locator` with `import type`.
+
+`@ayme-dev/webmcp` and `@ayme-dev/webmcp-vue` declare an optional
+`@playwright/test` peer of `>=1.29 <1.63`. Playwright is unnecessary for the
+core public API and plugin defaults or direct settings. POM registration types
+require it. Packed consumer checks exercise 1.29.1 with TypeScript 5.9.3 and
+1.62.1 with TypeScript 6.0.3, with strict declaration checking and no
+`skipLibCheck`. Playwright 1.29's own declarations use syntax rejected by
+TypeScript 6, so that combination is not supported. Versions 1.63 and later
+require compatibility review.
+
+Compatibility covers the methods and options marked implemented in the
+[existing compatibility ledger](packages/playwright-browser/compatibility/api.ts),
+subject to its limitations. The full Playwright `Page` and `Locator` declarations
+also expose unsupported operations; successful TypeScript compilation does not
+establish runtime support. Browser-executed POMs must not import Playwright runtime
+values such as `expect`; unused imports behind local barrels may be removed by
+the plugin, but this does not provide a browser version of Playwright Test.
+
+An older consumer's declarations need not expose newer supported capabilities:
+
+| Capability                                       | First Playwright declaration |
+| ------------------------------------------------ | ---------------------------- |
+| `Locator.all`                                    | 1.29                         |
+| `Locator.or`, negative locator filters           | 1.33                         |
+| `Locator.and`                                    | 1.34                         |
+| `Locator.pressSequentially`                      | 1.38                         |
+| `Locator.ariaSnapshot`                           | 1.49                         |
+| `Locator.filter({ visible })`                    | 1.51                         |
+| `Locator.describe`                               | 1.53                         |
+| `Locator.description`                            | 1.57                         |
+| `Page.ariaSnapshot`, snapshot `mode` and `depth` | 1.59                         |
+| Snapshot `boxes`, role `description`             | 1.60                         |
+| Query and snapshot `signal`                      | 1.62                         |
+
+These dates follow [Playwright's release history](https://playwright.dev/docs/release-notes).
+The 1.29 minimum includes `Locator.all` and the `selectOption(string)` behavior
+that matches either an option value or label. Ayme always executes its bundled
+adapter from the fixed runtime source pin, regardless of the consumer's installed
+Playwright version. It does not emulate historical releases. The current-document
+boundary excludes iframe traversal, multiple pages, and browser-process operations.
+The runtime's reviewed tests remain separate from the consumer declaration checks.
+
+The optional config loader has a narrower requirement described below. The plugin
+does not declare that requirement as a package-wide peer because it applies only
+when `playwright.config` is supplied; it validates the consumer's resolved
+Playwright version at that point.
+
 ## Playwright settings
 
 The Vite plugin accepts the small part of Playwright configuration that the
@@ -27,7 +79,8 @@ Consumers that relied on the old automatic discovery must now pass their
 config path explicitly.
 
 If a config is supplied, Ayme loads the consumer's Playwright 1.62.x config
-loader. That loader is a private Playwright module, so other versions and
+loader through the matching `playwright` dependency of `@playwright/test`.
+That loader is a private Playwright module, so other versions and
 loader shapes fail with an explicit compatibility error. Ayme reads only
 `testIdAttribute`, `actionTimeout`, and `navigationTimeout`; no other config
 field enters the browser bundle.

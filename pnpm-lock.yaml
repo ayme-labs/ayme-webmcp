@@ -257,6 +257,9 @@ importers:
       "@ayme-dev/webmcp":
         specifier: workspace:*
         version: link:../webmcp
+      "@playwright/test":
+        specifier: ">=1.29 <1.63"
+        version: 1.62.1
     devDependencies:
       "@ayme-dev/eslint-config":
         specifier: workspace:*

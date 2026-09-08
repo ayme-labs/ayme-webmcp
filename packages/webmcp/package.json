@@ -30,7 +30,7 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@playwright/test": "^1.62.1"
+    "@playwright/test": ">=1.29 <1.63"
   },
   "peerDependenciesMeta": {
     "@playwright/test": {
@@ -50,14 +50,6 @@
     "tsdown": "^0.22.14",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11"
-  },
-  "peerDependencies": {
-    "@playwright/test": "^1.62.1"
-  },
-  "peerDependenciesMeta": {
-    "@playwright/test": {
-      "optional": true
-    }
   },
   "dependencies": {
     "@mcp-b/webmcp-types": "^5.0.1"
