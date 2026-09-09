@@ -579,7 +579,7 @@ export class PageImpl {
     );
     this.assertActionDeadline(deadline, "press");
     this.focusElement(element);
-    await this.keyboard.pressForTarget(element, key);
+    await this.keyboard.press(key);
   }
 
   async focusSelector(
@@ -2013,10 +2013,8 @@ export class PageImpl {
   private async ensureActionable(
     element: Element,
     states: ("visible" | "enabled" | "editable" | "stable")[],
-    deadline?: ActionDeadline,
-    actionName = "action"
+    deadline?: ActionDeadline
   ) {
-    this.assertActionDeadline(deadline, actionName);
     const result = await this.waitForActionDeadline(
       this.actionableInjected.checkElementStates(element, states),
       deadline,
@@ -2093,28 +2091,29 @@ export class PageImpl {
     position?: ActionPoint
   ): Promise<ActionTarget> {
     let lastError: Error | undefined;
+    const throwTimeout = () => {
+      if (lastError)
+        throw new AdapterTimeoutError(
+          `${actionName}: Timeout ${deadline.timeout}ms exceeded. ${lastError.message}`,
+          { cause: lastError }
+        );
+      this.assertActionDeadline(deadline, actionName);
+    };
 
     while (true) {
-      if (Date.now() >= deadline.expiresAt) {
-        if (lastError)
-          throw new AdapterTimeoutError(
-            `${actionName}: Timeout ${deadline.timeout}ms exceeded. ${lastError.message}`,
-            { cause: lastError }
-          );
-        this.assertActionDeadline(deadline, actionName);
-      }
+      if (Date.now() >= deadline.expiresAt) throwTimeout();
       try {
         const element = this.requireSingle(selector, label);
-        await this.ensureActionable(element, states, deadline, actionName);
-        this.assertActionDeadline(deadline, actionName);
+        await this.ensureActionable(element, states, deadline);
+        if (Date.now() >= deadline.expiresAt) throwTimeout();
         if (actionName !== "scroll into view")
           this.scrollIntoView(element, position);
         // Scrolling can change visibility or expose a covering element.
-        await this.ensureActionable(element, states, deadline, actionName);
+        await this.ensureActionable(element, states, deadline);
         const point = checkHitTarget
           ? this.ensureReceivesEvents(element, position)
           : actionPoint(element, position, this.window);
-        this.assertActionDeadline(deadline, actionName);
+        if (Date.now() >= deadline.expiresAt) throwTimeout();
         return { element, point };
       } catch (error) {
         if (!isRetryableActionError(error)) throw error;
@@ -2279,20 +2278,30 @@ export class PageImpl {
     this.replaceSelectedText(element, value);
   }
 
-  insertPressedText(element: Element, text: string) {
+  insertPressedText(
+    element: Element,
+    text: string,
+    inputType = "insertText",
+    eventData: string | null = text
+  ) {
     if (!isEditableElement(element, this.window)) return;
     if (isFillableInputWithoutSelection(element, this.window)) {
       element.value += text;
-      this.dispatchInputEvent(element, text);
+      this.dispatchInputEvent(element, eventData, inputType);
       return;
     }
-    this.replaceSelectedText(element, text);
+    this.replaceSelectedText(element, text, inputType, eventData);
   }
 
-  insertKeyboardText(element: Element, text: string, inputType = "insertText") {
+  insertKeyboardText(
+    element: Element,
+    text: string,
+    inputType = "insertText",
+    eventData: string | null = text
+  ) {
     if (!isEditableElement(element, this.window)) return;
-    if (!this.dispatchBeforeInput(element, text, inputType)) return;
-    this.insertPressedText(element, text);
+    if (!this.dispatchBeforeInput(element, eventData, inputType)) return;
+    this.insertPressedText(element, text, inputType, eventData);
   }
 
   private async insertTextSelector(
@@ -2328,7 +2337,7 @@ export class PageImpl {
       return;
     }
     if (isTextArea(element, this.window) || isContentEditable(element))
-      this.insertKeyboardText(element, "\n", "insertLineBreak");
+      this.insertKeyboardText(element, "\n", "insertLineBreak", null);
   }
 
   applyKeydownDefault(
@@ -2372,12 +2381,17 @@ export class PageImpl {
     selection?.addRange(range);
   }
 
-  private replaceSelectedText(element: Element, text: string) {
+  private replaceSelectedText(
+    element: Element,
+    text: string,
+    inputType = "insertText",
+    eventData: string | null = text
+  ) {
     if (isTextInput(element, this.window) || isTextArea(element, this.window)) {
       const start = element.selectionStart ?? element.value.length;
       const end = element.selectionEnd ?? start;
       element.setRangeText(text, start, end, "end");
-      this.dispatchInputEvent(element, text);
+      this.dispatchInputEvent(element, eventData, inputType);
       return;
     }
     if (isContentEditable(element)) {
@@ -2395,7 +2409,7 @@ export class PageImpl {
       } else {
         element.textContent = `${element.textContent ?? ""}${text}`;
       }
-      this.dispatchInputEvent(element, text);
+      this.dispatchInputEvent(element, eventData, inputType);
       return;
     }
     throw new Error("Element is not editable");
@@ -2403,7 +2417,7 @@ export class PageImpl {
 
   private dispatchBeforeInput(
     element: Element,
-    data: string,
+    data: string | null,
     inputType: string
   ): boolean {
     const InputEvent = this.window.InputEvent;
@@ -2543,11 +2557,11 @@ class BrowserKeyboard {
   constructor(private readonly page: PageImpl) {}
 
   async down(key: string): Promise<void> {
-    await this.downForTarget(this.activeTarget(), key);
+    await this.downForTarget(key);
   }
 
   async up(key: string): Promise<void> {
-    await this.upForTarget(this.activeTarget(), key);
+    await this.upForTarget(key);
   }
 
   async insertText(text: string): Promise<void> {
@@ -2576,25 +2590,28 @@ class BrowserKeyboard {
       await this.up(modifier);
   }
 
-  async downForTarget(element: Element, key: string): Promise<void> {
+  private async downForTarget(key: string): Promise<void> {
     const description = this.descriptionFor(key);
     const repeat = this.pressedKeys.has(description.code);
     this.pressedKeys.add(description.code);
     if (isModifier(description.key)) this.pressedModifiers.add(description.key);
 
     const keyDownAllowed = this.page.dispatchKeyboardEvent(
-      element,
+      this.activeTarget(),
       "keydown",
       description,
       this.pressedModifiers,
       repeat
     );
     this.keydownAllowed.set(description.code, keyDownAllowed);
-    const keyPressAllowed =
+    await this.waitForKeyboardPhase();
+    const dispatchKeyPress =
       keyDownAllowed &&
-      (description.text.length > 0 || description.key === "Enter") &&
+      (description.text.length > 0 || description.key === "Enter");
+    const keyPressAllowed =
+      dispatchKeyPress &&
       this.page.dispatchKeyboardEvent(
-        element,
+        this.activeTarget(),
         "keypress",
         description,
         this.pressedModifiers,
@@ -2603,23 +2620,24 @@ class BrowserKeyboard {
 
     if (keyDownAllowed)
       this.page.applyKeydownDefault(
-        element,
+        this.activeTarget(),
         description,
         this.pressedModifiers
       );
+    if (dispatchKeyPress) await this.waitForKeyboardPhase();
     if (keyPressAllowed && description.text && description.key !== "Enter")
-      this.page.insertKeyboardText(element, description.text);
+      this.page.insertKeyboardText(this.activeTarget(), description.text);
     if (keyPressAllowed && description.key === "Enter")
-      this.page.pressEnter(element);
+      this.page.pressEnter(this.activeTarget());
   }
 
-  async upForTarget(element: Element, key: string): Promise<void> {
+  private async upForTarget(key: string): Promise<void> {
     const description = this.descriptionFor(key);
     if (isModifier(description.key))
       this.pressedModifiers.delete(description.key);
     this.pressedKeys.delete(description.code);
     const keyUpAllowed = this.page.dispatchKeyboardEvent(
-      element,
+      this.activeTarget(),
       "keyup",
       description,
       this.pressedModifiers
@@ -2627,27 +2645,21 @@ class BrowserKeyboard {
     const keyDownAllowed = this.keydownAllowed.get(description.code) ?? false;
     this.keydownAllowed.delete(description.code);
     if (keyDownAllowed && keyUpAllowed)
-      this.page.applyKeyupDefault(element, description, this.pressedModifiers);
-  }
-
-  async pressForTarget(
-    element: Element,
-    key: string,
-    delay?: number
-  ): Promise<void> {
-    const tokens = splitKeyboardShortcut(key);
-    const target = tokens.at(-1)!;
-    for (const modifier of tokens.slice(0, -1))
-      await this.downForTarget(element, modifier);
-    await this.downForTarget(element, target);
-    if (delay) await this.wait(delay);
-    await this.upForTarget(element, target);
-    for (const modifier of tokens.slice(0, -1).reverse())
-      await this.upForTarget(element, modifier);
+      this.page.applyKeyupDefault(
+        this.activeTarget(),
+        description,
+        this.pressedModifiers
+      );
   }
 
   private activeTarget(): Element {
-    return this.page.document.activeElement ?? this.page.document.body;
+    let target = this.page.document.activeElement ?? this.page.document.body;
+    while (
+      target.shadowRoot?.mode === "open" &&
+      target.shadowRoot.activeElement
+    )
+      target = target.shadowRoot.activeElement;
+    return target;
   }
 
   private descriptionFor(key: string): KeyboardKeyDescription {
@@ -2668,6 +2680,14 @@ class BrowserKeyboard {
     await new Promise<void>((resolve) =>
       this.page.window.setTimeout(resolve, delay)
     );
+  }
+
+  private async waitForKeyboardPhase(): Promise<void> {
+    // Chromium completes nested microtasks from one input dispatch before the
+    // next DevTools input command is handled. A single Promise.resolve() only
+    // yields one queued continuation, so it misses microtasks queued by other
+    // microtasks. Crossing a timer task flushes that complete microtask turn.
+    await new Promise<void>((resolve) => this.page.window.setTimeout(resolve));
   }
 }
 
