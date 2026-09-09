@@ -1433,6 +1433,43 @@ describe("Single-document adapter contract", () => {
       expect(clicks).toBe(1);
     });
 
+    it("does not activate a newly focused button during Space keydown or keyup", async () => {
+      document.body.innerHTML =
+        "<button id=keydown-first>first</button><button id=keydown-second>second</button>";
+      const page = createPage();
+      const keydownFirst = document.querySelector(
+        "#keydown-first"
+      ) as HTMLButtonElement;
+      const keydownSecond = document.querySelector(
+        "#keydown-second"
+      ) as HTMLButtonElement;
+      let keydownClicks = 0;
+      keydownFirst.addEventListener("click", () => keydownClicks++);
+      keydownSecond.addEventListener("click", () => keydownClicks++);
+      keydownFirst.addEventListener("keydown", () => keydownSecond.focus());
+
+      keydownFirst.focus();
+      await page.keyboard.press("Space");
+      expect(keydownClicks).toBe(0);
+
+      document.body.innerHTML =
+        "<button id=keyup-first>first</button><button id=keyup-second>second</button>";
+      const keyupFirst = document.querySelector(
+        "#keyup-first"
+      ) as HTMLButtonElement;
+      const keyupSecond = document.querySelector(
+        "#keyup-second"
+      ) as HTMLButtonElement;
+      let keyupClicks = 0;
+      keyupFirst.addEventListener("click", () => keyupClicks++);
+      keyupSecond.addEventListener("click", () => keyupClicks++);
+      keyupFirst.addEventListener("keyup", () => keyupSecond.focus());
+
+      keyupFirst.focus();
+      await page.keyboard.press("Space");
+      expect(keyupClicks).toBe(0);
+    });
+
     it("applies Enter defaults only for supported controls", async () => {
       document.body.innerHTML = `
         <form>
@@ -2098,6 +2135,25 @@ describe("Single-document adapter contract", () => {
         .locator("#input")
         .pressSequentially("ab", { delay: 5, timeout: 0 });
       expect(input.value).toBe("ab");
+    });
+
+    it("does not insert after a selector press deadline expires during a keyboard phase", async () => {
+      document.body.innerHTML = `<input id=input />`;
+      const page = createPage();
+      const input = document.querySelector("#input") as HTMLInputElement;
+      input.addEventListener("keydown", () =>
+        queueMicrotask(() => {
+          const deadline = Date.now() + 40;
+          while (Date.now() < deadline) {
+            // Keep the keyboard continuation behind a main-thread task.
+          }
+        })
+      );
+
+      await expect(
+        page.locator("#input").press("a", { timeout: 10 })
+      ).rejects.toThrow("Timeout 10ms exceeded");
+      expect(input.value).toBe("");
     });
 
     it.each(["default", "explicit"] as const)(

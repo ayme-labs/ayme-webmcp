@@ -579,7 +579,7 @@ export class PageImpl {
     );
     this.assertActionDeadline(deadline, "press");
     this.focusElement(element);
-    await this.keyboard.press(key);
+    await this.keyboard.press(key, {}, deadline);
   }
 
   async focusSelector(
@@ -1612,6 +1612,10 @@ export class PageImpl {
       );
   }
 
+  checkKeyboardActionDeadline(deadline: ActionDeadline | undefined) {
+    this.assertActionDeadline(deadline, "press");
+  }
+
   private async waitWithinActionDeadline(
     durationMs: number | undefined,
     deadline: ActionDeadline | undefined,
@@ -2282,8 +2286,10 @@ export class PageImpl {
     element: Element,
     text: string,
     inputType = "insertText",
-    eventData: string | null = text
+    eventData: string | null = text,
+    deadline?: ActionDeadline
   ) {
+    this.assertActionDeadline(deadline, "press");
     if (!isEditableElement(element, this.window)) return;
     if (isFillableInputWithoutSelection(element, this.window)) {
       element.value += text;
@@ -2297,11 +2303,14 @@ export class PageImpl {
     element: Element,
     text: string,
     inputType = "insertText",
-    eventData: string | null = text
+    eventData: string | null = text,
+    deadline?: ActionDeadline
   ) {
+    this.assertActionDeadline(deadline, "press");
     if (!isEditableElement(element, this.window)) return;
     if (!this.dispatchBeforeInput(element, eventData, inputType)) return;
-    this.insertPressedText(element, text, inputType, eventData);
+    this.assertActionDeadline(deadline, "press");
+    this.insertPressedText(element, text, inputType, eventData, deadline);
   }
 
   private async insertTextSelector(
@@ -2320,10 +2329,11 @@ export class PageImpl {
     );
     this.assertActionDeadline(deadline, "press");
     this.focusElement(element);
-    this.insertKeyboardText(element, text);
+    this.insertKeyboardText(element, text, "insertText", text, deadline);
   }
 
-  pressEnter(element: Element) {
+  pressEnter(element: Element, deadline?: ActionDeadline) {
+    this.assertActionDeadline(deadline, "press");
     if (isHtmlButton(element, this.window)) {
       element.click();
       return;
@@ -2337,7 +2347,7 @@ export class PageImpl {
       return;
     }
     if (isTextArea(element, this.window) || isContentEditable(element))
-      this.insertKeyboardText(element, "\n", "insertLineBreak", null);
+      this.insertKeyboardText(element, "\n", "insertLineBreak", null, deadline);
   }
 
   applyKeydownDefault(
@@ -2552,16 +2562,19 @@ export class PageImpl {
 class BrowserKeyboard {
   private readonly pressedKeys = new Set<string>();
   private readonly pressedModifiers = new Set<string>();
-  private readonly keydownAllowed = new Map<string, boolean>();
+  private readonly keydownState = new Map<
+    string,
+    { allowed: boolean; target: Element }
+  >();
 
   constructor(private readonly page: PageImpl) {}
 
-  async down(key: string): Promise<void> {
-    await this.downForTarget(key);
+  async down(key: string, deadline?: ActionDeadline): Promise<void> {
+    await this.downForTarget(key, deadline);
   }
 
-  async up(key: string): Promise<void> {
-    await this.upForTarget(key);
+  async up(key: string, deadline?: ActionDeadline): Promise<void> {
+    await this.upForTarget(key, deadline);
   }
 
   async insertText(text: string): Promise<void> {
@@ -2579,35 +2592,49 @@ class BrowserKeyboard {
     }
   }
 
-  async press(key: string, options: { delay?: number } = {}): Promise<void> {
+  async press(
+    key: string,
+    options: { delay?: number } = {},
+    deadline?: ActionDeadline
+  ): Promise<void> {
     const tokens = splitKeyboardShortcut(key);
     const target = tokens.at(-1)!;
-    for (const modifier of tokens.slice(0, -1)) await this.down(modifier);
-    await this.down(target);
-    if (options.delay) await this.wait(options.delay);
-    await this.up(target);
+    for (const modifier of tokens.slice(0, -1))
+      await this.down(modifier, deadline);
+    await this.down(target, deadline);
+    if (options.delay) await this.wait(options.delay, deadline);
+    await this.up(target, deadline);
     for (const modifier of tokens.slice(0, -1).reverse())
-      await this.up(modifier);
+      await this.up(modifier, deadline);
   }
 
-  private async downForTarget(key: string): Promise<void> {
+  private async downForTarget(
+    key: string,
+    deadline?: ActionDeadline
+  ): Promise<void> {
+    this.page.checkKeyboardActionDeadline(deadline);
     const description = this.descriptionFor(key);
     const repeat = this.pressedKeys.has(description.code);
     this.pressedKeys.add(description.code);
     if (isModifier(description.key)) this.pressedModifiers.add(description.key);
 
+    const keyDownTarget = this.activeTarget();
     const keyDownAllowed = this.page.dispatchKeyboardEvent(
-      this.activeTarget(),
+      keyDownTarget,
       "keydown",
       description,
       this.pressedModifiers,
       repeat
     );
-    this.keydownAllowed.set(description.code, keyDownAllowed);
-    await this.waitForKeyboardPhase();
+    this.keydownState.set(description.code, {
+      allowed: keyDownAllowed,
+      target: keyDownTarget,
+    });
+    await this.waitForKeyboardPhase(deadline);
     const dispatchKeyPress =
       keyDownAllowed &&
       (description.text.length > 0 || description.key === "Enter");
+    this.page.checkKeyboardActionDeadline(deadline);
     const keyPressAllowed =
       dispatchKeyPress &&
       this.page.dispatchKeyboardEvent(
@@ -2624,29 +2651,50 @@ class BrowserKeyboard {
         description,
         this.pressedModifiers
       );
-    if (dispatchKeyPress) await this.waitForKeyboardPhase();
-    if (keyPressAllowed && description.text && description.key !== "Enter")
-      this.page.insertKeyboardText(this.activeTarget(), description.text);
-    if (keyPressAllowed && description.key === "Enter")
-      this.page.pressEnter(this.activeTarget());
+    if (dispatchKeyPress) await this.waitForKeyboardPhase(deadline);
+    if (keyPressAllowed && description.text && description.key !== "Enter") {
+      this.page.checkKeyboardActionDeadline(deadline);
+      this.page.insertKeyboardText(
+        this.activeTarget(),
+        description.text,
+        "insertText",
+        description.text,
+        deadline
+      );
+    }
+    if (keyPressAllowed && description.key === "Enter") {
+      this.page.checkKeyboardActionDeadline(deadline);
+      this.page.pressEnter(this.activeTarget(), deadline);
+    }
   }
 
-  private async upForTarget(key: string): Promise<void> {
+  private async upForTarget(
+    key: string,
+    deadline?: ActionDeadline
+  ): Promise<void> {
+    this.page.checkKeyboardActionDeadline(deadline);
     const description = this.descriptionFor(key);
     if (isModifier(description.key))
       this.pressedModifiers.delete(description.key);
     this.pressedKeys.delete(description.code);
+    const keyUpTarget = this.activeTarget();
     const keyUpAllowed = this.page.dispatchKeyboardEvent(
-      this.activeTarget(),
+      keyUpTarget,
       "keyup",
       description,
       this.pressedModifiers
     );
-    const keyDownAllowed = this.keydownAllowed.get(description.code) ?? false;
-    this.keydownAllowed.delete(description.code);
-    if (keyDownAllowed && keyUpAllowed)
+    const keyDownState = this.keydownState.get(description.code);
+    this.keydownState.delete(description.code);
+    this.page.checkKeyboardActionDeadline(deadline);
+    if (
+      keyDownState?.allowed &&
+      keyUpAllowed &&
+      keyUpTarget === keyDownState.target &&
+      this.activeTarget() === keyDownState.target
+    )
       this.page.applyKeyupDefault(
-        this.activeTarget(),
+        keyDownState.target,
         description,
         this.pressedModifiers
       );
@@ -2676,18 +2724,27 @@ class BrowserKeyboard {
     return description;
   }
 
-  private async wait(delay: number): Promise<void> {
+  private async wait(delay: number, deadline?: ActionDeadline): Promise<void> {
+    this.page.checkKeyboardActionDeadline(deadline);
+    const remaining = deadline
+      ? Math.max(0, deadline.expiresAt - Date.now())
+      : delay;
+    if (deadline && remaining <= 0)
+      this.page.checkKeyboardActionDeadline(deadline);
     await new Promise<void>((resolve) =>
-      this.page.window.setTimeout(resolve, delay)
+      this.page.window.setTimeout(resolve, Math.min(delay, remaining))
     );
+    this.page.checkKeyboardActionDeadline(deadline);
   }
 
-  private async waitForKeyboardPhase(): Promise<void> {
+  private async waitForKeyboardPhase(deadline?: ActionDeadline): Promise<void> {
+    this.page.checkKeyboardActionDeadline(deadline);
     // Chromium completes nested microtasks from one input dispatch before the
     // next DevTools input command is handled. A single Promise.resolve() only
     // yields one queued continuation, so it misses microtasks queued by other
     // microtasks. Crossing a timer task flushes that complete microtask turn.
     await new Promise<void>((resolve) => this.page.window.setTimeout(resolve));
+    this.page.checkKeyboardActionDeadline(deadline);
   }
 }
 
