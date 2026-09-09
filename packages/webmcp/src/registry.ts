@@ -53,7 +53,6 @@ const subscribers = new Set<() => void>();
 let mutationObserver: MutationObserver | undefined;
 let probeTimer: ReturnType<typeof setTimeout> | undefined;
 const POM_ROOT_TRIAL_TIMEOUT = 500;
-const successfulRootTrials = new WeakSet<Element>();
 
 export function configureAymeRuntime(page: Page) {
   if (runtimeOwner)
@@ -798,38 +797,12 @@ async function probeMembers(
 }
 
 async function passesRootTrial(root: Locator): Promise<boolean> {
-  const elements = locatorElements(root);
-  const element = elements.length === 1 ? elements[0] : undefined;
-  if (element && successfulRootTrials.has(element)) {
-    if (isRenderedElement(element)) return true;
-    successfulRootTrials.delete(element);
-  }
-
   try {
     await root.click({ trial: true, timeout: POM_ROOT_TRIAL_TIMEOUT });
-    if (element) successfulRootTrials.add(element);
     return true;
   } catch {
-    if (element) successfulRootTrials.delete(element);
     return false;
   }
-}
-
-function isRenderedElement(element: Element) {
-  if (!element.isConnected) return false;
-  const ownerWindow = element.ownerDocument.defaultView;
-  const style = ownerWindow?.getComputedStyle(element);
-  if (
-    style &&
-    (style.display === "none" ||
-      style.visibility === "hidden" ||
-      style.visibility === "collapse")
-  )
-    return false;
-  return (
-    typeof element.getClientRects !== "function" ||
-    element.getClientRects().length > 0
-  );
 }
 
 async function readMember(instance: object, member: PomMemberManifest) {
