@@ -393,7 +393,7 @@ describe("live Page Object registry", () => {
     let trialSucceeds = false;
     const trialClick = vi.fn(
       async (options: { trial?: boolean; timeout?: number }) => {
-        expect(options).toEqual({ trial: true, timeout: 1_000 });
+        expect(options).toEqual({ trial: true, timeout: 500 });
         if (!trialSucceeds) throw new Error("Root is not actionable.");
       }
     );
@@ -447,6 +447,49 @@ describe("live Page Object registry", () => {
       "MenuPage.menu.open",
     ]);
     expect(trialClick).toHaveBeenCalledTimes(2);
+
+    registration.dispose();
+  });
+
+  it("gates direct tools by a top-level POM root when present", async () => {
+    const registry = await import("./registry");
+    registry.configureAymeRuntime({} as Page);
+
+    let rootCount = 1;
+    let trialSucceeds = false;
+    const trialClick = vi.fn(
+      async (options: { trial?: boolean; timeout?: number }) => {
+        expect(options).toEqual({ trial: true, timeout: 500 });
+        if (!trialSucceeds) throw new Error("Root is not actionable.");
+      }
+    );
+    class RootedPage {
+      readonly root = brandedLocator({
+        count: async () => rootCount,
+        click: trialClick,
+      });
+    }
+    registry.registerCompiledPom(RootedPage, {
+      ...emptyManifest("RootedPage"),
+      tools: [action("open")],
+    });
+    const registration = registry.createPageRegistration(RootedPage);
+
+    await vi.runOnlyPendingTimersAsync();
+    expect(registry.listRegisteredTools()).toEqual([]);
+    expect(trialClick).toHaveBeenCalledOnce();
+
+    trialSucceeds = true;
+    FakeMutationObserver.instances[0]?.trigger();
+    await vi.runOnlyPendingTimersAsync();
+    expect(registry.listRegisteredTools().map(({ name }) => name)).toEqual([
+      "open",
+    ]);
+
+    rootCount = 0;
+    FakeMutationObserver.instances[0]?.trigger();
+    await vi.runOnlyPendingTimersAsync();
+    expect(registry.listRegisteredTools()).toEqual([]);
 
     registration.dispose();
   });

@@ -28,6 +28,8 @@ type LiveRegisteredPomTool = RegisteredPomTool & {
 export type RegisteredPom = {
   id: string;
   instance: object;
+  root?: Locator;
+  rootAvailable?: boolean;
   manifest: PomManifest;
   memberObservations: readonly PomMemberObservation[];
   tools: readonly LiveRegisteredPomTool[];
@@ -50,7 +52,7 @@ const registeredPoms = new Set<RegisteredPom>();
 const subscribers = new Set<() => void>();
 let mutationObserver: MutationObserver | undefined;
 let probeTimer: ReturnType<typeof setTimeout> | undefined;
-const POM_ROOT_TRIAL_TIMEOUT = 1_000;
+const POM_ROOT_TRIAL_TIMEOUT = 500;
 const successfulRootTrials = new WeakSet<Element>();
 
 export function configureAymeRuntime(page: Page) {
@@ -140,6 +142,8 @@ export function registerPageObject<T extends object>(
   const registration: RegisteredPom = {
     id: compiledPom.className,
     instance,
+    root: pomRoot(instance),
+    rootAvailable: undefined,
     manifest: compiledPom,
     memberObservations: [],
     tools: createRegisteredTools(compiledPom, instance),
@@ -188,15 +192,26 @@ function schedulePomMemberProbe() {
 
 export async function probeRegisteredPomMembers() {
   const results = await Promise.all(
-    [...registeredPoms].map(async (registration) => ({
-      registration,
-      memberObservations: await probePomMembers(registration),
-    }))
+    [...registeredPoms].map(async (registration) => {
+      const rootAvailable =
+        registration.root === undefined
+          ? undefined
+          : await probePomRoot(registration.root);
+      return {
+        registration,
+        rootAvailable,
+        memberObservations: await probePomMembers(registration),
+      };
+    })
   );
 
   let changed = false;
   for (const result of results) {
     if (!registeredPoms.has(result.registration)) continue;
+    if (result.registration.rootAvailable !== result.rootAvailable) {
+      result.registration.rootAvailable = result.rootAvailable;
+      changed = true;
+    }
     if (
       sameObservations(
         result.registration.memberObservations,
@@ -283,14 +298,16 @@ export function listRegisteredPomTools() {
     for (const tool of registration.tools) {
       const componentPath = tool.componentPath;
       const active =
-        componentPath === undefined ||
-        registration.memberObservations.some(
-          (observation) =>
-            observation.kind === "component-root" &&
-            observation.count > 0 &&
-            observation.available !== false &&
-            isLiveComponentRoot(componentPath, observation.memberName)
-        );
+        componentPath === undefined
+          ? registration.root === undefined ||
+            registration.rootAvailable === true
+          : registration.memberObservations.some(
+              (observation) =>
+                observation.kind === "component-root" &&
+                observation.count > 0 &&
+                observation.available !== false &&
+                isLiveComponentRoot(componentPath, observation.memberName)
+            );
       if (active && !activeTools.has(tool.name))
         activeTools.set(tool.name, tool);
     }
@@ -315,6 +332,15 @@ function escapeRegExp(value: string) {
 }
 
 export const listRegisteredTools = listRegisteredPomTools;
+
+function pomRoot(instance: object): Locator | undefined {
+  try {
+    const root = Reflect.get(instance, "root");
+    return isAymeLocator(root) ? root : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export function subscribeToRegisteredPoms(subscriber: () => void) {
   subscribers.add(subscriber);
@@ -551,6 +577,14 @@ async function probePomMembers(
     "",
     components
   );
+}
+
+async function probePomRoot(root: Locator): Promise<boolean> {
+  try {
+    return (await root.count()) > 0 && (await passesRootTrial(root));
+  } catch {
+    return false;
+  }
 }
 
 async function collectRegisteredPomRoots(
