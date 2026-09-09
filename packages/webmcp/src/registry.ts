@@ -50,6 +50,8 @@ const registeredPoms = new Set<RegisteredPom>();
 const subscribers = new Set<() => void>();
 let mutationObserver: MutationObserver | undefined;
 let probeTimer: ReturnType<typeof setTimeout> | undefined;
+const POM_ROOT_TRIAL_TIMEOUT = 1_000;
+const successfulRootTrials = new WeakSet<Element>();
 
 export function configureAymeRuntime(page: Page) {
   if (runtimeOwner)
@@ -221,6 +223,7 @@ function sameObservations(
         observation.memberName === candidate.memberName &&
         observation.kind === candidate.kind &&
         observation.count === candidate.count &&
+        observation.available === candidate.available &&
         observation.access === candidate.access &&
         observation.error === candidate.error
       );
@@ -285,6 +288,7 @@ export function listRegisteredPomTools() {
           (observation) =>
             observation.kind === "component-root" &&
             observation.count > 0 &&
+            observation.available !== false &&
             isLiveComponentRoot(componentPath, observation.memberName)
         );
       if (active && !activeTools.has(tool.name))
@@ -717,10 +721,13 @@ async function probeMembers(
           continue;
         }
 
+        const rootCount = await componentValue.root.count();
         observations.push({
           memberName: `${componentPath}.root`,
           kind: "component-root",
-          count: await componentValue.root.count(),
+          count: rootCount,
+          available:
+            rootCount > 0 && (await passesRootTrial(componentValue.root)),
         });
         const childMembers = componentManifest.members.filter(
           (child) => !(child.kind === "locator" && child.memberName === "root")
@@ -754,6 +761,41 @@ async function probeMembers(
   }
 
   return observations;
+}
+
+async function passesRootTrial(root: Locator): Promise<boolean> {
+  const elements = locatorElements(root);
+  const element = elements.length === 1 ? elements[0] : undefined;
+  if (element && successfulRootTrials.has(element)) {
+    if (isRenderedElement(element)) return true;
+    successfulRootTrials.delete(element);
+  }
+
+  try {
+    await root.click({ trial: true, timeout: POM_ROOT_TRIAL_TIMEOUT });
+    if (element) successfulRootTrials.add(element);
+    return true;
+  } catch {
+    if (element) successfulRootTrials.delete(element);
+    return false;
+  }
+}
+
+function isRenderedElement(element: Element) {
+  if (!element.isConnected) return false;
+  const ownerWindow = element.ownerDocument.defaultView;
+  const style = ownerWindow?.getComputedStyle(element);
+  if (
+    style &&
+    (style.display === "none" ||
+      style.visibility === "hidden" ||
+      style.visibility === "collapse")
+  )
+    return false;
+  return (
+    typeof element.getClientRects !== "function" ||
+    element.getClientRects().length > 0
+  );
 }
 
 async function readMember(instance: object, member: PomMemberManifest) {

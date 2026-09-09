@@ -5,6 +5,7 @@ import type { Page } from "@playwright/test";
 
 function brandedLocator(overrides: Record<string, unknown> = {}) {
   const loc: Record<string | symbol, unknown> = { ...overrides };
+  loc.click ??= vi.fn(async () => {});
   loc[LOCATOR_BRAND] = Object.freeze({
     ownerPage: {},
     getSelector: () => "mock",

@@ -39,6 +39,15 @@ describe("get_page_context", () => {
     vi.unstubAllGlobals();
   });
 
+  it("explains that tools are live while definitions include reachable capabilities", () => {
+    expect(getPageContextTool.description).toContain(
+      "Registered action tools represent capabilities currently available on the page"
+    );
+    expect(getPageContextTool.description).toContain(
+      "capabilities that may become available after further interaction"
+    );
+  });
+
   it("combines current structure and POM definitions while retaining ref resolution", async () => {
     const resolve = vi.fn();
     getPageStateForDocument.mockResolvedValue({

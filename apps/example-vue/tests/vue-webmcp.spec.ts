@@ -497,7 +497,7 @@ test("demonstrates the list app and invokes the generated POM tools from the deb
     {
       name: "get_page_context",
       description:
-        "Return the current structural page state together with compact POM definitions. A bare member is a Locator; member: ChildPom is a child POM; [] marks collections; and action(args): this | OtherPom is an action with possible next POMs. Action comments are authored descriptions, and this means the current POM. Definitions can include referenced POMs that are not currently visible; registered tool schemas remain authoritative.",
+        "Return the current structural page state together with compact POM definitions. A bare member is a Locator; member: ChildPom is a child POM; [] marks collections; and action(args): this | OtherPom is an action with possible next POMs. Action comments are authored descriptions, and this means the current POM. Registered action tools represent capabilities currently available on the page; definitions also include referenced POMs and capabilities that may become available after further interaction. Registered tool schemas remain authoritative.",
       inputSchema: {
         type: "object",
         properties: {

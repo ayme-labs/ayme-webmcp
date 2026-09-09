@@ -3,7 +3,17 @@ import { describe, expect, it } from "vitest";
 import ayme from "./index";
 import { createPage } from "@ayme-dev/playwright-browser";
 import { AriaRefSchema } from "@ayme-dev/core/structural-observation";
-import { configureAymeRuntime } from "./internal";
+import {
+  configureAymeRuntime,
+  createAymeRuntime,
+  createPageRegistration,
+  registerCompiledPom,
+} from "./internal";
+import {
+  listRegisteredPomTools,
+  listRegisteredPoms,
+  probeRegisteredPomMembers,
+} from "./registry";
 
 describe("the public Ayme page state facade in Chromium", () => {
   it("resolves live elements and retargets historical refs through replacements", async () => {
@@ -97,6 +107,97 @@ describe("the public Ayme page state facade in Chromium", () => {
     expect(clicks).toBe(1);
     expect(input.value).toBe("Updated title");
     expect(inputs).toBeGreaterThan(0);
+  });
+
+  it("keeps collapsed root tools unavailable while retaining their definitions", async () => {
+    document.body.innerHTML = `
+        <aside id="sidebar" style="display: none; width: 240px; height: 120px">
+          <button>Log out</button>
+        </aside>
+      `;
+    const sidebar = document.querySelector("#sidebar");
+    if (!sidebar) throw new Error("Expected the sidebar root.");
+    let clicks = 0;
+    sidebar.addEventListener("click", () => (clicks += 1));
+
+    const page = createPage();
+    const runtime = createAymeRuntime(page);
+    class SidebarPage {
+      readonly sidebar = {
+        root: page.locator("#sidebar"),
+        logout() {},
+      };
+    }
+    registerCompiledPom(SidebarPage, {
+      className: "SidebarPage",
+      members: [
+        {
+          memberName: "sidebar",
+          kind: "component",
+          access: "field",
+          componentClassName: "Sidebar",
+          collection: false,
+        },
+      ],
+      components: [
+        {
+          className: "Sidebar",
+          members: [{ memberName: "root", kind: "locator", access: "field" }],
+          tools: [
+            {
+              methodName: "logout",
+              toolName: "Sidebar.logout",
+              description: "Log out.",
+              authoredDescription: "Log out.",
+              inputSchema: {
+                type: "object",
+                properties: {},
+                required: [],
+                additionalProperties: false,
+              },
+              parameters: [],
+              returnPoms: [],
+            },
+          ],
+        },
+      ],
+      tools: [],
+    });
+    const registration = createPageRegistration(SidebarPage);
+
+    await probeRegisteredPomMembers();
+    expect(listRegisteredPomTools()).toEqual([]);
+    await expect(
+      ayme.getPageContext("SidebarPage", "Sidebar")
+    ).resolves.toMatchObject({
+      pomDefinitions: expect.arrayContaining([
+        expect.objectContaining({
+          name: "Sidebar",
+          actions: expect.arrayContaining([
+            expect.objectContaining({ name: "logout" }),
+          ]),
+        }),
+      ]),
+    });
+    expect(clicks).toBe(0);
+
+    sidebar.removeAttribute("style");
+    await probeRegisteredPomMembers();
+    expect(listRegisteredPoms()[0]?.memberObservations).toContainEqual(
+      expect.objectContaining({
+        memberName: "sidebar.root",
+        kind: "component-root",
+        count: 1,
+        available: true,
+      })
+    );
+    expect(listRegisteredPomTools().map(({ name }) => name)).toEqual([
+      "SidebarPage.sidebar.logout",
+    ]);
+    expect(clicks).toBe(0);
+
+    registration.dispose();
+    runtime.dispose();
   });
 });
 

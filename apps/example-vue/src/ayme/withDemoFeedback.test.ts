@@ -77,3 +77,22 @@ it("delays the delegated action without changing its timeout option", async () =
   await pending;
   expect(click).toHaveBeenCalledExactlyOnceWith({ timeout: 10 });
 });
+
+it("keeps trial clicks out of the demo trace and pacing", async () => {
+  vi.useFakeTimers();
+  const rawPage = createPage();
+  const rawLocator = rawPage.locator("button");
+  vi.spyOn(rawPage, "locator").mockReturnValue(rawLocator);
+  const click = vi.spyOn(rawLocator, "click").mockResolvedValue();
+  const onTrace = vi.fn();
+  const page = withDemoFeedback(rawPage, {
+    beforeActionMs: 50,
+    clickCue: true,
+    onTrace,
+  });
+
+  await page.locator("button").click({ trial: true, timeout: 10 });
+
+  expect(click).toHaveBeenCalledExactlyOnceWith({ trial: true, timeout: 10 });
+  expect(onTrace).not.toHaveBeenCalled();
+});

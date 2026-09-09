@@ -6,6 +6,7 @@ import type { PomManifest } from "./contracts";
 
 function brandedLocator(overrides: Record<string, unknown> = {}) {
   const loc: Record<string | symbol, unknown> = { ...overrides };
+  loc.click ??= vi.fn(async () => {});
   loc[LOCATOR_BRAND] = Object.freeze({
     ownerPage: {},
     getSelector: () => "mock",
@@ -380,6 +381,72 @@ describe("live Page Object registry", () => {
     FakeMutationObserver.instances[0]?.trigger();
     await vi.runOnlyPendingTimersAsync();
     expect(registry.listRegisteredTools()).toHaveLength(0);
+
+    registration.dispose();
+  });
+
+  it("only lists component tools when their root passes a trial click", async () => {
+    const registry = await import("./registry");
+    const definitions = await import("./pomDefinitions");
+    registry.configureAymeRuntime({} as Page);
+
+    let trialSucceeds = false;
+    const trialClick = vi.fn(
+      async (options: { trial?: boolean; timeout?: number }) => {
+        expect(options).toEqual({ trial: true, timeout: 1_000 });
+        if (!trialSucceeds) throw new Error("Root is not actionable.");
+      }
+    );
+    class MenuPage {
+      readonly menu = {
+        root: brandedLocator({
+          count: async () => 1,
+          click: trialClick,
+        }),
+        open: vi.fn(),
+      };
+    }
+    registry.registerCompiledPom(MenuPage, {
+      className: "MenuPage",
+      tools: [],
+      members: [
+        {
+          memberName: "menu",
+          kind: "component",
+          access: "field",
+          componentClassName: "Menu",
+          collection: false,
+        },
+      ],
+      components: [
+        {
+          className: "Menu",
+          members: [{ memberName: "root", kind: "locator", access: "field" }],
+          tools: [action("open")],
+        },
+      ],
+    });
+    const registration = registry.createPageRegistration(MenuPage);
+
+    await vi.runOnlyPendingTimersAsync();
+    expect(registry.listRegisteredTools()).toEqual([]);
+    expect(trialClick).toHaveBeenCalledOnce();
+    expect(
+      definitions
+        .getPomDefinitions("MenuPage", "Menu")
+        .definitions.map(({ name }) => name)
+    ).toEqual(["MenuPage", "Menu"]);
+    expect(
+      definitions.getPomDefinitions("Menu").definitions[0]?.actions
+    ).toHaveLength(1);
+
+    trialSucceeds = true;
+    FakeMutationObserver.instances[0]?.trigger();
+    await vi.runOnlyPendingTimersAsync();
+    expect(registry.listRegisteredTools().map(({ name }) => name)).toEqual([
+      "MenuPage.menu.open",
+    ]);
+    expect(trialClick).toHaveBeenCalledTimes(2);
 
     registration.dispose();
   });

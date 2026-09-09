@@ -51,6 +51,7 @@ export type PomMemberObservation = {
   memberName: string;
   kind: "locator" | "component-root" | "component-collection";
   count: number;
+  available?: boolean;
   access?: PomMemberAccess;
   error?: string;
 };
