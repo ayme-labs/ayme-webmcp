@@ -6,6 +6,7 @@ import {
 import { AdapterTimeoutError } from "./errors";
 import { AdapterElementHandle } from "./elementHandle";
 import { inputFilePayloads, type InputFiles } from "./inputFiles";
+import { keyboardLayout, type KeyboardKeyDescription } from "./keyboardLayout";
 import type { Page } from "@playwright/test";
 import type { ByRoleOptions, LocatorOptions } from "./locator";
 import { LocatorImpl } from "./locator";
@@ -195,6 +196,7 @@ export class AdapterJSHandle<T = unknown> {
 export class PageImpl {
   readonly document: Document;
   readonly window: Window & typeof globalThis;
+  readonly keyboard: BrowserKeyboard;
   private _injected: ReturnType<typeof injectedScriptFor> | undefined;
   private _injectedTestIdAttributeName: string | undefined;
   private defaultTimeout: number | undefined;
@@ -203,6 +205,7 @@ export class PageImpl {
   constructor(browserWindow: Window & typeof globalThis) {
     this.window = browserWindow;
     this.document = browserWindow.document;
+    this.keyboard = new BrowserKeyboard(this);
   }
 
   private get injected() {
@@ -576,47 +579,7 @@ export class PageImpl {
     );
     this.assertActionDeadline(deadline, "press");
     this.focusElement(element);
-
-    const keys = parseKeyDescription(key);
-    const modifiers = new Set<string>();
-    for (const modifier of keys.slice(0, -1)) {
-      modifiers.add(modifier.key);
-      this.dispatchKeyboardEvent(element, "keydown", modifier, modifiers);
-    }
-
-    const target = keyWithModifiers(keys.at(-1)!, modifiers);
-    const targetIsModifier = isModifier(target.key);
-    if (targetIsModifier) modifiers.add(target.key);
-    const text = textForKey(target, modifiers);
-
-    const keyDownAllowed = this.dispatchKeyboardEvent(
-      element,
-      "keydown",
-      target,
-      modifiers
-    );
-    const keyPressAllowed =
-      keyDownAllowed &&
-      (text.length > 0 || target.key === "Enter") &&
-      this.dispatchKeyboardEvent(element, "keypress", target, modifiers);
-
-    if (keyDownAllowed) this.applyKeydownDefault(element, target, modifiers);
-    if (keyPressAllowed && text) this.insertPressedText(element, text);
-    if (keyPressAllowed && target.key === "Enter") this.pressEnter(element);
-
-    if (targetIsModifier) modifiers.delete(target.key);
-    const keyUpAllowed = this.dispatchKeyboardEvent(
-      element,
-      "keyup",
-      target,
-      modifiers
-    );
-    if (keyDownAllowed && keyUpAllowed)
-      this.applyKeyupDefault(element, target, modifiers);
-    for (const modifier of keys.slice(0, -1).reverse()) {
-      modifiers.delete(modifier.key);
-      this.dispatchKeyboardEvent(element, "keyup", modifier, modifiers);
-    }
+    await this.keyboard.pressForTarget(element, key);
   }
 
   async focusSelector(
@@ -1024,7 +987,7 @@ export class PageImpl {
     assertPageActionOptions("type", options, ["delay"]);
     const deadline = this.createActionDeadline(options?.timeout);
     for (const character of text) {
-      if (isKeyboardLayoutCharacter(character)) {
+      if (keyboardLayout.has(character)) {
         await this.pressSelector(
           selector,
           character,
@@ -2316,14 +2279,20 @@ export class PageImpl {
     this.replaceSelectedText(element, value);
   }
 
-  private insertPressedText(element: Element, text: string) {
+  insertPressedText(element: Element, text: string) {
     if (!isEditableElement(element, this.window)) return;
     if (isFillableInputWithoutSelection(element, this.window)) {
       element.value += text;
-      this.dispatchInputEvent(element);
+      this.dispatchInputEvent(element, text);
       return;
     }
     this.replaceSelectedText(element, text);
+  }
+
+  insertKeyboardText(element: Element, text: string, inputType = "insertText") {
+    if (!isEditableElement(element, this.window)) return;
+    if (!this.dispatchBeforeInput(element, text, inputType)) return;
+    this.insertPressedText(element, text);
   }
 
   private async insertTextSelector(
@@ -2342,10 +2311,10 @@ export class PageImpl {
     );
     this.assertActionDeadline(deadline, "press");
     this.focusElement(element);
-    this.insertPressedText(element, text);
+    this.insertKeyboardText(element, text);
   }
 
-  private pressEnter(element: Element) {
+  pressEnter(element: Element) {
     if (isHtmlButton(element, this.window)) {
       element.click();
       return;
@@ -2359,12 +2328,12 @@ export class PageImpl {
       return;
     }
     if (isTextArea(element, this.window) || isContentEditable(element))
-      this.insertPressedText(element, "\n");
+      this.insertKeyboardText(element, "\n", "insertLineBreak");
   }
 
-  private applyKeydownDefault(
+  applyKeydownDefault(
     element: Element,
-    target: KeyDescription,
+    target: KeyboardKeyDescription,
     modifiers: Set<string>
   ) {
     const primaryModifier = modifiers.has("Control") || modifiers.has("Meta");
@@ -2374,9 +2343,9 @@ export class PageImpl {
     }
   }
 
-  private applyKeyupDefault(
+  applyKeyupDefault(
     element: Element,
-    target: KeyDescription,
+    target: KeyboardKeyDescription,
     modifiers: Set<string>
   ) {
     if (
@@ -2408,7 +2377,7 @@ export class PageImpl {
       const start = element.selectionStart ?? element.value.length;
       const end = element.selectionEnd ?? start;
       element.setRangeText(text, start, end, "end");
-      this.dispatchInputEvent(element);
+      this.dispatchInputEvent(element, text);
       return;
     }
     if (isContentEditable(element)) {
@@ -2426,15 +2395,45 @@ export class PageImpl {
       } else {
         element.textContent = `${element.textContent ?? ""}${text}`;
       }
-      this.dispatchInputEvent(element);
+      this.dispatchInputEvent(element, text);
       return;
     }
     throw new Error("Element is not editable");
   }
 
-  private dispatchInputEvent(element: Element) {
+  private dispatchBeforeInput(
+    element: Element,
+    data: string,
+    inputType: string
+  ): boolean {
+    const InputEvent = this.window.InputEvent;
+    if (!InputEvent) return true;
+    return element.dispatchEvent(
+      new InputEvent("beforeinput", {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        data,
+        inputType,
+      })
+    );
+  }
+
+  private dispatchInputEvent(
+    element: Element,
+    data: string | null = null,
+    inputType = "insertText"
+  ) {
+    const InputEvent = this.window.InputEvent;
     element.dispatchEvent(
-      new this.window.Event("input", { bubbles: true, composed: true })
+      InputEvent
+        ? new InputEvent("input", {
+            bubbles: true,
+            composed: true,
+            data,
+            inputType,
+          })
+        : new this.window.Event("input", { bubbles: true, composed: true })
     );
   }
 
@@ -2485,29 +2484,221 @@ export class PageImpl {
     );
   }
 
-  private dispatchKeyboardEvent(
+  dispatchKeyboardEvent(
     element: Element,
     type: "keydown" | "keypress" | "keyup",
-    description: KeyDescription,
-    modifiers: Set<string>
+    description: KeyboardKeyDescription,
+    modifiers: Set<string>,
+    repeat = false
   ): boolean {
-    return element.dispatchEvent(
-      new this.window.KeyboardEvent(type, {
-        key: description.key,
-        code: description.code,
-        bubbles: true,
-        cancelable: true,
-        altKey: modifiers.has("Alt"),
-        ctrlKey: modifiers.has("Control"),
-        metaKey: modifiers.has("Meta"),
-        shiftKey: modifiers.has("Shift"),
-      })
-    );
+    const charCode =
+      type === "keypress" && description.text
+        ? description.text.charCodeAt(0)
+        : 0;
+    const keyCode =
+      type === "keypress" ? charCode : description.keyCodeWithoutLocation;
+    const event = new this.window.KeyboardEvent(type, {
+      key: description.key,
+      code: description.code,
+      keyCode,
+      charCode,
+      which: keyCode,
+      location: description.location,
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      altKey: modifiers.has("Alt"),
+      ctrlKey: modifiers.has("Control"),
+      metaKey: modifiers.has("Meta"),
+      repeat,
+      shiftKey: modifiers.has("Shift"),
+    });
+    // Chromium exposes these legacy properties from the protocol event. The
+    // DOM implementation used by the controlled browser does not honor the
+    // KeyboardEventInit members, so retain the pinned description explicitly.
+    Object.defineProperties(event, {
+      keyCode: { configurable: true, value: keyCode },
+      charCode: { configurable: true, value: charCode },
+      which: { configurable: true, value: keyCode },
+    });
+    return element.dispatchEvent(event);
   }
 
   private get actionableInjected() {
     return this.injected as typeof this.injected & ActionableInjectedScript;
   }
+}
+
+/**
+ * Browser-only analogue of pinned `server/input.ts` Keyboard. It deliberately
+ * owns only synthetic event/input behavior in the current document; browser
+ * cursor movement, deletion, focus traversal, and navigation defaults remain
+ * outside this adapter's supported default-action surface.
+ */
+class BrowserKeyboard {
+  private readonly pressedKeys = new Set<string>();
+  private readonly pressedModifiers = new Set<string>();
+  private readonly keydownAllowed = new Map<string, boolean>();
+
+  constructor(private readonly page: PageImpl) {}
+
+  async down(key: string): Promise<void> {
+    await this.downForTarget(this.activeTarget(), key);
+  }
+
+  async up(key: string): Promise<void> {
+    await this.upForTarget(this.activeTarget(), key);
+  }
+
+  async insertText(text: string): Promise<void> {
+    this.page.insertKeyboardText(this.activeTarget(), text);
+  }
+
+  async type(text: string, options: { delay?: number } = {}): Promise<void> {
+    const delay = options.delay || undefined;
+    for (const character of text) {
+      if (keyboardLayout.has(character)) await this.press(character, { delay });
+      else {
+        if (delay) await this.wait(delay);
+        await this.insertText(character);
+      }
+    }
+  }
+
+  async press(key: string, options: { delay?: number } = {}): Promise<void> {
+    const tokens = splitKeyboardShortcut(key);
+    const target = tokens.at(-1)!;
+    for (const modifier of tokens.slice(0, -1)) await this.down(modifier);
+    await this.down(target);
+    if (options.delay) await this.wait(options.delay);
+    await this.up(target);
+    for (const modifier of tokens.slice(0, -1).reverse())
+      await this.up(modifier);
+  }
+
+  async downForTarget(element: Element, key: string): Promise<void> {
+    const description = this.descriptionFor(key);
+    const repeat = this.pressedKeys.has(description.code);
+    this.pressedKeys.add(description.code);
+    if (isModifier(description.key)) this.pressedModifiers.add(description.key);
+
+    const keyDownAllowed = this.page.dispatchKeyboardEvent(
+      element,
+      "keydown",
+      description,
+      this.pressedModifiers,
+      repeat
+    );
+    this.keydownAllowed.set(description.code, keyDownAllowed);
+    const keyPressAllowed =
+      keyDownAllowed &&
+      (description.text.length > 0 || description.key === "Enter") &&
+      this.page.dispatchKeyboardEvent(
+        element,
+        "keypress",
+        description,
+        this.pressedModifiers,
+        repeat
+      );
+
+    if (keyDownAllowed)
+      this.page.applyKeydownDefault(
+        element,
+        description,
+        this.pressedModifiers
+      );
+    if (keyPressAllowed && description.text && description.key !== "Enter")
+      this.page.insertKeyboardText(element, description.text);
+    if (keyPressAllowed && description.key === "Enter")
+      this.page.pressEnter(element);
+  }
+
+  async upForTarget(element: Element, key: string): Promise<void> {
+    const description = this.descriptionFor(key);
+    if (isModifier(description.key))
+      this.pressedModifiers.delete(description.key);
+    this.pressedKeys.delete(description.code);
+    const keyUpAllowed = this.page.dispatchKeyboardEvent(
+      element,
+      "keyup",
+      description,
+      this.pressedModifiers
+    );
+    const keyDownAllowed = this.keydownAllowed.get(description.code) ?? false;
+    this.keydownAllowed.delete(description.code);
+    if (keyDownAllowed && keyUpAllowed)
+      this.page.applyKeyupDefault(element, description, this.pressedModifiers);
+  }
+
+  async pressForTarget(
+    element: Element,
+    key: string,
+    delay?: number
+  ): Promise<void> {
+    const tokens = splitKeyboardShortcut(key);
+    const target = tokens.at(-1)!;
+    for (const modifier of tokens.slice(0, -1))
+      await this.downForTarget(element, modifier);
+    await this.downForTarget(element, target);
+    if (delay) await this.wait(delay);
+    await this.upForTarget(element, target);
+    for (const modifier of tokens.slice(0, -1).reverse())
+      await this.upForTarget(element, modifier);
+  }
+
+  private activeTarget(): Element {
+    return this.page.document.activeElement ?? this.page.document.body;
+  }
+
+  private descriptionFor(key: string): KeyboardKeyDescription {
+    const resolved = resolveKeyboardKey(key, this.page.window);
+    let description = keyboardLayout.get(resolved);
+    if (!description) throw new Error(`Unknown key: "${resolved}"`);
+    if (this.pressedModifiers.has("Shift") && description.shifted)
+      description = description.shifted;
+    if (
+      this.pressedModifiers.size > 1 ||
+      (!this.pressedModifiers.has("Shift") && this.pressedModifiers.size === 1)
+    )
+      return { ...description, text: "" };
+    return description;
+  }
+
+  private async wait(delay: number): Promise<void> {
+    await new Promise<void>((resolve) =>
+      this.page.window.setTimeout(resolve, delay)
+    );
+  }
+}
+
+function splitKeyboardShortcut(key: string): string[] {
+  const tokens: string[] = [];
+  let building = "";
+  for (const character of key) {
+    if (character === "+" && building) {
+      tokens.push(building);
+      building = "";
+    } else {
+      building += character;
+    }
+  }
+  tokens.push(building);
+  if (!tokens.length || tokens.some((token) => !token)) unknownKey(key);
+  for (const modifier of tokens.slice(0, -1)) {
+    const description = keyboardLayout.get(resolveKeyboardKey(modifier));
+    if (!description || !isModifier(description.key)) unknownKey(key);
+  }
+  return tokens;
+}
+
+function resolveKeyboardKey(
+  key: string,
+  browserWindow?: Window & typeof globalThis
+): string {
+  if (key !== "ControlOrMeta") return key;
+  return browserWindow && /Mac/.test(browserWindow.navigator.platform)
+    ? "Meta"
+    : "Control";
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -2801,141 +2992,14 @@ function queryAborted(signal: AbortSignal): Error {
   return new Error(`Query was aborted: ${abortReason(signal)}`);
 }
 
-type KeyDescription = {
-  key: string;
-  code: string;
-  text?: string;
-  shiftedKey?: string;
-};
-
-const NAMED_KEYS: Record<string, KeyDescription> = {
-  Alt: { key: "Alt", code: "AltLeft" },
-  Control: { key: "Control", code: "ControlLeft" },
-  Enter: { key: "Enter", code: "Enter" },
-  Meta: { key: "Meta", code: "MetaLeft" },
-  Shift: { key: "Shift", code: "ShiftLeft" },
-  Space: { key: " ", code: "Space", text: " " },
-};
-
-const PRINTABLE_KEYS: Record<string, KeyDescription> = Object.fromEntries(
-  [
-    ["Backquote", "`", "~"],
-    ["Digit1", "1", "!"],
-    ["Digit2", "2", "@"],
-    ["Digit3", "3", "#"],
-    ["Digit4", "4", "$"],
-    ["Digit5", "5", "%"],
-    ["Digit6", "6", "^"],
-    ["Digit7", "7", "&"],
-    ["Digit8", "8", "*"],
-    ["Digit9", "9", "("],
-    ["Digit0", "0", ")"],
-    ["Minus", "-", "_"],
-    ["Equal", "=", "+"],
-    ["Backslash", "\\", "|"],
-    ["BracketLeft", "[", "{"],
-    ["BracketRight", "]", "}"],
-    ["Semicolon", ";", ":"],
-    ["Quote", "'", '"'],
-    ["Comma", ",", "<"],
-    ["Period", ".", ">"],
-    ["Slash", "/", "?"],
-  ].flatMap(([code, key, shiftedKey]) => [
-    [key, { code, key, text: key, shiftedKey }],
-    [shiftedKey, { code, key: shiftedKey, text: shiftedKey, shiftedKey }],
-  ])
-) as Record<string, KeyDescription>;
-
-function parseKeyDescription(value: string): KeyDescription[] {
-  const parts = splitKeyDescription(value);
-  if (!parts.length || parts.some((part) => !part)) unknownKey(value);
-  const descriptions = parts.map((part) => keyDescription(part));
-  if (descriptions.length > 1) {
-    for (const modifier of descriptions.slice(0, -1)) {
-      if (!isModifier(modifier.key)) unknownKey(value);
-    }
-  }
-  return descriptions;
-}
-
-function splitKeyDescription(value: string): string[] {
-  const parts: string[] = [];
-  let current = "";
-  for (const character of value) {
-    if (character === "+" && current) {
-      parts.push(current);
-      current = "";
-    } else {
-      current += character;
-    }
-  }
-  parts.push(current);
-  return parts;
-}
-
-function keyDescription(value: string): KeyDescription {
-  const description = keyDescriptionOrUndefined(value);
-  if (description) return description;
-  return unknownKey(value);
-}
-
-function keyDescriptionOrUndefined(value: string): KeyDescription | undefined {
-  if (value === " ") return NAMED_KEYS.Space;
-  const named = NAMED_KEYS[value];
-  if (named) return named;
-  if (/^[a-zA-Z0-9]$/.test(value)) {
-    if (/^[a-zA-Z]$/.test(value))
-      return {
-        code: `Key${value.toUpperCase()}`,
-        key: value,
-        text: value,
-        shiftedKey: value.toUpperCase(),
-      };
-    const printable = PRINTABLE_KEYS[value];
-    if (printable) return printable;
-  }
-  const printable = PRINTABLE_KEYS[value];
-  if (printable) return printable;
-  return undefined;
-}
-
 function unknownKey(value: string): never {
   throw new Error(`Unknown key: "${value}"`);
-}
-
-function textForKey(key: KeyDescription, modifiers: Set<string>): string {
-  if (
-    !key.text ||
-    modifiers.has("Alt") ||
-    modifiers.has("Control") ||
-    modifiers.has("Meta")
-  )
-    return "";
-  return modifiers.has("Shift") && /^[a-z]$/.test(key.text)
-    ? key.text.toUpperCase()
-    : key.text;
-}
-
-function keyWithModifiers(
-  description: KeyDescription,
-  modifiers: Set<string>
-): KeyDescription {
-  if (!modifiers.has("Shift") || !description.shiftedKey) return description;
-  return {
-    ...description,
-    key: description.shiftedKey,
-    text: description.shiftedKey,
-  };
 }
 
 function isModifier(key: string): boolean {
   return (
     key === "Alt" || key === "Control" || key === "Meta" || key === "Shift"
   );
-}
-
-function isKeyboardLayoutCharacter(value: string): boolean {
-  return value === " " || keyDescriptionOrUndefined(value) !== undefined;
 }
 
 function isTextInput(

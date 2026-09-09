@@ -904,9 +904,32 @@ test("proxy does not expose real driver sub-objects", async ({
   expect(proxyMouse).not.toBe(page.mouse);
   expect(proxyTouch).not.toBe(page.touchscreen);
 
-  // The real driver sub-objects have callable API methods (press, click,
-  // tap). Through the adapter proxy these must be undefined or throw.
-  await expect((adapterPage as any).keyboard("press", "a")).rejects.toThrow();
+  // Keyboard is now an adapter-owned object. Poison the native operation and
+  // prove text reaches the controlled document through its browser entry.
+  for (const method of ["down", "up", "press", "type", "insertText"])
+    (page.keyboard as any)[method] = () => {
+      throw new Error(`native keyboard.${method} must not be used`);
+    };
+  await adapterPage.evaluate(() => {
+    document.body.innerHTML = "<input autofocus>";
+    (document.querySelector("input") as HTMLInputElement).focus();
+  });
+  await proxyKbd.down("Shift");
+  await proxyKbd.up("Shift");
+  await proxyKbd.type("b");
+  await proxyKbd.insertText("c");
+  await proxyKbd.press("a");
+  await expect(adapterPage.locator("input")).toHaveValue("bca");
+  const execution = await page.evaluate(() => (window as any).__aymeEvidence);
+  expect(execution.entered).toEqual(
+    expect.arrayContaining([
+      "Keyboard.down",
+      "Keyboard.up",
+      "Keyboard.type",
+      "Keyboard.insertText",
+      "Keyboard.press",
+    ])
+  );
 
   await expect((adapterPage as any).mouse("click", 0, 0)).rejects.toThrow();
 

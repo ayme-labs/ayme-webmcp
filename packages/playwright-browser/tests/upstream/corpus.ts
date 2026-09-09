@@ -1,11 +1,12 @@
 export const corpus = {
   source: {
-    // Ayme Labs owns the fork used by both the runtime and compatibility corpus.
     repository: "ayme-labs/playwright",
     commit: "b25d782e3fbdf21abdae60e974e49b78ca07e828",
     basePath: "tests/page",
   },
   specs: {
+    "page-keyboard.spec.ts":
+      "5b848c208876e406712354841b59d4dc306e8e4e390efa2c4b31037576751c3f",
     "page-set-input-files.spec.ts":
       "d43d4b256d5b076695f87a9036a41bd3d0042e3a1eb2e934c77347b9b7f7e46c",
     "page-check.spec.ts":

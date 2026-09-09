@@ -3,7 +3,7 @@
     "repository": "ayme-labs/playwright",
     "commit": "b25d782e3fbdf21abdae60e974e49b78ca07e828"
   },
-  "selectedTestCount": 539,
+  "selectedTestCount": 588,
   "reviewed": [
     {
       "id": "locator-click.spec.ts > should click if the target element is removed in pointerdown event",
@@ -824,6 +824,16 @@
       "id": "page-fill.spec.ts > should throw on incorrect week",
       "method": "Page.fill",
       "evidence": "The entered fill operation rejects an invalid week representation."
+    },
+    {
+      "id": "page-keyboard.spec.ts > should throw on unknown keys",
+      "method": "Keyboard.press",
+      "evidence": "Three invalid keys reach browser Keyboard.press/down and are rejected with the exact unknown-key names asserted by the unchanged test. No native calls or transport failures."
+    },
+    {
+      "id": "page-keyboard.spec.ts > should type into a textarea @smoke",
+      "method": "Keyboard.type",
+      "evidence": "Browser Page.evaluate creates and focuses a textarea; Keyboard.type enters the browser implementation and the final value equals the full requested string. No native calls or transport failures."
     },
     {
       "id": "page-set-input-files.spec.ts > should set from memory",

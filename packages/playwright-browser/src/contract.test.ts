@@ -1306,7 +1306,7 @@ describe("Single-document adapter contract", () => {
       await page.locator("#button").press("Space");
 
       expect((document.querySelector("#input") as HTMLInputElement).value).toBe(
-        "hI"
+        "hi"
       );
       expect(
         (document.querySelector("#input") as HTMLInputElement).selectionStart
@@ -1322,7 +1322,7 @@ describe("Single-document adapter contract", () => {
       expect(events).toContainEqual({
         code: "Digit1",
         ctrlKey: true,
-        key: "!",
+        key: "1",
         shiftKey: true,
         type: "keydown",
       });
@@ -1350,9 +1350,7 @@ describe("Single-document adapter contract", () => {
       await expect(page.locator("#input").press("NotARealKey")).rejects.toThrow(
         'Unknown key: "NotARealKey"'
       );
-      await expect(page.locator("#input").press("ArrowLeft")).rejects.toThrow(
-        'Unknown key: "ArrowLeft"'
-      );
+      await page.locator("#input").press("ArrowLeft");
     });
 
     it("keeps final modifiers active for keydown and removes them before keyup", async () => {
@@ -1463,6 +1461,189 @@ describe("Single-document adapter contract", () => {
       expect(
         (document.querySelector("#radio") as HTMLInputElement).checked
       ).toBe(false);
+    });
+
+    it("exposes stable page.keyboard state to the current focused element", async () => {
+      document.body.innerHTML =
+        "<input id=input /><textarea id=textarea></textarea>";
+      const page = createPage();
+      const keyboard = page.keyboard;
+      const input = document.querySelector("#input") as HTMLInputElement;
+      const textarea = document.querySelector(
+        "#textarea"
+      ) as HTMLTextAreaElement;
+      const events: Array<{
+        key: string;
+        repeat: boolean;
+        shift: boolean;
+        type: string;
+      }> = [];
+      input.addEventListener("keydown", (event) => {
+        const key = event as KeyboardEvent;
+        events.push({
+          key: key.key,
+          repeat: key.repeat,
+          shift: key.shiftKey,
+          type: key.type,
+        });
+      });
+
+      input.focus();
+      expect(page.keyboard).toBe(keyboard);
+      await keyboard.down("Shift");
+      await keyboard.down("a");
+      await keyboard.down("a");
+      await keyboard.up("a");
+      await keyboard.up("Shift");
+      await keyboard.insertText("嗨");
+      textarea.focus();
+      await keyboard.type("ok");
+
+      expect(input.value).toBe("aa嗨");
+      expect(textarea.value).toBe("ok");
+      expect(events).toContainEqual({
+        key: "a",
+        repeat: false,
+        shift: true,
+        type: "keydown",
+      });
+      expect(events).toContainEqual({
+        key: "a",
+        repeat: true,
+        shift: true,
+        type: "keydown",
+      });
+    });
+
+    it("honors keyboard cancellation and emits beforeinput before input", async () => {
+      document.body.innerHTML = "<input id=input />";
+      const page = createPage();
+      const input = document.querySelector("#input") as HTMLInputElement;
+      const events: string[] = [];
+      input.focus();
+      input.addEventListener("keydown", (event) => {
+        if ((event as KeyboardEvent).key === "a") event.preventDefault();
+      });
+      input.addEventListener("keypress", (event) => {
+        if ((event as KeyboardEvent).key === "b") event.preventDefault();
+      });
+      input.addEventListener("beforeinput", (event) => {
+        events.push(`before:${(event as InputEvent).data}`);
+        if ((event as InputEvent).data === "c") event.preventDefault();
+      });
+      input.addEventListener("input", (event) =>
+        events.push(`input:${(event as InputEvent).data}`)
+      );
+
+      await page.keyboard.press("a");
+      await page.keyboard.press("b");
+      await page.keyboard.press("c");
+      await page.keyboard.insertText("d");
+
+      expect(input.value).toBe("d");
+      expect(events).toEqual(["before:c", "before:d", "input:d"]);
+    });
+
+    it("orders keyboard chords, suppresses modified text, and replaces contenteditable selection", async () => {
+      document.body.innerHTML =
+        "<input id=input value=before /><div id=editor contenteditable>before</div>";
+      const page = createPage();
+      const input = document.querySelector("#input") as HTMLInputElement;
+      const editor = document.querySelector("#editor") as HTMLElement;
+      const events: string[] = [];
+      for (const type of ["keydown", "keyup"])
+        input.addEventListener(type, (event) =>
+          events.push(`${type}:${(event as KeyboardEvent).key}`)
+        );
+
+      input.focus();
+      const started = Date.now();
+      await page.keyboard.press("Control+Shift+a", { delay: 5 });
+      expect(Date.now() - started).toBeGreaterThanOrEqual(4);
+      expect(events).toEqual([
+        "keydown:Control",
+        "keydown:Shift",
+        "keydown:a",
+        "keyup:a",
+        "keyup:Shift",
+        "keyup:Control",
+      ]);
+      expect(input.value).toBe("before");
+      expect(input.selectionStart).toBe(0);
+      expect(input.selectionEnd).toBe(6);
+
+      editor.focus();
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+      await page.keyboard.insertText("after");
+      expect(editor.textContent).toBe("after");
+    });
+
+    it("uses pinned descriptions and current focus for direct keyboard events", async () => {
+      document.body.innerHTML = "<input id=first /><input id=second />";
+      const page = createPage();
+      const first = document.querySelector("#first") as HTMLInputElement;
+      const second = document.querySelector("#second") as HTMLInputElement;
+      const events: Array<Record<string, unknown>> = [];
+      first.focus();
+      first.addEventListener("keydown", (event) => {
+        const key = event as KeyboardEvent;
+        events.push({
+          target: "first",
+          type: key.type,
+          key: key.key,
+          code: key.code,
+          keyCode: key.keyCode,
+          which: key.which,
+          location: key.location,
+          composed: key.composed,
+        });
+        second.focus();
+      });
+      second.addEventListener("keyup", (event) => {
+        const key = event as KeyboardEvent;
+        events.push({ target: "second", type: key.type, key: key.key });
+      });
+      first.addEventListener("keypress", (event) => {
+        const key = event as KeyboardEvent;
+        events.push({
+          target: "first",
+          type: key.type,
+          key: key.key,
+          charCode: key.charCode,
+          which: key.which,
+        });
+      });
+
+      await page.keyboard.press("Numpad1", { delay: 1 });
+      first.focus();
+      await page.keyboard.press("a");
+
+      expect(events).toContainEqual({
+        target: "first",
+        type: "keydown",
+        key: "End",
+        code: "Numpad1",
+        keyCode: 35,
+        which: 35,
+        location: 3,
+        composed: true,
+      });
+      expect(events).toContainEqual({
+        target: "second",
+        type: "keyup",
+        key: "End",
+      });
+      expect(events).toContainEqual({
+        target: "first",
+        type: "keypress",
+        key: "a",
+        charCode: 97,
+        which: 97,
+      });
     });
   });
 
