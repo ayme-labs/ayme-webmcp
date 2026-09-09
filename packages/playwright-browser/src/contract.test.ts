@@ -1470,6 +1470,47 @@ describe("Single-document adapter contract", () => {
       expect(keyupClicks).toBe(0);
     });
 
+    it("waits for keyup focus microtasks before Space activation", async () => {
+      document.body.innerHTML =
+        "<button id=queued-first>first</button><button id=queued-second>second</button>";
+      const page = createPage();
+      const queuedFirst = document.querySelector(
+        "#queued-first"
+      ) as HTMLButtonElement;
+      const queuedSecond = document.querySelector(
+        "#queued-second"
+      ) as HTMLButtonElement;
+      let queuedClicks = 0;
+      queuedFirst.addEventListener("click", () => queuedClicks++);
+      queuedSecond.addEventListener("click", () => queuedClicks++);
+      queuedFirst.addEventListener("keyup", () =>
+        queueMicrotask(() => queuedSecond.focus())
+      );
+
+      queuedFirst.focus();
+      await page.keyboard.press("Space");
+      expect(queuedClicks).toBe(0);
+
+      document.body.innerHTML =
+        "<button id=nested-first>first</button><button id=nested-second>second</button>";
+      const nestedFirst = document.querySelector(
+        "#nested-first"
+      ) as HTMLButtonElement;
+      const nestedSecond = document.querySelector(
+        "#nested-second"
+      ) as HTMLButtonElement;
+      let nestedClicks = 0;
+      nestedFirst.addEventListener("click", () => nestedClicks++);
+      nestedSecond.addEventListener("click", () => nestedClicks++);
+      nestedFirst.addEventListener("keyup", () =>
+        queueMicrotask(() => queueMicrotask(() => nestedSecond.focus()))
+      );
+
+      nestedFirst.focus();
+      await page.keyboard.press("Space");
+      expect(nestedClicks).toBe(0);
+    });
+
     it("applies Enter defaults only for supported controls", async () => {
       document.body.innerHTML = `
         <form>

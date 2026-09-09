@@ -2686,7 +2686,7 @@ class BrowserKeyboard {
     );
     const keyDownState = this.keydownState.get(description.code);
     this.keydownState.delete(description.code);
-    this.page.checkKeyboardActionDeadline(deadline);
+    await this.waitForKeyboardPhase(deadline);
     if (
       keyDownState?.allowed &&
       keyUpAllowed &&
