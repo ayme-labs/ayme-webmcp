@@ -39,7 +39,9 @@ test("uses the compiled POM in React and real Playwright, then remounts", async 
 
   await page.getByRole("button", { name: "Unmount counter" }).click();
   await expect(page.getByRole("region", { name: "Counter" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Mount counter", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Mount counter", exact: true })
+    .click();
   await expect(page.locator("output")).toHaveText("0");
   await page.getByRole("button", { name: "Call Page Object" }).click();
   await expect(page.locator("output")).toHaveText("1");

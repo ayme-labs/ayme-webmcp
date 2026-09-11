@@ -225,7 +225,7 @@ async function loadPlaywrightConfig(
     typeof loaderModule.transform.requireOrImport !== "function"
   )
     throw new Error(
-      `Unsupported Playwright config loader at ${loaderPath}: expected configLoader.loadConfigFromFile and transform.requireOrImport for Playwright 1.62.x.`,
+      `Unsupported Playwright config loader at ${loaderPath}: expected configLoader.loadConfigFromFile and transform.requireOrImport for Playwright 1.62.x.`
     );
 
   let fullConfig: unknown;

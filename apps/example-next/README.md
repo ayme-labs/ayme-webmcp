@@ -4,8 +4,7 @@ This branch asks whether Ayme's existing POM compiler and React integration can
 work in a Next.js App Router app using Turbopack for development and production.
 It is a throwaway compiler spike, not a declaration of general Next.js support.
 
-Next.js is pinned to 16.3.4, the npm `latest` release checked on September 11,
-2026. The app uses the existing `@ayme-dev/webmcp-react` package. There is no
+Next.js is pinned to 16.3.4, the npm `latest` release checked on September 11, 2026. The app uses the existing `@ayme-dev/webmcp-react` package. There is no
 `webmcp-next` package, Vite process, webpack fallback or runtime redesign.
 
 ## Run

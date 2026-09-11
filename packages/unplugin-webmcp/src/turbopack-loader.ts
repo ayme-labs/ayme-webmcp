@@ -33,7 +33,9 @@ export default function turbopackLoader(this: LoaderContext, source: string) {
   if (errors?.length)
     throw new Error(
       `Could not transpile Ayme POM ${this.resourcePath}: ${errors
-        .map((error) => ts.flattenDiagnosticMessageText(error.messageText, "\n"))
+        .map((error) =>
+          ts.flattenDiagnosticMessageText(error.messageText, "\n")
+        )
         .join("\n")}`
     );
 

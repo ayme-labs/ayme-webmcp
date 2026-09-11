@@ -11,7 +11,10 @@ const resourcePath = fileURLToPath(
 const context = { resourcePath, getOptions: () => ({}) };
 
 it("emits POM registration and JavaScript without Playwright type imports", () => {
-  const code = turbopackLoader.call(context, readFileSync(resourcePath, "utf8"));
+  const code = turbopackLoader.call(
+    context,
+    readFileSync(resourcePath, "utf8")
+  );
   expect(code).toMatch(/registerCompiledPom\(CounterPage,/);
   expect(code).toContain('"className": "CounterPage"');
   expect(code).toContain('"methodName": "increment"');

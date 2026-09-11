@@ -10,8 +10,7 @@ export function createPomTransform(options: PomCompilerOptions = {}) {
 
   return (code: string, id: string) => {
     const fileName = id.split("?")[0];
-    if (!fileName?.endsWith(".ts") || !code.includes("@WebMCP"))
-      return null;
+    if (!fileName?.endsWith(".ts") || !code.includes("@WebMCP")) return null;
 
     const manifests = compiler.derivePomManifests(fileName);
     if (manifests.length === 0) return null;
