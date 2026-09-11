@@ -185,7 +185,10 @@ describe("POM root reachability", () => {
   it("treats an unsupported :modal selector as no modal", async () => {
     document.body.innerHTML = '<section id="root">Visible</section>';
     const original = Document.prototype.querySelectorAll;
-    Document.prototype.querySelectorAll = function (selectors: string) {
+    Document.prototype.querySelectorAll = function (
+      this: Document,
+      selectors: string
+    ) {
       if (selectors === ":modal")
         throw new DOMException("Unsupported selector", "SyntaxError");
       return original.call(this, selectors);
