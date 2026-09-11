@@ -59,11 +59,12 @@ pnpm --filter @ayme-dev/example-next test:e2e
 ```
 
 The development suite verifies server rendering, hydration, real Playwright and
-POM execution, removal/remounting, and live invalidation of compiled metadata.
-The invalidation check edits an imported POM type while `next dev` remains
-running and requires the browser-visible manifest to update without a restart.
-The production suite repeats the stable rendering and execution checks against
-`next start`; the source-mutation check is development-only.
+POM execution, removal/remounting, and dependency invalidation of compiled
+metadata. The invalidation check edits an imported POM type while `next dev`
+remains running, reloads the browser, and requires the browser-visible manifest
+to contain the new type metadata without restarting Next. The production suite
+repeats the stable rendering and execution checks against `next start`; the
+source-mutation check is development-only.
 
 The branch workflow also runs the existing React/Vite browser tests, package
 type checks, lint, formatting and dependency checks. It uses the committed
@@ -86,6 +87,12 @@ when publication is enabled.
 Server Component POM execution, Edge deployments, Pages Router, source-map
 fidelity and packaged-consumer certification are not covered. POMs must use
 `.ts` and the existing explicit `@WebMCP` convention.
+
+React Fast Refresh is not part of the POM lifetime contract. Recompiling a POM
+module replaces its class identity, while `usePageObject` deliberately requires
+a fixed model for a mounted component. Reload the browser after editing POM code
+or compiler-only dependencies; the development invalidation test verifies that
+no Next server restart is required.
 
 Dependency tracking follows the TypeScript program used for metadata derivation.
 Because that program honors the project's configured root files, broad

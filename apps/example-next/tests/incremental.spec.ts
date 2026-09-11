@@ -7,7 +7,7 @@ const counterModePath = fileURLToPath(
   new URL("../playwright/pom/CounterMode.ts", import.meta.url)
 );
 
-test("recompiles POM metadata when an imported type changes", async ({
+test("rebuilds POM metadata from an imported type without restarting Next", async ({
   page,
 }) => {
   const original = await readFile(counterModePath, "utf8");
@@ -20,10 +20,12 @@ test("recompiles POM metadata when an imported type changes", async ({
 
   try {
     await writeFile(counterModePath, changed);
+    await page.reload();
     await expect(metadata).toContainText('"triple"', { timeout: 30_000 });
     await expect(metadata).not.toContainText('"double"');
   } finally {
     await writeFile(counterModePath, original);
+    await page.reload();
   }
 
   await expect(metadata).toContainText('"double"', { timeout: 30_000 });
