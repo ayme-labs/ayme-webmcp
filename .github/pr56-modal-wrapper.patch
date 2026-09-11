@@ -1,0 +1,65 @@
+--- a/packages/webmcp/src/pageState.ts
++++ b/packages/webmcp/src/pageState.ts
+@@ -336,9 +336,11 @@
+   );
+   const capture = captureAriaSnapshot(root);
+   const absentRoots = new Set(structure.absentElements);
++  const presentRoots = new Set(registrations.map(({ element }) => element));
+   const excludedRefs = new Set<StructuralAriaRef>();
+   for (const [element, ref] of capture.refsByElement) {
+     for (let ancestor: Element | null = element; ancestor;) {
++      if (presentRoots.has(ancestor)) break;
+       if (absentRoots.has(ancestor)) {
+         excludedRefs.add(AriaRefSchema.parse(ref));
+         break;
+--- a/packages/webmcp/src/capturedTree.ts
++++ b/packages/webmcp/src/capturedTree.ts
+@@ -24,12 +24,22 @@
+       return ref;
+     },
+   });
+-  const select = (node: StructuralNode): (StructuralNode | string)[] => {
+-    if (excludedRefs.has(node.ref)) return [];
++  const select = (
++    node: StructuralNode,
++    excludedParent = false
++  ): (StructuralNode | string)[] => {
++    const temporary = temporaryRefs.has(node.ref);
++    const excluded =
++      excludedRefs.has(node.ref) || (temporary && excludedParent);
+     const children = node.children.flatMap((child) =>
+-      typeof child === "string" ? [child] : select(child)
++      typeof child === "string"
++        ? excluded
++          ? []
++          : [child]
++        : select(child, excluded)
+     );
+-    return temporaryRefs.has(node.ref) ? children : [node.copy({ children })];
++    // A present child can escape its absent wrapper, for example a top-layer dialog.
++    return temporary || excluded ? children : [node.copy({ children })];
+   };
+   const roots =
+     parsed.root.role === "fragment" && parsed.root.ref === "s_root"
+--- a/packages/webmcp/src/pomAvailability.browser.test.ts
++++ b/packages/webmcp/src/pomAvailability.browser.test.ts
+@@ -479,4 +479,19 @@
+     expect(names()).toEqual(["BelowFold.close"]);
+     expect([window.scrollX, window.scrollY]).toEqual(scroll);
+   });
++  it("retains a present modal inside a non-present POM wrapper", async () => {
++    document.body.innerHTML =
++      '<div id="wrapper" inert><dialog id="modal"><button>Confirm</button></dialog></div>';
++    class Shell {
++      root = page.locator("#wrapper");
++      dialog = { root: page.locator("#modal"), close() {} };
++    }
++    registerCompiledPom(Shell, manifest("Shell", [child("dialog")]));
++    createPageRegistration(Shell);
++    document.querySelector<HTMLDialogElement>("#modal")!.showModal();
++    const state = await ayme.getPageState();
++    expect(state.text).toContain("Shell.dialog");
++    expect(state.text).toContain("Confirm");
++    expect(names()).toEqual(["Shell.dialog.close"]);
++  });
+ });

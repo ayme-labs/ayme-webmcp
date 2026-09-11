@@ -7,6 +7,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
     env:
@@ -20,15 +21,18 @@ jobs:
           node-version: 24
       - run: corepack enable
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - name: Apply exact locally tested patch
+      - name: Apply exact locally tested patches
         shell: bash
         run: |
           set -euo pipefail
           gzip -dc .github/pr56-presence.patch.gz > "$RUNNER_TEMP/pr56.patch"
+          cp .github/pr56-modal-wrapper.patch "$RUNNER_TEMP/modal-wrapper.patch"
           echo "b72574196b508af818753e79a95478eed50186792cba8c9988b8f92a42514573  $RUNNER_TEMP/pr56.patch" | sha256sum -c -
           git checkout --detach 205a0e3193d09a672eb3ccf8e60498a5bdc39d75
           git apply --check "$RUNNER_TEMP/pr56.patch"
           git apply "$RUNNER_TEMP/pr56.patch"
+          git apply --check "$RUNNER_TEMP/modal-wrapper.patch"
+          git apply "$RUNNER_TEMP/modal-wrapper.patch"
           if git diff --name-only | grep -v '^packages/webmcp/src/'; then exit 1; fi
           test -z "$(git diff --name-only -- packages/playwright-browser)"
       - run: pnpm install --frozen-lockfile
@@ -46,7 +50,7 @@ jobs:
           git add packages/webmcp/src
           git -c core.hooksPath=/dev/null commit -m 'fix(webmcp): separate structural presence from availability'
           pnpm run commitlint --from 205a0e3193d09a672eb3ccf8e60498a5bdc39d75 --to HEAD
-          git push origin HEAD:refs/heads/chore/56-presence-candidate
+          git push origin HEAD:refs/heads/chore/56-presence-final-candidate
           git rev-parse HEAD
           git diff --stat 205a0e3193d09a672eb3ccf8e60498a5bdc39d75
       - uses: actions/upload-artifact@v4
