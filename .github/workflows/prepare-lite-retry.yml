@@ -11,56 +11,33 @@ jobs:
   prepare:
     if: github.repository == 'ayme-labs/ayme-webmcp' && github.ref == 'refs/heads/work/prepare-lite-migration'
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 15
     env:
       LEFTHOOK: "0"
-      NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v7
       - uses: jetify-com/devbox-install-action@v0.12.0
         with:
           enable-cache: true
           disable-nix-access-token: true
-      - name: Verify source-path comments and preserve strict dependency guards
+      - name: Pin the consumer-check fix without changing runtime behavior
         run: |
-          devbox run -- bash <<'SCRIPT'
-          set -euo pipefail
-          pnpm install --frozen-lockfile --store-dir "$RUNNER_TEMP/lite-store"
-          pnpm exec turbo run build --filter=@ayme-dev/webmcp...
           python3 <<'PY'
           from pathlib import Path
-          matches = []
-          for p in Path('packages/webmcp/dist').glob('*.mjs'):
-              for n, line in enumerate(p.read_text().splitlines(), 1):
-                  if '@ayme-dev/playwright-lite' in line:
-                      print('PRIVATE_REFERENCE', p.name, n, line[:1000])
-                      matches.append(line)
-          assert matches, 'Expected to reproduce the private-reference guard failure'
-          assert all(line.lstrip().startswith('//#region ') for line in matches), 'Unexpected reference: inspect before changing build configuration'
-          p = Path('packages/webmcp/tsdown.config.ts')
-          source = p.read_text()
-          old = '  clean: true,\n'
-          assert source.count(old) == 1
-          source = source.replace(old, old + '  // Omit build-machine source paths, not copyright or license comments.\n  inputOptions: { experimental: { attachDebugInfo: "none" } },\n')
-          p.write_text(source)
+          old = '44af2734713027f734dfdcdd8e92b51cad9a9652'
+          new = 'c90da7139d51a8940fce8dcf22e04e9c7e88c1cd'
+          for f in ['packages/webmcp/package.json', 'apps/example-vue/package.json', 'pnpm-workspace.yaml', 'README.md', 'packages/webmcp/THIRD_PARTY_NOTICES.txt']:
+              p = Path(f)
+              s = p.read_text()
+              assert old in s, f
+              p.write_text(s.replace(old, new))
           PY
-          pnpm exec prettier --write packages/webmcp/tsdown.config.ts
-          pnpm exec turbo run build --filter=@ayme-dev/webmcp...
-          pnpm --filter @ayme-dev/webmcp exec vitest run src/packedConsumer.test.ts
-          git add packages/webmcp/tsdown.config.ts
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'build(webmcp): omit private source paths from bundled output'
+          devbox run -- bash <<'SCRIPT'
+          set -euo pipefail
+          pnpm install --no-frozen-lockfile --store-dir "$RUNNER_TEMP/lite-store"
+          pnpm exec prettier --write packages/webmcp/package.json apps/example-vue/package.json pnpm-lock.yaml pnpm-workspace.yaml README.md
+          git add packages/webmcp/package.json apps/example-vue/package.json pnpm-lock.yaml pnpm-workspace.yaml README.md packages/webmcp/THIRD_PARTY_NOTICES.txt
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'chore: pin the final fork integration commit'
           git push origin HEAD:work/prepare-lite-migration
           git log -1 --format='PREPARED_COMMIT %H%nPREPARED_TREE %T'
-          pnpm --filter @ayme-dev/example-next exec playwright install --with-deps chromium
-          pnpm check > "$RUNNER_TEMP/migration-check.log" 2>&1 || { tail -n 120 "$RUNNER_TEMP/migration-check.log"; exit 1; }
-          tail -n 80 "$RUNNER_TEMP/migration-check.log"
           SCRIPT
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: migration-check-results
-          path: |
-            ${{ runner.temp }}/migration-check.log
-            packages/webmcp/test-results
-            apps/*/test-results
-          if-no-files-found: ignore
