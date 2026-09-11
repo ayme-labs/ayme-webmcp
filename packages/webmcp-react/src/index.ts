@@ -5,14 +5,14 @@ import {
   useEffect,
   useState,
   useSyncExternalStore,
-  type ReactNode,
   type ReactElement,
+  type ReactNode,
 } from "react";
 import {
   createRuntimeSession,
   type AymePage,
-  type RuntimeSession,
   type PageObjectConstructor,
+  type RuntimeSession,
 } from "@ayme-dev/webmcp/internal";
 
 export type { AymeWebMcpPublicationStatus } from "@ayme-dev/webmcp/internal";
@@ -55,9 +55,17 @@ export function useAymeWebMcp() {
   const runtime = useRuntime();
   const publicationStatus = useSyncExternalStore(
     runtime.subscribe,
+    runtime.getSnapshot,
     runtime.getSnapshot
   );
   return { publicationStatus, retryPublication: runtime.retryPublication };
+}
+
+function serverPageObject<T extends object>(
+  model: PageObjectConstructor<T>
+): T {
+  const prototype = (model as unknown as { prototype: object }).prototype;
+  return Object.create(prototype) as T;
 }
 
 export function usePageObject<T extends object>(
@@ -67,7 +75,10 @@ export function usePageObject<T extends object>(
   const [retained] = useState(() => ({
     model,
     runtime,
-    instance: runtime.construct(model),
+    instance:
+      typeof window === "undefined"
+        ? serverPageObject(model)
+        : runtime.construct(model),
   }));
   if (retained.model !== model || retained.runtime !== runtime)
     throw new Error(

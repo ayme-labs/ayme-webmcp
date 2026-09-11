@@ -2,22 +2,27 @@ import { expect, test } from "@playwright/test";
 import { CounterPage } from "../playwright/pom/CounterPage";
 
 // These tests run unchanged against next dev and the next build/next start app.
-test.describe("server shell", () => {
+test.describe("server render", () => {
   test.use({ javaScriptEnabled: false });
 
-  test("renders without constructing the browser runtime on the server", async ({
-    page,
-  }) => {
+  test("includes the Ayme subtree before hydration", async ({ page }) => {
     const response = await page.goto("/");
     expect(response?.status()).toBe(200);
     await expect(
       page.getByRole("heading", { name: "Ayme Next.js prototype" })
     ).toBeVisible();
-    await expect(page.getByRole("region", { name: "Counter" })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "Counter" })).toBeVisible();
+    await expect(page.locator("output")).toHaveText("0");
+    await expect(page.getByRole("status", { name: "Publication" })).toHaveText(
+      "Publication: disabled"
+    );
+    await expect(
+      page.getByRole("button", { name: "Call Page Object" })
+    ).toBeVisible();
   });
 });
 
-test("uses the compiled POM in React and real Playwright, then remounts", async ({
+test("hydrates, uses the compiled POM and real Playwright, then remounts", async ({
   page,
 }) => {
   const pageErrors: string[] = [];

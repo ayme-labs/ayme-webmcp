@@ -25,7 +25,9 @@ type Registration = {
 };
 
 // Construction is inert. Frameworks start activity only when their owner commits.
-export function createRuntimeSession(page: AymePage = createPage()) {
+export function createRuntimeSession(page?: AymePage) {
+  let resolvedPage = page;
+  const getPage = () => (resolvedPage ??= createPage());
   const enabled =
     typeof __AYME_WEBMCP_PUBLISH__ !== "undefined" && __AYME_WEBMCP_PUBLISH__;
   const initialStatus: AymeWebMcpPublicationStatus = {
@@ -111,7 +113,9 @@ export function createRuntimeSession(page: AymePage = createPage()) {
   }
 
   return {
-    page,
+    get page() {
+      return getPage();
+    },
     getSnapshot: () => status,
     subscribe(listener: () => void) {
       subscribers.add(listener);
@@ -121,7 +125,7 @@ export function createRuntimeSession(page: AymePage = createPage()) {
     },
     retryPublication,
     construct<T extends object>(model: PageObjectConstructor<T>) {
-      return constructPageObject(model, page);
+      return constructPageObject(model, getPage());
     },
     register<T extends object>(model: PageObjectConstructor<T>, instance: T) {
       const registration: Registration = {
@@ -137,7 +141,7 @@ export function createRuntimeSession(page: AymePage = createPage()) {
     start() {
       if (owner)
         throw new Error("The Ayme runtime already has an active owner.");
-      owner = createAymeRuntime(page);
+      owner = createAymeRuntime(getPage());
       controller = new AbortController();
       try {
         for (const registration of registrations)

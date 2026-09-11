@@ -6,6 +6,7 @@ import {
   useEffect,
 } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, expect, expectTypeOf, it, vi } from "vitest";
 import {
   listRegisteredPoms,
@@ -42,6 +43,38 @@ afterEach(async () => {
   for (const root of roots.splice(0)) await act(() => root.unmount());
   Reflect.deleteProperty(document, "modelContext");
   vi.unstubAllGlobals();
+});
+
+it("server-renders without constructing or registering a Page Object", () => {
+  vi.stubGlobal("window", undefined);
+  let constructions = 0;
+  class ServerModel {
+    constructor(readonly page: Page) {
+      constructions += 1;
+    }
+    increment() {}
+  }
+  registerCompiledPom(ServerModel, {
+    className: "ServerModel",
+    components: [],
+    members: [],
+    tools: [],
+  });
+  function Child() {
+    const model = usePageObject(ServerModel);
+    const { publicationStatus } = useAymeWebMcp();
+    return h(
+      "button",
+      { onClick: () => model.increment() },
+      publicationStatus.state
+    );
+  }
+
+  expect(renderToString(h(AymeWebMcpProvider, null, h(Child)))).toContain(
+    ">disabled</button>"
+  );
+  expect(constructions).toBe(0);
+  expect(listRegisteredPoms()).toHaveLength(0);
 });
 
 it("retains a custom-page instance through StrictMode replay and rerenders, then replaces it on remount", async () => {

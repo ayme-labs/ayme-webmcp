@@ -58,6 +58,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+it("creates the default browser page lazily", () => {
+  vi.stubGlobal("window", undefined);
+  const runtime = createRuntimeSession();
+  expect(runtime.getSnapshot()).toEqual({
+    state: "disabled",
+    message: "WebMCP publication is disabled.",
+  });
+});
+
 it("constructs without activation and handles registration before owner startup and replay", () => {
   const runtime = session(false);
   const instance = runtime.construct(Model);

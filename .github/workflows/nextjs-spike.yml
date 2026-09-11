@@ -35,6 +35,12 @@ jobs:
           set -euo pipefail
           pnpm install --frozen-lockfile
           pnpm exec turbo run build --filter=@ayme-dev/example-next... --filter=@ayme-dev/example-react...
+          pnpm --filter @ayme-dev/webmcp test
+          pnpm --filter @ayme-dev/webmcp typecheck
+          pnpm --filter @ayme-dev/webmcp lint
+          pnpm --filter @ayme-dev/webmcp-react test
+          pnpm --filter @ayme-dev/webmcp-react typecheck
+          pnpm --filter @ayme-dev/webmcp-react lint
           pnpm --filter @ayme-dev/unplugin-webmcp test
           pnpm --filter @ayme-dev/unplugin-webmcp typecheck
           pnpm --filter @ayme-dev/unplugin-webmcp lint
