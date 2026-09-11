@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 
-// Geometry is tested in Chromium, not in Node or layoutless jsdom fixtures.
-vi.mock("@ayme-dev/playwright-browser", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@ayme-dev/playwright-browser")>()),
-  probeLocatorReachability: async () => true,
+// Reachability policy is covered in Chromium. Registry unit tests exercise the
+// observation lifecycle without depending on layout geometry in jsdom.
+vi.mock("./pomReachability", () => ({
+  probePomReachability: async () => true,
 }));
