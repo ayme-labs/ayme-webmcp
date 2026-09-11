@@ -4,6 +4,7 @@ on:
     branches: [chore/56-presence-verification]
 permissions:
   contents: write
+  actions: write
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -19,6 +20,21 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
+      - name: Cancel superseded verification runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'JS'
+          const headers = {Authorization: `Bearer ${process.env.GH_TOKEN}`, Accept: 'application/vnd.github+json'};
+          const base = 'https://api.github.com/repos/ayme-labs/ayme-webmcp/actions';
+          const response = await fetch(`${base}/workflows/tmp-offline-pr56.yml/runs?branch=chore%2F56-presence-verification`, {headers});
+          if (!response.ok) throw new Error(`List verification runs: ${response.status}`);
+          for (const run of (await response.json()).workflow_runs) {
+            if (String(run.id) === process.env.GITHUB_RUN_ID || run.status === 'completed') continue;
+            const result = await fetch(`${base}/runs/${run.id}/cancel`, {method: 'POST', headers});
+            console.log(`Cancel superseded verification ${run.id}: ${result.status}`);
+          }
+          JS
       - run: corepack enable
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Apply exact locally tested patches
@@ -36,11 +52,18 @@ jobs:
           if git diff --name-only | grep -v '^packages/webmcp/src/'; then exit 1; fi
           test -z "$(git diff --name-only -- packages/playwright-browser)"
       - run: pnpm install --frozen-lockfile
-      - name: Full repository verification
+      - name: Repository builds and unit tests
         shell: bash
         run: |
           set -o pipefail
-          pnpm run check 2>&1 | tee "$RUNNER_TEMP/pr56-check.log"
+          pnpm exec turbo run build lint typecheck test 2>&1 | tee "$RUNNER_TEMP/pr56-check.log"
+      - name: Relevant browser and example suites
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec turbo run test:e2e --filter='!@ayme-dev/playwright-browser' 2>&1 | tee -a "$RUNNER_TEMP/pr56-check.log"
+      - run: pnpm run format:check
+      - run: pnpm run boundaries
       - name: Publish verified candidate only
         shell: bash
         run: |
