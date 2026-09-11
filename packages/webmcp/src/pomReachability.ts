@@ -218,7 +218,7 @@ export async function probePomReachability(locator: Locator): Promise<boolean> {
 
         // ponytail: sibling branch boxes cover the practical moving-overlay
         // case without reimplementing the browser's stacking algorithm.
-        for (let branch = current; ; ) {
+        for (let branch = current; ;) {
           const parent = parentElement(branch);
           if (!parent) break;
           const branchStyle = view.getComputedStyle(branch);
@@ -236,7 +236,7 @@ export async function probePomReachability(locator: Locator): Promise<boolean> {
             const siblingZ = zIndex(style);
             const follows = Boolean(
               branch.compareDocumentPosition(sibling) &
-                NodeCtor.DOCUMENT_POSITION_FOLLOWING
+              NodeCtor.DOCUMENT_POSITION_FOLLOWING
             );
             if (siblingZ < branchZ || (siblingZ === branchZ && !follows))
               continue;
