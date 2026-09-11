@@ -51,11 +51,44 @@ export function pomProgramDependencies(
   fileName: string,
   options: PomCompilerOptions = {}
 ) {
+  const absoluteFileName = path.resolve(fileName);
   const dependencies = new Set<string>();
-  createPomProgram(fileName, options, {
-    onDependency: (dependency) => dependencies.add(path.resolve(dependency)),
-  });
+  const report = (dependency: string) =>
+    dependencies.add(path.resolve(dependency));
+  const config = projectConfigFor(absoluteFileName, options, false, report);
+
+  for (const projectFile of config.fileNames) report(projectFile);
+  reportImportedModules(absoluteFileName, config.options, dependencies);
   return [...dependencies].sort();
+}
+
+function reportImportedModules(
+  fileName: string,
+  compilerOptions: ts.CompilerOptions,
+  dependencies: Set<string>,
+  visited = new Set<string>()
+) {
+  const absoluteFileName = path.resolve(fileName);
+  if (visited.has(absoluteFileName)) return;
+  visited.add(absoluteFileName);
+
+  const source = ts.sys.readFile(absoluteFileName);
+  if (source === undefined) return;
+
+  const importedFiles = ts.preProcessFile(source, true, true).importedFiles;
+  for (const importedFile of importedFiles) {
+    const resolved = ts.resolveModuleName(
+      importedFile.fileName,
+      absoluteFileName,
+      compilerOptions,
+      ts.sys
+    ).resolvedModule;
+    if (!resolved || resolved.isExternalLibraryImport) continue;
+
+    const dependency = path.resolve(resolved.resolvedFileName);
+    dependencies.add(dependency);
+    reportImportedModules(dependency, compilerOptions, dependencies, visited);
+  }
 }
 
 function projectConfigFor(
