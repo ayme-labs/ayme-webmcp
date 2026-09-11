@@ -5,10 +5,11 @@ import type { Page } from "@playwright/test";
 
 function brandedLocator(overrides: Record<string, unknown> = {}) {
   const loc: Record<string | symbol, unknown> = { ...overrides };
+  const element = { isConnected: true } as Element;
   loc[LOCATOR_BRAND] = Object.freeze({
     ownerPage: {},
     getSelector: () => "mock",
-    resolveElements: () => [],
+    resolveElements: () => [element],
   });
   return loc;
 }
@@ -128,6 +129,7 @@ describe("WebMCP publisher", () => {
     expect(registrations.map(({ tool }) => tool.name)).toEqual([
       "get_page_state",
       "addItem",
+      "ItemsPage.items.archive",
     ]);
 
     await vi.runOnlyPendingTimersAsync();

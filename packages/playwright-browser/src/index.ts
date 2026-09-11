@@ -37,3 +37,5 @@ export function createPage(): Page {
     page.setDefaultNavigationTimeout(__AYME_PLAYWRIGHT_NAVIGATION_TIMEOUT__);
   return page as unknown as Page;
 }
+
+export { probeLocatorReachability } from "./locatorReachability";

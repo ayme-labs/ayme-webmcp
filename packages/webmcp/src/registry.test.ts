@@ -6,10 +6,11 @@ import type { PomManifest } from "./contracts";
 
 function brandedLocator(overrides: Record<string, unknown> = {}) {
   const loc: Record<string | symbol, unknown> = { ...overrides };
+  const element = { isConnected: true } as Element;
   loc[LOCATOR_BRAND] = Object.freeze({
     ownerPage: {},
     getSelector: () => "mock",
-    resolveElements: () => [],
+    resolveElements: () => [element],
   });
   return loc;
 }

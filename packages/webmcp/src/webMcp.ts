@@ -1,6 +1,10 @@
 import type { RegisteredPomTool } from "./contracts";
 import { getPageStateTool } from "./pageState";
-import { listRegisteredPomTools, subscribeToRegisteredPoms } from "./registry";
+import {
+  listRegisteredPomTools,
+  subscribeToRegisteredPoms,
+  probeRegisteredPomMembers,
+} from "./registry";
 
 type PublishedTool = RegisteredPomTool | typeof getPageStateTool;
 
@@ -87,14 +91,17 @@ export async function synchronizeWebMcpTools(
   };
 
   if (!disposed) {
-    unsubscribe = subscribeToRegisteredPoms(() => {
-      void synchronize().catch((error) => {
-        dispose();
-        options.onError?.(error);
-      });
-    });
     try {
-      await synchronize();
+      await probeRegisteredPomMembers();
+      if (!disposed) {
+        unsubscribe = subscribeToRegisteredPoms(() => {
+          void synchronize().catch((error) => {
+            dispose();
+            options.onError?.(error);
+          });
+        });
+        await synchronize();
+      }
     } catch (error) {
       dispose();
       throw error;

@@ -14,6 +14,7 @@ import {
   createPage,
   isAymeLocator,
   resolveLocatorElements,
+  probeLocatorReachability,
 } from "@ayme-dev/playwright-browser";
 import type { Locator, Page } from "@playwright/test";
 
@@ -43,13 +44,35 @@ export type RegisteredPomTarget = {
   element: Element;
 };
 
+type ObservedPomRoot = {
+  path: string;
+  element: Element | undefined;
+  available: boolean;
+};
+
+type ObservedRegisteredPom = RegisteredPom & {
+  rootObservations: readonly ObservedPomRoot[];
+};
+
 let browserPage: Page | undefined;
 let runtimeOwner: object | undefined;
 const compiledPoms = new WeakMap<object, PomManifest>();
-const registeredPoms = new Set<RegisteredPom>();
+const registeredPoms = new Set<ObservedRegisteredPom>();
 const subscribers = new Set<() => void>();
 let mutationObserver: MutationObserver | undefined;
 let probeTimer: ReturnType<typeof setTimeout> | undefined;
+let observedWindow: Window | null = null;
+let probeRevision = 0;
+let probeLifetime = 0;
+let probeQueue: Promise<void> = Promise.resolve();
+const layoutEvents = [
+  "scroll",
+  "resize",
+  "transitionend",
+  "transitioncancel",
+  "animationend",
+  "animationcancel",
+] as const;
 
 export function configureAymeRuntime(page: Page) {
   if (runtimeOwner)
@@ -129,11 +152,12 @@ export function registerPageObject<T extends object>(
     throw new Error(
       "The imported page object has no compiler-derived Ayme metadata."
     );
-  const registration: RegisteredPom = {
+  const registration: ObservedRegisteredPom = {
     id: compiledPom.className,
     instance,
     manifest: compiledPom,
     memberObservations: [],
+    rootObservations: [],
     tools: createRegisteredTools(compiledPom, instance),
   };
   const registryWasEmpty = registeredPoms.size === 0;
@@ -160,10 +184,19 @@ function startObservingPage() {
     characterData: true,
     subtree: true,
   });
+  observedWindow = document.defaultView ?? null;
+  for (const event of layoutEvents)
+    observedWindow?.addEventListener(event, schedulePomMemberProbe, true);
   schedulePomMemberProbe();
 }
 
 function stopObservingPage() {
+  probeLifetime += 1;
+  probeQueue = Promise.resolve();
+  probeRevision += 1;
+  for (const event of layoutEvents)
+    observedWindow?.removeEventListener(event, schedulePomMemberProbe, true);
+  observedWindow = null;
   mutationObserver?.disconnect();
   mutationObserver = undefined;
   if (probeTimer !== undefined) clearTimeout(probeTimer);
@@ -171,6 +204,7 @@ function stopObservingPage() {
 }
 
 function schedulePomMemberProbe() {
+  probeRevision += 1;
   if (probeTimer !== undefined) return;
   probeTimer = setTimeout(() => {
     probeTimer = undefined;
@@ -178,28 +212,56 @@ function schedulePomMemberProbe() {
   }, 0);
 }
 
-export async function probeRegisteredPomMembers() {
-  const results = await Promise.all(
-    [...registeredPoms].map(async (registration) => ({
-      registration,
-      memberObservations: await probePomMembers(registration),
-    }))
-  );
+export function probeRegisteredPomMembers(): Promise<void> {
+  // Serialize callers so a slower, older probe cannot overwrite a newer result.
+  const lifetime = probeLifetime;
+  const next = probeQueue.then(() => probeRegistrations(lifetime));
+  probeQueue = next.catch(() => {});
+  return next;
+}
 
-  let changed = false;
-  for (const result of results) {
-    if (!registeredPoms.has(result.registration)) continue;
-    if (
-      sameObservations(
-        result.registration.memberObservations,
-        result.memberObservations
+async function probeRegistrations(lifetime: number): Promise<void> {
+  while (lifetime === probeLifetime) {
+    const revision = probeRevision;
+    const results = await Promise.all(
+      [...registeredPoms].map(async (registration) => ({
+        registration,
+        ...(await probePomMembers(registration)),
+      }))
+    );
+    if (lifetime !== probeLifetime) return;
+    if (revision !== probeRevision) continue;
+
+    let changed = false;
+    for (const {
+      registration,
+      memberObservations,
+      rootObservations,
+    } of results) {
+      if (!registeredPoms.has(registration)) continue;
+      const sameRoots =
+        registration.rootObservations.length === rootObservations.length &&
+        registration.rootObservations.every((root, index) => {
+          const next = rootObservations[index];
+          return (
+            next !== undefined &&
+            root.path === next.path &&
+            root.element === next.element &&
+            root.available === next.available
+          );
+        });
+      if (
+        sameRoots &&
+        sameObservations(registration.memberObservations, memberObservations)
       )
-    )
-      continue;
-    result.registration.memberObservations = result.memberObservations;
-    changed = true;
+        continue;
+      registration.memberObservations = memberObservations;
+      registration.rootObservations = rootObservations;
+      changed = true;
+    }
+    if (changed) notifySubscribers();
+    return;
   }
-  if (changed) notifySubscribers();
 }
 
 function sameObservations(
@@ -222,28 +284,24 @@ function sameObservations(
   );
 }
 
-export function listRegisteredPoms() {
+export function listRegisteredPoms(): RegisteredPom[] {
   return [...registeredPoms];
 }
 
 export async function listRegisteredPomRoots(): Promise<RegisteredPomRoot[]> {
-  const roots: RegisteredPomRoot[] = [];
-  for (const registration of registeredPoms) {
-    const components = new Map(
-      registration.manifest.components.map((component) => [
-        component.className,
-        component,
-      ])
-    );
-    await collectRegisteredPomRoots(
-      registration.instance,
-      registration.manifest.members,
-      registration.id,
-      components,
-      roots
-    );
-  }
-  return roots;
+  await probeRegisteredPomMembers();
+  return [...registeredPoms].flatMap((registration) =>
+    registration.rootObservations.filter(isRootAvailable).map((root) => ({
+      label: root.path ? `${registration.id}.${root.path}` : registration.id,
+      element: root.element,
+    }))
+  );
+}
+
+function isRootAvailable(
+  root: ObservedPomRoot
+): root is ObservedPomRoot & { element: Element } {
+  return root.available && root.element?.isConnected === true;
 }
 
 export async function listRegisteredPomTargets(): Promise<
@@ -274,13 +332,16 @@ export function listRegisteredPomTools() {
     for (const tool of registration.tools) {
       const componentPath = tool.componentPath;
       const active =
-        componentPath === undefined ||
-        registration.memberObservations.some(
-          (observation) =>
-            observation.kind === "component-root" &&
-            observation.count > 0 &&
-            isLiveComponentRoot(componentPath, observation.memberName)
-        );
+        componentPath === undefined
+          ? !("root" in registration.instance) ||
+            registration.rootObservations.some(
+              (root) => root.path === "" && isRootAvailable(root)
+            )
+          : registration.rootObservations.some(
+              (root) =>
+                isRootAvailable(root) &&
+                isLiveComponentRoot(componentPath, `${root.path}.root`)
+            );
       if (active && !activeTools.has(tool.name))
         activeTools.set(tool.name, tool);
     }
@@ -526,66 +587,50 @@ async function resolveComponent(
   return current;
 }
 
-async function probePomMembers(
-  registration: RegisteredPom
-): Promise<PomMemberObservation[]> {
+async function probePomMembers(registration: RegisteredPom) {
   const components = new Map(
     registration.manifest.components.map((component) => [
       component.className,
       component,
     ])
   );
-  return await probeMembers(
+  const rootObservations: ObservedPomRoot[] = [];
+  if ("root" in registration.instance) {
+    try {
+      const root = Reflect.get(registration.instance, "root");
+      if (isLocator(root)) await observeRoot(root, "", rootObservations);
+    } catch {
+      // A missing or invalid declared root never falls back to rootless activation.
+    }
+  }
+  const memberObservations = await probeMembers(
     registration.instance,
     registration.manifest.members,
     "",
-    components
+    components,
+    rootObservations
   );
+  return { memberObservations, rootObservations };
 }
 
-async function collectRegisteredPomRoots(
-  instance: object,
-  members: readonly PomMemberManifest[],
-  prefix: string,
-  components: ReadonlyMap<string, PomComponentManifest>,
-  roots: RegisteredPomRoot[],
-  componentClasses: ReadonlySet<string> = new Set()
-): Promise<void> {
-  for (const member of members) {
-    if (member.kind !== "component") continue;
-    const component = components.get(member.componentClassName);
-    if (!component) continue;
-
-    try {
-      const value = await readMember(instance, member);
-      const values = member.collection ? asComponents(value) : [value];
-      for (const [index, candidate] of values.entries()) {
-        if (!isPomComponent(candidate)) continue;
-        const path = member.collection
-          ? `${prefix}.${member.memberName}[${index}]`
-          : `${prefix}.${member.memberName}`;
-        const elements = locatorElements(candidate.root);
-        if (elements.length === 1) {
-          const element = elements[0];
-          if (element) roots.push({ label: path, element });
-        }
-        if (componentClasses.has(component.className)) continue;
-        await collectRegisteredPomRoots(
-          candidate,
-          component.members.filter(
-            (child) =>
-              !(child.kind === "locator" && child.memberName === "root")
-          ),
-          path,
-          components,
-          roots,
-          new Set(componentClasses).add(component.className)
-        );
-      }
-    } catch {
-      continue;
-    }
-  }
+async function observeRoot(
+  root: Locator,
+  path: string,
+  observations: ObservedPomRoot[]
+): Promise<number> {
+  const count = await root.count();
+  const elements = locatorElements(root);
+  const element =
+    count === 1 && elements.length === 1 ? elements[0] : undefined;
+  const reachable =
+    element !== undefined && (await probeLocatorReachability(root));
+  const current = reachable ? locatorElements(root) : [];
+  observations.push({
+    path,
+    element,
+    available: reachable && current.length === 1 && current[0] === element,
+  });
+  return count;
 }
 
 async function collectPomTargets(
@@ -660,8 +705,12 @@ async function probeMembers(
   instance: object,
   members: readonly PomMemberManifest[],
   prefix: string,
-  components: ReadonlyMap<string, PomComponentManifest>
+  components: ReadonlyMap<string, PomComponentManifest>,
+  roots: ObservedPomRoot[],
+  ancestors: ReadonlySet<object> = new Set()
 ): Promise<PomMemberObservation[]> {
+  if (ancestors.has(instance)) return [];
+  const nextAncestors = new Set(ancestors).add(instance);
   const observations: PomMemberObservation[] = [];
 
   for (const member of members) {
@@ -714,7 +763,7 @@ async function probeMembers(
         observations.push({
           memberName: `${componentPath}.root`,
           kind: "component-root",
-          count: await componentValue.root.count(),
+          count: await observeRoot(componentValue.root, componentPath, roots),
         });
         const childMembers = componentManifest.members.filter(
           (child) => !(child.kind === "locator" && child.memberName === "root")
@@ -724,7 +773,9 @@ async function probeMembers(
             componentValue,
             childMembers,
             componentPath,
-            components
+            components,
+            roots,
+            nextAncestors
           ))
         );
       }
