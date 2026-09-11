@@ -109,7 +109,7 @@ describe("the public Ayme page state facade in Chromium", () => {
     expect(inputs).toBeGreaterThan(0);
   });
 
-  it("keeps collapsed root tools unavailable while retaining their definitions", async () => {
+  it("keeps unavailable root tools and structure hidden while retaining their definitions", async () => {
     document.body.innerHTML = `
         <aside id="sidebar" style="display: none; width: 240px; height: 120px">
           <button>Log out</button>
@@ -194,6 +194,18 @@ describe("the public Ayme page state facade in Chromium", () => {
     expect(listRegisteredPomTools().map(({ name }) => name)).toEqual([
       "SidebarPage.sidebar.logout",
     ]);
+    const availableContext = await ayme.getPageContext("SidebarPage", "Sidebar");
+    expect(availableContext.structure).toContain("SidebarPage.sidebar");
+    expect(clicks).toBe(0);
+
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<div id="overlay" style="position: fixed; inset: 0; z-index: 1"></div>'
+    );
+    await probeRegisteredPomMembers();
+    expect(listRegisteredPomTools()).toEqual([]);
+    const coveredContext = await ayme.getPageContext("SidebarPage", "Sidebar");
+    expect(coveredContext.structure).not.toContain("SidebarPage.sidebar");
     expect(clicks).toBe(0);
 
     registration.dispose();
