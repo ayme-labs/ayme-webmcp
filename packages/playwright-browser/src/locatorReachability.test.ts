@@ -147,6 +147,22 @@ describe("locator reachability", () => {
     ).resolves.toBe(false);
   });
 
+  it("accepts another scroll destination when the centered one is covered", async () => {
+    document.body.innerHTML =
+      '<div style="height:1600px"></div><section id="root" style="height:120px">Below fold</section><div style="position:fixed;left:0;right:0;top:35%;height:30%;z-index:10"></div><div style="height:1600px"></div>';
+    await expect(
+      probeLocatorReachability(createPage().locator("#root"))
+    ).resolves.toBe(true);
+  });
+
+  it("rejects an offscreen root covered by a sibling that scrolls with it", async () => {
+    document.body.innerHTML =
+      '<div style="overflow:auto;height:200px;position:relative"><div style="height:500px"></div><div style="position:relative;height:100px"><section id="root" style="position:absolute;inset:0">Panel</section><div style="position:absolute;inset:0;z-index:10"></div></div></div>';
+    await expect(
+      probeLocatorReachability(createPage().locator("#root"))
+    ).resolves.toBe(false);
+  });
+
   it("respects inert roots and modal blocking", async () => {
     document.body.innerHTML =
       '<section id="root">Outside</section><dialog><section id="inside">Inside</section></dialog>';
