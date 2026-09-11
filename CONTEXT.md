@@ -30,3 +30,6 @@ The lifetime within one browser document during which Ayme maintains best-effort
 
 **Page Object Root**:
 The page element that anchors one Page Object instance in the observed structure.
+
+**Page Object Availability**:
+Whether a live Page Object is currently reachable through its root in the user-facing page. DOM presence alone does not imply availability.

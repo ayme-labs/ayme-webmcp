@@ -4,6 +4,8 @@ status: accepted
 
 # Let Ayme own live Page Object observation
 
+The root-availability criterion below is superseded by [ADR-0018](0018-determine-live-page-object-availability-from-root-reachability.md). Observation ownership and lifecycle remain accepted. The original rationale is retained below.
+
 ## Context
 
 Activated Page Objects are already tracked by the core registry. Child Page Object tool availability additionally depends on whether their roots match the current DOM.
