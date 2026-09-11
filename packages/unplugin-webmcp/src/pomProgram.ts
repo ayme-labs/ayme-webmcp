@@ -8,12 +8,13 @@ export type PomCompilerOptions = {
 
 type PomProgramOptions = {
   fallbackToUnconfigured?: boolean;
+  onDependency?: (fileName: string) => void;
 };
 
 export function createPomProgram(
   fileName: string,
   options: PomCompilerOptions = {},
-  { fallbackToUnconfigured = false }: PomProgramOptions = {}
+  { fallbackToUnconfigured = false, onDependency }: PomProgramOptions = {}
 ) {
   const absoluteFileName = path.resolve(fileName);
 
@@ -22,26 +23,76 @@ export function createPomProgram(
     config = projectConfigFor(
       absoluteFileName,
       options,
-      fallbackToUnconfigured
+      fallbackToUnconfigured,
+      onDependency
     );
   } catch (error) {
     if (!fallbackToUnconfigured) throw error;
-    return ts.createProgram([absoluteFileName], {});
+    const program = ts.createProgram([absoluteFileName], {});
+    reportProgramDependencies(program, onDependency);
+    return program;
   }
 
-  return ts.createProgram({
+  const program = ts.createProgram({
     rootNames: [...new Set([...config.fileNames, absoluteFileName])],
     options: {
       ...config.options,
       noEmit: true,
     },
   });
+  reportProgramDependencies(program, onDependency);
+  return program;
+}
+
+export function pomProgramDependencies(
+  fileName: string,
+  options: PomCompilerOptions = {}
+) {
+  const absoluteFileName = path.resolve(fileName);
+  const dependencies = new Set<string>();
+  const report = (dependency: string) =>
+    dependencies.add(path.resolve(dependency));
+  const config = projectConfigFor(absoluteFileName, options, false, report);
+
+  for (const projectFile of config.fileNames) report(projectFile);
+  reportImportedModules(absoluteFileName, config.options, dependencies);
+  return [...dependencies].sort();
+}
+
+function reportImportedModules(
+  fileName: string,
+  compilerOptions: ts.CompilerOptions,
+  dependencies: Set<string>,
+  visited = new Set<string>()
+) {
+  const absoluteFileName = path.resolve(fileName);
+  if (visited.has(absoluteFileName)) return;
+  visited.add(absoluteFileName);
+
+  const source = ts.sys.readFile(absoluteFileName);
+  if (source === undefined) return;
+
+  const importedFiles = ts.preProcessFile(source, true, true).importedFiles;
+  for (const importedFile of importedFiles) {
+    const resolved = ts.resolveModuleName(
+      importedFile.fileName,
+      absoluteFileName,
+      compilerOptions,
+      ts.sys
+    ).resolvedModule;
+    if (!resolved || resolved.isExternalLibraryImport) continue;
+
+    const dependency = path.resolve(resolved.resolvedFileName);
+    dependencies.add(dependency);
+    reportImportedModules(dependency, compilerOptions, dependencies, visited);
+  }
 }
 
 function projectConfigFor(
   fileName: string,
   options: PomCompilerOptions,
-  allowConfigErrors: boolean
+  allowConfigErrors: boolean,
+  onDependency?: (fileName: string) => void
 ): ts.ParsedCommandLine {
   const configPath = options.tsconfigPath
     ? path.resolve(options.tsconfigPath)
@@ -55,17 +106,39 @@ function projectConfigFor(
       `Could not find a tsconfig.json for POM source ${fileName}.`
     );
 
+  onDependency?.(configPath);
   const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
   if (configFile.error) throw configError(configPath, configFile.error);
 
+  const parseHost: ts.ParseConfigHost = onDependency
+    ? {
+        ...ts.sys,
+        readFile(fileName) {
+          const contents = ts.sys.readFile(fileName);
+          if (contents !== undefined) onDependency(path.resolve(fileName));
+          return contents;
+        },
+      }
+    : ts.sys;
   const config = ts.parseJsonConfigFileContent(
     configFile.config,
-    ts.sys,
+    parseHost,
     path.dirname(configPath)
   );
   const error = config.errors[0];
   if (error && !allowConfigErrors) throw configError(configPath, error);
   return config;
+}
+
+function reportProgramDependencies(
+  program: ts.Program,
+  onDependency: ((fileName: string) => void) | undefined
+) {
+  if (!onDependency) return;
+  for (const sourceFile of program.getSourceFiles()) {
+    if (program.isSourceFileDefaultLibrary(sourceFile)) continue;
+    onDependency(path.resolve(sourceFile.fileName));
+  }
 }
 
 function configError(configPath: string, diagnostic: ts.Diagnostic) {
