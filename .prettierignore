@@ -8,6 +8,10 @@ node_modules/
 .turbo/
 dist/
 test-results/
+apps/example-next/.next/
+apps/example-next/.next-dev/
+apps/example-next/next-env.d.ts
+apps/example-next/*.tsbuildinfo
 apps/example-vue/tests/vue-webmcp.spec.ts-snapshots/
 
 # Pinned upstream Playwright contract — keep byte-for-byte identical
