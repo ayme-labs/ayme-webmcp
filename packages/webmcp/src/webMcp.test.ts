@@ -273,9 +273,14 @@ describe("WebMCP publisher", () => {
   it("aborts publication while initial registration is pending", async () => {
     let finishRegistration: (() => void) | undefined;
     let registrationSignal: AbortSignal | undefined;
+    let started!: () => void;
+    const registrationStarted = new Promise<void>((resolve) => {
+      started = resolve;
+    });
     const registerTool = vi.fn(
       async (_tool: PublishedTool, options: { signal: AbortSignal }) => {
         registrationSignal = options.signal;
+        started();
         await new Promise<void>((resolve) => {
           finishRegistration = resolve;
         });
@@ -289,7 +294,7 @@ describe("WebMCP publisher", () => {
       { registerTool },
       { signal: controller.signal }
     );
-    await flushPublisher();
+    await registrationStarted;
 
     controller.abort();
     expect(registrationSignal?.aborted).toBe(true);

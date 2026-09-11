@@ -169,6 +169,53 @@ describe("live Page Object registry", () => {
     registration.dispose();
   });
 
+  it("completes refreshes during continuous mutations without a probe backlog", async () => {
+    const registry = await import("./registry");
+    registry.configureAymeRuntime({} as Page);
+    const count = vi.fn(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      return 1;
+    });
+    class UpdatingPage {
+      readonly item = brandedLocator({ count });
+    }
+    registry.registerCompiledPom(UpdatingPage, {
+      ...emptyManifest("UpdatingPage"),
+      members: [{ memberName: "item", kind: "locator", access: "field" }],
+    });
+    const registration = registry.createPageRegistration(UpdatingPage);
+    const subscriber = vi.fn();
+    const unsubscribe = registry.subscribeToRegisteredPoms(subscriber);
+    const activity = setInterval(
+      () => FakeMutationObserver.instances[0]?.trigger(),
+      5
+    );
+    let finished = false;
+    const refresh = Promise.all([
+      registry.probeRegisteredPomMembers(),
+      registry.probeRegisteredPomMembers(),
+      registry.listRegisteredPomRoots(),
+    ]).then(() => {
+      finished = true;
+    });
+    try {
+      await vi.advanceTimersByTimeAsync(95);
+      expect(finished).toBe(true);
+      expect(subscriber).toHaveBeenCalledOnce();
+      expect(count.mock.calls.length).toBeLessThanOrEqual(4);
+      clearInterval(activity);
+      await vi.advanceTimersByTimeAsync(100);
+      const completedPasses = count.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(200);
+      expect(count).toHaveBeenCalledTimes(completedPasses);
+      await refresh;
+    } finally {
+      clearInterval(activity);
+      unsubscribe();
+      registration.dispose();
+    }
+  });
+
   it("schedules an initial probe for every added Page Object", async () => {
     const registry = await import("./registry");
     registry.configureAymeRuntime({} as Page);

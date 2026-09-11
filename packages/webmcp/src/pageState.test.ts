@@ -8,7 +8,12 @@ const { captureAriaSnapshot, listRegisteredPomRoots } = vi.hoisted(() => ({
 }));
 
 vi.mock("@ayme-dev/playwright-browser", () => ({ captureAriaSnapshot }));
-vi.mock("./registry", () => ({ listRegisteredPomRoots }));
+vi.mock("./registry", () => ({
+  getRegisteredPomStructure: async () => ({
+    roots: await listRegisteredPomRoots(),
+    absentElements: [],
+  }),
+}));
 
 import { getPageStateTool } from "./pageState";
 import ayme from "./index";
