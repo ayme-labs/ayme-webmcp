@@ -5,11 +5,8 @@ import { pathToFileURL } from "node:url";
 
 import { createUnplugin, type UnpluginFactory } from "unplugin";
 
-import {
-  createPomCompiler,
-  type PomCompilerOptions,
-} from "./derivePomManifests";
-import { rewritePomImports } from "./rewritePomImports";
+import type { PomCompilerOptions } from "./derivePomManifests";
+import { createPomTransform } from "./transformPomModule";
 
 const PLAYWRIGHT_TEST_PACKAGE = "@playwright/test";
 const DEFAULT_TEST_ID_ATTRIBUTE = "data-testid";
@@ -63,7 +60,7 @@ export const unpluginFactory: UnpluginFactory<AymeWebMcpOptions | undefined> = (
 ) => {
   if (options.publish !== undefined && typeof options.publish !== "boolean")
     throw new TypeError("publish must be a boolean");
-  const compiler = createPomCompiler(options);
+  const transformPom = createPomTransform(options);
 
   return {
     name: "ayme-webmcp",
@@ -104,28 +101,7 @@ export const unpluginFactory: UnpluginFactory<AymeWebMcpOptions | undefined> = (
       filter: {
         id: /\.ts$/,
       },
-      handler(code, id) {
-        const fileName = id.split("?")[0];
-        if (!fileName?.endsWith(".ts") || !code.includes("@WebMCP"))
-          return null;
-
-        const manifests = compiler.derivePomManifests(fileName);
-        if (manifests.length === 0) return null;
-
-        const rewrittenCode = rewritePomImports(code, fileName, options);
-
-        const registrations = manifests
-          .map(
-            (manifest) =>
-              `registerCompiledPom(${manifest.className}, ${JSON.stringify(manifest)});`
-          )
-          .join("\n");
-
-        return {
-          code: `import { registerCompiledPom } from '@ayme-dev/webmcp/internal';\n${rewrittenCode}\n${registrations}\n`,
-          map: null,
-        };
-      },
+      handler: transformPom,
     },
   };
 };
@@ -249,7 +225,7 @@ async function loadPlaywrightConfig(
     typeof loaderModule.transform.requireOrImport !== "function"
   )
     throw new Error(
-      `Unsupported Playwright config loader at ${loaderPath}: expected configLoader.loadConfigFromFile and transform.requireOrImport for Playwright 1.62.x.`
+      `Unsupported Playwright config loader at ${loaderPath}: expected configLoader.loadConfigFromFile and transform.requireOrImport for Playwright 1.62.x.`,
     );
 
   let fullConfig: unknown;

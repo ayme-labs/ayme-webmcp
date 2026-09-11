@@ -20,6 +20,11 @@
       "types": "./dist/vite.d.mts",
       "import": "./dist/vite.mjs",
       "default": "./dist/vite.mjs"
+    },
+    "./turbopack-loader": {
+      "types": "./dist/turbopack-loader.d.mts",
+      "import": "./dist/turbopack-loader.mjs",
+      "default": "./dist/turbopack-loader.mjs"
     }
   },
   "scripts": {
