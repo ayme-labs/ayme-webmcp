@@ -33,6 +33,7 @@ jobs:
           program = program.replace('"@ayme-dev/playwright-lite": true', '"@ayme-dev/playwright-lite@https://codeload.github.com/ayme-labs/playwright-lite/tar.gz/5a66acf73a6ef24de4cb570e9f550ba96d298982": true')
           exec(compile(program, 'migration.py', 'exec'))
           PY
+          git restore .github/workflows/ci.yml
       - name: Install and verify inside Devbox
         run: |
           devbox run -- bash <<'SCRIPT'
