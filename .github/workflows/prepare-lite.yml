@@ -1,0 +1,20 @@
+name: Prepare Lite migration
+on:
+  push:
+    branches: [work/prepare-lite-migration]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Inspect integration callers and configuration
+        run: |
+          git grep -n -E 'playwright-browser|isAymeLocator|LOCATOR_BRAND|captureAriaSnapshot' -- ':!packages/playwright-browser' ':!pnpm-lock.yaml' || true
+          for file in AGENTS.md package.json scripts/check-boundaries.mjs packages/webmcp/src/index.ts packages/webmcp/src/internal.ts packages/webmcp/vitest.config.ts packages/webmcp/src/unit.setup.ts packages/webmcp/src/packedConsumer.test.ts .github/workflows/ci.yml; do
+            echo "==== $file ===="
+            test ! -f "$file" || cat "$file"
+          done
