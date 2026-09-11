@@ -18,8 +18,7 @@ jobs:
     if: github.ref == 'refs/heads/codex/nextjs-turbopack-spike'
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # This throwaway-branch job commits only lockfile/formatting changes. It does
-    # not run for pull requests or write to main. Remove it before promotion.
+    # Temporary lockfile formatting only. Remove write access after this run.
     permissions:
       contents: write
     env:
@@ -33,39 +32,20 @@ jobs:
         with:
           enable-cache: true
           disable-nix-access-token: true
-      - name: Resolve, lock and verify inside Devbox
+      - name: Verify inside Devbox
         run: |
           devbox run -- bash <<'SCRIPT'
           set -euo pipefail
-          pnpm install --no-frozen-lockfile
-          pnpm exec prettier --write \
-            apps/example-next \
-            packages/unplugin-webmcp/src/index.ts \
-            packages/unplugin-webmcp/src/transformPomModule.ts \
-            packages/unplugin-webmcp/src/turbopack-loader.ts \
-            packages/unplugin-webmcp/src/turbopack-loader.test.ts \
-            packages/unplugin-webmcp/src/__tests__/fixtures/turbopack \
-            packages/unplugin-webmcp/package.json \
-            packages/unplugin-webmcp/tsdown.config.ts \
-            .github/workflows/nextjs-spike.yml
-          git add -- pnpm-lock.yaml apps/example-next \
-            packages/unplugin-webmcp/src/index.ts \
-            packages/unplugin-webmcp/src/transformPomModule.ts \
-            packages/unplugin-webmcp/src/turbopack-loader.ts \
-            packages/unplugin-webmcp/src/turbopack-loader.test.ts \
-            packages/unplugin-webmcp/src/__tests__/fixtures/turbopack \
-            packages/unplugin-webmcp/package.json \
-            packages/unplugin-webmcp/tsdown.config.ts \
-            .github/workflows/nextjs-spike.yml
+          pnpm install --frozen-lockfile
+          pnpm exec prettier --write pnpm-lock.yaml
+          git add -- pnpm-lock.yaml
           if ! git diff --cached --quiet; then
             git -c user.name='github-actions[bot]' \
               -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
               -c core.hooksPath=/dev/null \
-              commit -m 'chore: lock and format the Next.js spike'
-            # No force push: reject if somebody changed the branch during install.
+              commit -m 'chore: format the generated Next.js lockfile'
             git push origin HEAD:refs/heads/codex/nextjs-turbopack-spike
           fi
-          pnpm install --frozen-lockfile
           pnpm exec turbo run build --filter=@ayme-dev/unplugin-webmcp... --filter=@ayme-dev/webmcp-react...
           pnpm --filter @ayme-dev/unplugin-webmcp test
           pnpm --filter @ayme-dev/unplugin-webmcp typecheck
