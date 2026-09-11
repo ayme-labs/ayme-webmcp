@@ -1,18 +1,33 @@
+import path from "node:path";
+
 import ts from "typescript";
 
 import type { PomCompilerOptions } from "./derivePomManifests";
 import { createPomTransform } from "./transformPomModule";
 
-// Only the webpack loader methods used by this spike. No webpack dependency.
+// Only the webpack loader methods used by this integration. No webpack dependency.
 type LoaderContext = {
   resourcePath: string;
   getOptions(): PomCompilerOptions;
+  addDependency?: (fileName: string) => void;
 };
 
 /** Experimental .ts POM loader. Configure it on Turbopack's browser graph only. */
 export default function turbopackLoader(this: LoaderContext, source: string) {
   const options = this.getOptions();
   const transformed = createPomTransform(options)(source, this.resourcePath);
+
+  if (transformed?.dependencies.length) {
+    if (!this.addDependency)
+      throw new Error(
+        "Ayme's Turbopack loader requires loader dependency tracking."
+      );
+    const resourcePath = path.resolve(this.resourcePath);
+    for (const dependency of transformed.dependencies) {
+      if (path.resolve(dependency) !== resourcePath)
+        this.addDependency(dependency);
+    }
+  }
 
   // Turbopack's custom loaders must return JavaScript, including when a content
   // filter matched a comment or string rather than a decorated POM class.
@@ -39,8 +54,5 @@ export default function turbopackLoader(this: LoaderContext, source: string) {
         .join("\n")}`
     );
 
-  // ponytail: imported type/config dependencies are not tracked by this spike.
-  // Restart Next after changing them; add compiler dependency reporting before
-  // promising incremental compilation for POMs with cross-file metadata.
   return result.outputText;
 }

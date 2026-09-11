@@ -3,6 +3,7 @@ import config from "./playwright.config";
 
 export default defineConfig({
   ...config,
+  testIgnore: "**/incremental.spec.ts",
   outputDir: "test-results/production",
   webServer: {
     command: "pnpm run start",

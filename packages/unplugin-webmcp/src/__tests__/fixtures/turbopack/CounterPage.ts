@@ -1,5 +1,6 @@
 import { WebMCP } from "@ayme-dev/webmcp";
 import type { Locator, Page } from "@playwright/test";
+import type { CounterMode } from "./CounterMode";
 
 @WebMCP
 export class CounterPage {
@@ -15,5 +16,10 @@ export class CounterPage {
   @WebMCP.tool({ description: "Increment the counter." })
   async increment() {
     await this.incrementButton.click();
+  }
+
+  @WebMCP.tool({ description: "Set counter mode metadata." })
+  setMode(mode: CounterMode) {
+    void mode;
   }
 }

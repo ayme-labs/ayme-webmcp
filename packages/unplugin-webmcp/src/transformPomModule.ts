@@ -2,6 +2,7 @@ import {
   createPomCompiler,
   type PomCompilerOptions,
 } from "./derivePomManifests";
+import { pomProgramDependencies } from "./pomProgram";
 import { rewritePomImports } from "./rewritePomImports";
 
 /** The source transform shared by Vite and the experimental Turbopack loader. */
@@ -15,6 +16,7 @@ export function createPomTransform(options: PomCompilerOptions = {}) {
     const manifests = compiler.derivePomManifests(fileName);
     if (manifests.length === 0) return null;
 
+    const dependencies = pomProgramDependencies(fileName, options);
     const rewrittenCode = rewritePomImports(code, fileName, options);
     const registrations = manifests
       .map(
@@ -26,6 +28,7 @@ export function createPomTransform(options: PomCompilerOptions = {}) {
     return {
       code: `import { registerCompiledPom } from '@ayme-dev/webmcp/internal';\n${rewrittenCode}\n${registrations}\n`,
       map: null,
+      dependencies,
     };
   };
 }
