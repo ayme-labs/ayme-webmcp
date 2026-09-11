@@ -419,7 +419,11 @@ export async function createAdapterPage(
       return current;
     };
     const wrapped = new WeakSet<object>();
-    const instrument = (object: any, kind: string): any => {
+    const instrument = (
+      object: any,
+      kind: string,
+      members?: readonly string[]
+    ): any => {
       if (!object || typeof object !== "object" || wrapped.has(object))
         return object;
       wrapped.add(object);
@@ -427,6 +431,7 @@ export async function createAdapterPage(
       for (const name of Object.getOwnPropertyNames(prototype)) {
         if (
           name === "constructor" ||
+          (members && !members.includes(name)) ||
           typeof Object.getOwnPropertyDescriptor(prototype, name)?.value !==
             "function"
         )
@@ -453,6 +458,13 @@ export async function createAdapterPage(
       return object;
     };
     instrument(host.__aymeAdapterPage, "Page");
+    instrument(host.__aymeAdapterPage.keyboard, "Keyboard", [
+      "down",
+      "up",
+      "press",
+      "type",
+      "insertText",
+    ]);
     host.__aymeElementHandles = new Map<string, any>();
     const handleContext =
       typeof crypto.randomUUID === "function"
@@ -541,6 +553,10 @@ function createPageProxy(realPage: Page, state: AdapterPageState): Page {
       // Page.url() is synchronous in Playwright's public API. Keep the
       // adapter-observed value locally after asynchronous bridge operations.
       if (prop === "url") return () => state.url;
+
+      // Keyboard is a synchronous Page property whose methods must execute in
+      // the browser adapter. Do not leak the native Playwright keyboard.
+      if (prop === "keyboard") return createKeyboardProxy(realPage);
 
       // Only ledger-declared out-of-scope Page members may use the native
       // driver. Record them, and wrap any object they return so downstream
@@ -730,6 +746,34 @@ function createPageProxy(realPage: Page, state: AdapterPageState): Page {
       };
     },
   }) as Page;
+}
+
+function createKeyboardProxy(realPage: Page) {
+  const call = async (method: string, args: unknown[]) => {
+    if (statusFor("Keyboard", method) !== "implemented")
+      throw new TypeError(
+        `Keyboard.${method} is not implemented by the adapter`
+      );
+    return await evaluateAdapter<void>(
+      realPage,
+      ({ method: member, args: rawArgs }) => {
+        const host = window as any;
+        return host.__aymeInvokeAdapter(() =>
+          host.__aymeAdapterPage.keyboard[member](
+            ...host.__aymeDecodeBridgeValue(rawArgs)
+          )
+        );
+      },
+      { method, args: encodeBridgeValueForPage(args, realPage) as unknown[] }
+    );
+  };
+  return {
+    down: (key: string) => call("down", [key]),
+    up: (key: string) => call("up", [key]),
+    insertText: (text: string) => call("insertText", [text]),
+    type: (text: string, options?: unknown) => call("type", [text, options]),
+    press: (key: string, options?: unknown) => call("press", [key, options]),
+  };
 }
 
 // ── ElementHandle proxy ─────────────────────────────────────────────

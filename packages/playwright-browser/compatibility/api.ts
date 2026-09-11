@@ -105,7 +105,9 @@ export const pageLedger = {
   isEnabled: implemented(),
   isHidden: implemented(),
   isVisible: implemented(),
-  keyboard: planned("Synthetic functional input only."),
+  keyboard: implemented(
+    "Synthetic current-document events and editable insertion only; browser cursor movement, deletion, focus traversal, and navigation defaults are not simulated."
+  ),
   localStorage: undecided(),
   locator: implemented(),
   mainFrame: implemented("Returns the current Page facade, not a Frame."),
@@ -275,11 +277,11 @@ export const locatorLedger = {
 } as const satisfies Ledger<Locator>;
 
 export const keyboardLedger = {
-  down: planned("Synthetic functional input only."),
-  insertText: planned("Synthetic functional input only."),
-  press: planned("Synthetic functional input only."),
-  type: planned("Synthetic functional input only."),
-  up: planned("Synthetic functional input only."),
+  down: implemented("Synthetic current-document keyboard events only."),
+  insertText: implemented("Synthetic editable insertion only."),
+  press: implemented("Synthetic current-document keyboard events only."),
+  type: implemented("Synthetic editable insertion only."),
+  up: implemented("Synthetic current-document keyboard events only."),
 } as const satisfies Ledger<Keyboard>;
 
 export const mouseLedger = {
@@ -303,7 +305,7 @@ export const ledgers = {
   Touchscreen: touchscreenLedger,
 } as const;
 
-export function statusFor(owner: "Page" | "Locator", member: string) {
+export function statusFor(owner: keyof typeof ledgers, member: string) {
   const ledger = ledgers[owner] as Readonly<
     Record<string | symbol, CompatibilityEntry>
   >;
