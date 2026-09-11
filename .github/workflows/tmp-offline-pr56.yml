@@ -1,34 +1,57 @@
-name: Prepare isolated PR 56 verification
+name: Verify PR 56 presence candidate
 on:
   push:
     branches: [chore/56-presence-verification]
 permissions:
-  contents: read
+  contents: write
 jobs:
-  prepare:
+  verify:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
     steps:
       - uses: actions/checkout@v7
         with:
-          persist-credentials: false
           fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: 24
       - run: corepack enable
-      - name: Prepare offline workspace
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Apply exact locally tested patch
+        shell: bash
         run: |
-          mkdir -p "$RUNNER_TEMP/offline"
-          git archive 205a0e3193d09a672eb3ccf8e60498a5bdc39d75 | tar -x -C "$RUNNER_TEMP/offline"
-          cd "$RUNNER_TEMP/offline"
-          git init
-          pnpm install --frozen-lockfile
-          mkdir -p .tools
-          cp "$(command -v node)" .tools/node
-          npm install --prefix .tools pnpm@11.24.0 --ignore-scripts
-          tar --exclude=.git -czf "$RUNNER_TEMP/offline-pr56.tar.gz" .
+          set -euo pipefail
+          gzip -dc .github/pr56-presence.patch.gz > "$RUNNER_TEMP/pr56.patch"
+          echo "b72574196b508af818753e79a95478eed50186792cba8c9988b8f92a42514573  $RUNNER_TEMP/pr56.patch" | sha256sum -c -
+          git checkout --detach 205a0e3193d09a672eb3ccf8e60498a5bdc39d75
+          git apply --check "$RUNNER_TEMP/pr56.patch"
+          git apply "$RUNNER_TEMP/pr56.patch"
+          if git diff --name-only | grep -v '^packages/webmcp/src/'; then exit 1; fi
+          test -z "$(git diff --name-only -- packages/playwright-browser)"
+      - run: pnpm install --frozen-lockfile
+      - name: Full repository verification
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run check 2>&1 | tee "$RUNNER_TEMP/pr56-check.log"
+      - name: Publish verified candidate only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add packages/webmcp/src
+          git -c core.hooksPath=/dev/null commit -m 'fix(webmcp): separate structural presence from availability'
+          pnpm run commitlint --from 205a0e3193d09a672eb3ccf8e60498a5bdc39d75 --to HEAD
+          git push origin HEAD:refs/heads/chore/56-presence-candidate
+          git rev-parse HEAD
+          git diff --stat 205a0e3193d09a672eb3ccf8e60498a5bdc39d75
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: offline-pr56
-          path: ${{ runner.temp }}/offline-pr56.tar.gz
+          name: pr56-presence-checks
+          path: ${{ runner.temp }}/pr56-check.log
           retention-days: 1
