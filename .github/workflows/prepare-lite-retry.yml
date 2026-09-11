@@ -21,28 +21,24 @@ jobs:
         with:
           enable-cache: true
           disable-nix-access-token: true
-      - name: Apply the migration with exact-commit build permission
+      - name: Refresh the exact fork commit
         run: |
-          git fetch --depth=1 origin a9d422b02cccbcfeb7434b18170e29943b929919
           python3 <<'PY'
-          import subprocess
-          source = subprocess.check_output(['git', 'show', 'a9d422b02cccbcfeb7434b18170e29943b929919:.github/workflows/prepare-lite.yml'], text=True)
-          program = source.split("          python3 <<'PY'\n", 1)[1].split('\n          PY\n', 1)[0]
-          program = '\n'.join(line[10:] if line.startswith('          ') else line for line in program.splitlines())
-          program = program.replace('b8021fb06a7f4a5a54ab7e261761f65d32d30a60', '5a66acf73a6ef24de4cb570e9f550ba96d298982')
-          program = program.replace('"@ayme-dev/playwright-lite": true', '"@ayme-dev/playwright-lite@https://codeload.github.com/ayme-labs/playwright-lite/tar.gz/5a66acf73a6ef24de4cb570e9f550ba96d298982": true')
-          exec(compile(program, 'migration.py', 'exec'))
+          from pathlib import Path
+          for f in ['packages/webmcp/package.json', 'apps/example-vue/package.json', 'pnpm-workspace.yaml', 'README.md', 'packages/webmcp/THIRD_PARTY_NOTICES.txt']:
+              p = Path(f)
+              s = p.read_text()
+              assert '5a66acf73a6ef24de4cb570e9f550ba96d298982' in s, f
+              p.write_text(s.replace('5a66acf73a6ef24de4cb570e9f550ba96d298982', '44af2734713027f734dfdcdd8e92b51cad9a9652'))
           PY
-          git restore .github/workflows/ci.yml
       - name: Install and verify inside Devbox
         run: |
           devbox run -- bash <<'SCRIPT'
           set -euo pipefail
           pnpm install --no-frozen-lockfile --store-dir "$RUNNER_TEMP/lite-store"
           git diff --name-only --diff-filter=ACM -z | xargs -0 pnpm exec prettier --write --ignore-unknown
-          pnpm exec prettier --write packages/webmcp/src/browserPage.ts packages/webmcp/src/browserPage.test.ts
-          git add -A
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'refactor(webmcp): use the commit-pinned Playwright Lite fork'
+          git add packages/webmcp/package.json apps/example-vue/package.json pnpm-lock.yaml pnpm-workspace.yaml README.md packages/webmcp/THIRD_PARTY_NOTICES.txt
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'chore: pin the reviewed browser bridge build'
           git push origin HEAD:work/prepare-lite-migration
           git log -1 --format='PREPARED_COMMIT %H%nPREPARED_TREE %T'
           pnpm --filter @ayme-dev/example-next exec playwright install --with-deps chromium
