@@ -21,24 +21,34 @@ jobs:
         with:
           enable-cache: true
           disable-nix-access-token: true
-      - name: Refresh the exact fork commit
-        run: |
-          python3 <<'PY'
-          from pathlib import Path
-          for f in ['packages/webmcp/package.json', 'apps/example-vue/package.json', 'pnpm-workspace.yaml', 'README.md', 'packages/webmcp/THIRD_PARTY_NOTICES.txt']:
-              p = Path(f)
-              s = p.read_text()
-              assert '5a66acf73a6ef24de4cb570e9f550ba96d298982' in s, f
-              p.write_text(s.replace('5a66acf73a6ef24de4cb570e9f550ba96d298982', '44af2734713027f734dfdcdd8e92b51cad9a9652'))
-          PY
-      - name: Install and verify inside Devbox
+      - name: Verify source-path comments and preserve strict dependency guards
         run: |
           devbox run -- bash <<'SCRIPT'
           set -euo pipefail
-          pnpm install --no-frozen-lockfile --store-dir "$RUNNER_TEMP/lite-store"
-          git diff --name-only --diff-filter=ACM -z | xargs -0 pnpm exec prettier --write --ignore-unknown
-          git add packages/webmcp/package.json apps/example-vue/package.json pnpm-lock.yaml pnpm-workspace.yaml README.md packages/webmcp/THIRD_PARTY_NOTICES.txt
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'chore: pin the reviewed browser bridge build'
+          pnpm install --frozen-lockfile --store-dir "$RUNNER_TEMP/lite-store"
+          pnpm exec turbo run build --filter=@ayme-dev/webmcp...
+          python3 <<'PY'
+          from pathlib import Path
+          matches = []
+          for p in Path('packages/webmcp/dist').glob('*.mjs'):
+              for n, line in enumerate(p.read_text().splitlines(), 1):
+                  if '@ayme-dev/playwright-lite' in line:
+                      print('PRIVATE_REFERENCE', p.name, n, line[:1000])
+                      matches.append(line)
+          assert matches, 'Expected to reproduce the private-reference guard failure'
+          assert all(line.lstrip().startswith('//#region ') for line in matches), 'Unexpected reference: inspect before changing build configuration'
+          p = Path('packages/webmcp/tsdown.config.ts')
+          source = p.read_text()
+          old = '  clean: true,\n'
+          assert source.count(old) == 1
+          source = source.replace(old, old + '  // Omit build-machine source paths, not copyright or license comments.\n  inputOptions: { experimental: { attachDebugInfo: "none" } },\n')
+          p.write_text(source)
+          PY
+          pnpm exec prettier --write packages/webmcp/tsdown.config.ts
+          pnpm exec turbo run build --filter=@ayme-dev/webmcp...
+          pnpm --filter @ayme-dev/webmcp exec vitest run src/packedConsumer.test.ts
+          git add packages/webmcp/tsdown.config.ts
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'build(webmcp): omit private source paths from bundled output'
           git push origin HEAD:work/prepare-lite-migration
           git log -1 --format='PREPARED_COMMIT %H%nPREPARED_TREE %T'
           pnpm --filter @ayme-dev/example-next exec playwright install --with-deps chromium
