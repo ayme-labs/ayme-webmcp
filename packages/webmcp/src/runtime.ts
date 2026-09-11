@@ -2,6 +2,7 @@ import { createPage } from "@ayme-dev/playwright-browser";
 import {
   constructPageObject,
   createAymeRuntime,
+  probeRegisteredPomMembers,
   registerPageObject,
   type PageObjectConstructor,
 } from "./registry";
@@ -68,6 +69,8 @@ export function createRuntimeSession(page: AymePage = createPage()) {
           });
           return;
         }
+        await probeRegisteredPomMembers();
+        if (signal.aborted) return;
         let attemptFailed = false;
         const registration = await synchronizeWebMcpTools(driver, {
           signal,

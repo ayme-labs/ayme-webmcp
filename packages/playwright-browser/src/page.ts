@@ -199,6 +199,7 @@ export class PageImpl {
   readonly keyboard: BrowserKeyboard;
   private _injected: ReturnType<typeof injectedScriptFor> | undefined;
   private _injectedTestIdAttributeName: string | undefined;
+  private readonly structuralRefs = new Map<string, Element>();
   private defaultTimeout: number | undefined;
   private defaultNavigationTimeout: number | undefined;
 
@@ -226,7 +227,13 @@ export class PageImpl {
 
   // ── Resolution ──────────────────────────────────────────────────
 
+  registerStructuralRef(ref: string, element: Element) {
+    this.structuralRefs.set(ref, element);
+  }
+
   resolveAll(selector: string): Element[] {
+    const structuralRef = this.structuralRef(selector);
+    if (structuralRef) return [structuralRef];
     try {
       const parsed = this.injected.parseSelector(selector);
       return this.injected.querySelectorAll(parsed, this.document);
@@ -2006,12 +2013,19 @@ export class PageImpl {
     selector: string,
     strict: boolean
   ): Element | undefined {
+    const structuralRef = this.structuralRef(selector);
+    if (structuralRef) return structuralRef;
     try {
       const parsed = this.injected.parseSelector(selector);
       return this.injected.querySelector(parsed, this.document, strict);
     } catch (error) {
       throw presentOriginalXPath(error, selector);
     }
+  }
+
+  private structuralRef(selector: string) {
+    const match = /^aria-ref=(.+)$/.exec(selector);
+    return match ? this.structuralRefs.get(match[1]) : undefined;
   }
 
   private async ensureActionable(

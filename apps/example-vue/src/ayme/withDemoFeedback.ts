@@ -44,6 +44,13 @@ export function withDemoFeedback(
           if (!isAymeLocator(target) || !operation)
             return wrapResult(member.apply(target, args));
 
+          const isTrialClick =
+            operation === "click" &&
+            typeof args[0] === "object" &&
+            args[0] !== null &&
+            (args[0] as { trial?: unknown }).trial === true;
+          if (isTrialClick) return wrapResult(member.apply(target, args));
+
           const locator = target as Locator;
           options.onTrace({
             operation,

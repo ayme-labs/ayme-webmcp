@@ -28,6 +28,8 @@ type LiveRegisteredPomTool = RegisteredPomTool & {
 export type RegisteredPom = {
   id: string;
   instance: object;
+  root?: Locator;
+  rootAvailable?: boolean;
   manifest: PomManifest;
   memberObservations: readonly PomMemberObservation[];
   tools: readonly LiveRegisteredPomTool[];
@@ -50,6 +52,7 @@ const registeredPoms = new Set<RegisteredPom>();
 const subscribers = new Set<() => void>();
 let mutationObserver: MutationObserver | undefined;
 let probeTimer: ReturnType<typeof setTimeout> | undefined;
+const POM_ROOT_TRIAL_TIMEOUT = 500;
 
 export function configureAymeRuntime(page: Page) {
   if (runtimeOwner)
@@ -84,6 +87,12 @@ function resetRegisteredPoms() {
   registeredPoms.clear();
   stopObservingPage();
   if (hadRegistrations) notifySubscribers();
+}
+
+export function requireAymeRuntimePage(): Page {
+  if (!browserPage)
+    throw new Error("Configure the Ayme browser runtime before interacting.");
+  return browserPage;
 }
 
 export function registerCompiledPom(PomClass: object, manifest: PomManifest) {
@@ -132,6 +141,8 @@ export function registerPageObject<T extends object>(
   const registration: RegisteredPom = {
     id: compiledPom.className,
     instance,
+    root: pomRoot(instance),
+    rootAvailable: undefined,
     manifest: compiledPom,
     memberObservations: [],
     tools: createRegisteredTools(compiledPom, instance),
@@ -180,15 +191,26 @@ function schedulePomMemberProbe() {
 
 export async function probeRegisteredPomMembers() {
   const results = await Promise.all(
-    [...registeredPoms].map(async (registration) => ({
-      registration,
-      memberObservations: await probePomMembers(registration),
-    }))
+    [...registeredPoms].map(async (registration) => {
+      const rootAvailable =
+        registration.root === undefined
+          ? undefined
+          : await probePomRoot(registration.root);
+      return {
+        registration,
+        rootAvailable,
+        memberObservations: await probePomMembers(registration),
+      };
+    })
   );
 
   let changed = false;
   for (const result of results) {
     if (!registeredPoms.has(result.registration)) continue;
+    if (result.registration.rootAvailable !== result.rootAvailable) {
+      result.registration.rootAvailable = result.rootAvailable;
+      changed = true;
+    }
     if (
       sameObservations(
         result.registration.memberObservations,
@@ -215,6 +237,7 @@ function sameObservations(
         observation.memberName === candidate.memberName &&
         observation.kind === candidate.kind &&
         observation.count === candidate.count &&
+        observation.available === candidate.available &&
         observation.access === candidate.access &&
         observation.error === candidate.error
       );
@@ -274,13 +297,16 @@ export function listRegisteredPomTools() {
     for (const tool of registration.tools) {
       const componentPath = tool.componentPath;
       const active =
-        componentPath === undefined ||
-        registration.memberObservations.some(
-          (observation) =>
-            observation.kind === "component-root" &&
-            observation.count > 0 &&
-            isLiveComponentRoot(componentPath, observation.memberName)
-        );
+        componentPath === undefined
+          ? registration.root === undefined ||
+            registration.rootAvailable === true
+          : registration.memberObservations.some(
+              (observation) =>
+                observation.kind === "component-root" &&
+                observation.count > 0 &&
+                observation.available !== false &&
+                isLiveComponentRoot(componentPath, observation.memberName)
+            );
       if (active && !activeTools.has(tool.name))
         activeTools.set(tool.name, tool);
     }
@@ -305,6 +331,15 @@ function escapeRegExp(value: string) {
 }
 
 export const listRegisteredTools = listRegisteredPomTools;
+
+function pomRoot(instance: object): Locator | undefined {
+  try {
+    const root = Reflect.get(instance, "root");
+    return isAymeLocator(root) ? root : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export function subscribeToRegisteredPoms(subscriber: () => void) {
   subscribers.add(subscriber);
@@ -543,6 +578,14 @@ async function probePomMembers(
   );
 }
 
+async function probePomRoot(root: Locator): Promise<boolean> {
+  try {
+    return (await root.count()) > 0 && (await passesRootTrial(root));
+  } catch {
+    return false;
+  }
+}
+
 async function collectRegisteredPomRoots(
   instance: object,
   members: readonly PomMemberManifest[],
@@ -711,10 +754,13 @@ async function probeMembers(
           continue;
         }
 
+        const rootCount = await componentValue.root.count();
         observations.push({
           memberName: `${componentPath}.root`,
           kind: "component-root",
-          count: await componentValue.root.count(),
+          count: rootCount,
+          available:
+            rootCount > 0 && (await passesRootTrial(componentValue.root)),
         });
         const childMembers = componentManifest.members.filter(
           (child) => !(child.kind === "locator" && child.memberName === "root")
@@ -750,6 +796,15 @@ async function probeMembers(
   return observations;
 }
 
+async function passesRootTrial(root: Locator): Promise<boolean> {
+  try {
+    await root.click({ trial: true, timeout: POM_ROOT_TRIAL_TIMEOUT });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function readMember(instance: object, member: PomMemberManifest) {
   const value = Reflect.get(instance, member.memberName);
   if (member.access === "method") {
@@ -771,6 +826,7 @@ async function executeTool(
 
   const result = await method.apply(instance, validatedArguments(tool, args));
   if (result === undefined) return { ok: true };
+  if (isReturnedPom(result, tool.returnPoms ?? [])) return { ok: true };
   if (isJsonValue(result)) return { ok: true, result };
   return { ok: true, result: String(result) };
 }
@@ -892,6 +948,14 @@ function isJsonValue(value: unknown): value is JsonValue {
   if (Array.isArray(value)) return value.every(isJsonValue);
   if (!isRecord(value)) return false;
   return Object.values(value).every(isJsonValue);
+}
+
+function isReturnedPom(value: unknown, returnPoms: readonly string[]) {
+  if (!isRecord(value) || returnPoms.length === 0) return false;
+  const constructor = value.constructor;
+  return (
+    typeof constructor === "function" && returnPoms.includes(constructor.name)
+  );
 }
 
 function isJsonPrimitive(value: unknown): value is JsonPrimitive {
