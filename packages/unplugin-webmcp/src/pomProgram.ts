@@ -14,10 +14,7 @@ type PomProgramOptions = {
 export function createPomProgram(
   fileName: string,
   options: PomCompilerOptions = {},
-  {
-    fallbackToUnconfigured = false,
-    onDependency,
-  }: PomProgramOptions = {}
+  { fallbackToUnconfigured = false, onDependency }: PomProgramOptions = {}
 ) {
   const absoluteFileName = path.resolve(fileName);
 
