@@ -1,0 +1,33 @@
+{
+  "name": "@ayme-dev/example-nuxt",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev --host 127.0.0.1 --port 4193",
+    "build": "nuxt build",
+    "start": "node .output/server/index.mjs",
+    "typecheck": "nuxt typecheck && tsc --noEmit -p tsconfig.pom.json",
+    "lint": "eslint . --max-warnings 0",
+    "test:e2e": "pnpm run test:e2e:dev && pnpm run test:e2e:prod",
+    "test:e2e:dev": "playwright test",
+    "test:e2e:prod": "playwright test --config=playwright.production.config.ts"
+  },
+  "dependencies": {
+    "@ayme-dev/webmcp": "workspace:*",
+    "@ayme-dev/webmcp-vue": "workspace:*",
+    "nuxt": "4.5.2",
+    "vue": "^3.5.42"
+  },
+  "devDependencies": {
+    "@ayme-dev/eslint-config": "workspace:*",
+    "@ayme-dev/typescript-config": "workspace:*",
+    "@ayme-dev/unplugin-webmcp": "workspace:*",
+    "@playwright/test": "~1.62.1",
+    "@types/node": "^24.0.0",
+    "eslint": "^10.9.1",
+    "playwright": "~1.62.1",
+    "typescript": "^6.0.3",
+    "vue-tsc": "^3.3.11"
+  }
+}

@@ -1,0 +1,18 @@
+<script setup lang="ts">
+import { ref } from "vue";
+import { usePageObject } from "@ayme-dev/webmcp-vue";
+import { CounterPage } from "../../playwright/pom/CounterPage";
+
+const count = ref(0);
+const pom = usePageObject(CounterPage);
+</script>
+
+<template>
+  <section aria-label="Counter">
+    <p>
+      Count: <output>{{ count }}</output>
+    </p>
+    <button @click="count += 1">Increment</button>
+    <button @click="pom.increment()">Call Page Object</button>
+  </section>
+</template>

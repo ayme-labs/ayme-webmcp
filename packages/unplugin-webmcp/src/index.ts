@@ -66,6 +66,13 @@ export const unpluginFactory: UnpluginFactory<AymeWebMcpOptions | undefined> = (
     name: "ayme-webmcp",
     enforce: "pre",
     vite: {
+      transform: {
+        filter: { id: /\.ts$/ },
+        handler(code, id, transformOptions) {
+          if (transformOptions?.ssr) return null;
+          return transformPom(code, id);
+        },
+      },
       async config(config) {
         const exclude = config.optimizeDeps?.exclude ?? [];
         const settings = await resolvePlaywrightSettings(
