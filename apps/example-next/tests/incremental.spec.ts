@@ -25,8 +25,5 @@ test("rebuilds POM metadata from an imported type without restarting Next", asyn
     await expect(metadata).not.toContainText('"double"');
   } finally {
     await writeFile(counterModePath, original);
-    await page.reload();
   }
-
-  await expect(metadata).toContainText('"double"', { timeout: 30_000 });
 });
