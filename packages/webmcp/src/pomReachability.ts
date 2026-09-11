@@ -63,7 +63,8 @@ export async function probePomReachability(locator: Locator): Promise<boolean> {
             }
             if (
               position === "fixed" &&
-              (!parent || !establishesContainingBlock(view.getComputedStyle(parent)))
+              (!parent ||
+                !establishesContainingBlock(view.getComputedStyle(parent)))
             )
               return { ancestors, fixedToViewport: true };
           }
@@ -117,7 +118,8 @@ export async function probePomReachability(locator: Locator): Promise<boolean> {
         scaleY: number,
         alignment: ScrollAlignment
       ): Scroll {
-        const style = scroller.ownerDocument.defaultView!.getComputedStyle(scroller);
+        const style =
+          scroller.ownerDocument.defaultView!.getComputedStyle(scroller);
         const reverseX =
           style.direction === "rtl" || style.writingMode === "vertical-rl";
         const x = scrollDelta(
@@ -187,10 +189,7 @@ export async function probePomReachability(locator: Locator): Promise<boolean> {
         let left = 0;
         let top = 0;
         for (const scroll of scrolls) {
-          if (
-            scroll.element === current ||
-            !ancestors.includes(scroll.element)
-          )
+          if (scroll.element === current || !ancestors.includes(scroll.element))
             continue;
           if (
             fixedToViewport &&
@@ -301,11 +300,7 @@ export async function probePomReachability(locator: Locator): Promise<boolean> {
       const document = element.ownerDocument;
       const view = document.defaultView;
       if (!view) return false;
-      for (
-        let node: Element | null = element;
-        node;
-        node = parentElement(node)
-      )
+      for (let node: Element | null = element; node; node = parentElement(node))
         if (node.hasAttribute("inert")) return false;
       const modal = [...document.querySelectorAll(":modal")].at(-1);
       if (modal && !contains(modal, element) && !contains(element, modal))
@@ -356,8 +351,7 @@ export async function probePomReachability(locator: Locator): Promise<boolean> {
                 box.left +
                 (ancestor.clientLeft + ancestor.clientWidth) * scaleX,
               bottom:
-                box.top +
-                (ancestor.clientTop + ancestor.clientHeight) * scaleY,
+                box.top + (ancestor.clientTop + ancestor.clientHeight) * scaleY,
             };
             const scroll = projectIntoPort(
               rect,

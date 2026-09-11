@@ -17,9 +17,9 @@ describe("POM root reachability", () => {
     await expect(probePomReachability(page.locator("#root"))).resolves.toBe(
       true
     );
-    await expect(
-      probePomReachability(page.locator("button"))
-    ).resolves.toBe(true);
+    await expect(probePomReachability(page.locator("button"))).resolves.toBe(
+      true
+    );
   });
 
   it.each([
