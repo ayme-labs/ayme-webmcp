@@ -353,7 +353,8 @@ export async function probePomReachability(locator: Locator): Promise<boolean> {
               left: box.left + ancestor.clientLeft * scaleX,
               top: box.top + ancestor.clientTop * scaleY,
               right:
-                box.left + (ancestor.clientLeft + ancestor.clientWidth) * scaleX,
+                box.left +
+                (ancestor.clientLeft + ancestor.clientWidth) * scaleX,
               bottom:
                 box.top + (ancestor.clientTop + ancestor.clientHeight) * scaleY,
             };
