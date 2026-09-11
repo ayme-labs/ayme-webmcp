@@ -21,11 +21,12 @@ jobs:
           mkdir -p "$RUNNER_TEMP/offline"
           git archive 205a0e3193d09a672eb3ccf8e60498a5bdc39d75 | tar -x -C "$RUNNER_TEMP/offline"
           cd "$RUNNER_TEMP/offline"
+          git init
           pnpm install --frozen-lockfile
           mkdir -p .tools
           cp "$(command -v node)" .tools/node
           npm install --prefix .tools pnpm@11.24.0 --ignore-scripts
-          tar -czf "$RUNNER_TEMP/offline-pr56.tar.gz" .
+          tar --exclude=.git -czf "$RUNNER_TEMP/offline-pr56.tar.gz" .
       - uses: actions/upload-artifact@v4
         with:
           name: offline-pr56
