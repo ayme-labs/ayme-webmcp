@@ -32,7 +32,7 @@ it("emits POM registration, JavaScript and compiler dependencies", () => {
   expect(code).toContain('"className": "CounterPage"');
   expect(code).toContain('"methodName": "increment"');
   expect(code).toContain('"methodName": "setMode"');
-  expect(code).toContain('"enum": ["single", "double"]');
+  expect(code).toContain('"enum":["single","double"]');
   expect(code).not.toContain("@WebMCP");
   expect(code).not.toContain("@playwright/test");
   expect(code).not.toContain("readonly incrementButton: Locator");

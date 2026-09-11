@@ -28,12 +28,18 @@ the webpack loader calling convention supported by Turbopack. It calls the same
 source transform as Vite, then transpiles the result with the package's existing
 TypeScript dependency. Its only configuration option is `tsconfigPath`.
 
-The Next config applies it to decorated `.ts` files on the browser graph.
+The loader reports the TypeScript configuration files and non-default-library
+source files used by the POM compiler through the loader dependency API. This
+lets Turbopack invalidate compiled POM metadata when cross-file types or project
+configuration change. If the bundler does not provide dependency tracking, the
+loader fails instead of silently serving stale metadata.
+
+The Next config applies the loader to decorated `.ts` files on the browser graph.
 Turbopack loads the built package entry, not a source-file alias. The workspace
 root is explicit so linked Ayme packages resolve. Dev and production outputs
 use separate directories.
 
-The React runtime session now creates its default browser page lazily. During a
+The React runtime session creates its default browser page lazily. During a
 server render, `usePageObject` returns an unconstructed object with the POM
 prototype and does not register it. The provider can therefore render the same
 UI on the server without a fake DOM or fake Playwright implementation. The
@@ -52,11 +58,12 @@ pnpm --filter @ayme-dev/unplugin-webmcp test
 pnpm --filter @ayme-dev/example-next test:e2e
 ```
 
-`test:e2e` runs the same tests against `next dev` and `next start`. Build first.
-With JavaScript disabled, the test requires the server response to contain the
-counter, output, publication state and POM action button. With JavaScript
-enabled, the test checks hydration, the compiled POM through the React hook,
-the same POM through real Playwright, removal and remounting, and browser errors.
+The development suite verifies server rendering, hydration, real Playwright and
+POM execution, removal/remounting, and live invalidation of compiled metadata.
+The invalidation check edits an imported POM type while `next dev` remains
+running and requires the browser-visible manifest to update without a restart.
+The production suite repeats the stable rendering and execution checks against
+`next start`; the source-mutation check is development-only.
 
 The branch workflow also runs the existing React/Vite browser tests, package
 type checks, lint, formatting and dependency checks. It uses the committed
@@ -80,10 +87,10 @@ Server Component POM execution, Edge deployments, Pages Router, source-map
 fidelity and packaged-consumer certification are not covered. POMs must use
 `.ts` and the existing explicit `@WebMCP` convention.
 
-The compiler reads TypeScript project files from disk. This loader does not
-report imported type/config dependencies to Turbopack yet. Restart Next after
-changing them. Full POM hot replacement and cross-file metadata invalidation
-need separate checks before this can become a supported integration.
+Dependency tracking follows the TypeScript program used for metadata derivation.
+Because that program honors the project's configured root files, broad
+`tsconfig` include patterns can make a POM depend on more files than its direct
+imports. This favors correct invalidation over the smallest possible watch set.
 
 ## References
 
