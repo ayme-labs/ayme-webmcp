@@ -258,12 +258,30 @@ export async function listRegisteredPomRoots(): Promise<RegisteredPomRoot[]> {
         component,
       ])
     );
+    const registrationRoots: RegisteredPomRoot[] = [];
     await collectRegisteredPomRoots(
       registration.instance,
       registration.manifest.members,
       registration.id,
       components,
-      roots
+      registrationRoots
+    );
+    const unavailableRootLabels = new Set<string>();
+    for (const observation of registration.memberObservations) {
+      if (
+        observation.kind !== "component-root" ||
+        isAvailableComponentRootObservation(observation) ||
+        !observation.memberName.endsWith(".root")
+      )
+        continue;
+      unavailableRootLabels.add(
+        `${registration.id}.${observation.memberName.slice(0, -".root".length)}`
+      );
+    }
+    roots.push(
+      ...registrationRoots.filter(
+        (root) => !unavailableRootLabels.has(root.label)
+      )
     );
   }
   return roots;
@@ -302,9 +320,7 @@ export function listRegisteredPomTools() {
             registration.rootAvailable === true
           : registration.memberObservations.some(
               (observation) =>
-                observation.kind === "component-root" &&
-                observation.count > 0 &&
-                observation.available !== false &&
+                isAvailableComponentRootObservation(observation) &&
                 isLiveComponentRoot(componentPath, observation.memberName)
             );
       if (active && !activeTools.has(tool.name))
@@ -312,6 +328,16 @@ export function listRegisteredPomTools() {
     }
   }
   return [...activeTools.values()];
+}
+
+function isAvailableComponentRootObservation(
+  observation: PomMemberObservation
+) {
+  return (
+    observation.kind === "component-root" &&
+    observation.count > 0 &&
+    observation.available !== false
+  );
 }
 
 function isLiveComponentRoot(path: string, memberName: string) {
