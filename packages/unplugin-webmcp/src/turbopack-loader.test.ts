@@ -11,10 +11,7 @@ const resourcePath = fileURLToPath(
 const context = { resourcePath, getOptions: () => ({}) };
 
 it("emits POM registration and JavaScript without Playwright type imports", () => {
-  const code = turbopackLoader.call(
-    context,
-    readFileSync(resourcePath, "utf8")
-  );
+  const code = turbopackLoader.call(context, readFileSync(resourcePath, "utf8"));
   expect(code).toMatch(/registerCompiledPom\(CounterPage,/);
   expect(code).toContain('"className": "CounterPage"');
   expect(code).toContain('"methodName": "increment"');
@@ -23,10 +20,10 @@ it("emits POM registration and JavaScript without Playwright type imports", () =
   expect(code).not.toContain("readonly incrementButton: Locator");
 });
 
-it("still emits JavaScript when the content filter matched only a comment", () => {
+it("transpiles ordinary TypeScript when no POM transform is needed", () => {
   const code = turbopackLoader.call(
     { ...context, resourcePath: "/unused/plain.ts" },
-    'export const answer: number = 42;'
+    "export const answer: number = 42;"
   );
   expect(code).toContain("export const answer = 42;");
   expect(code).not.toContain("registerCompiledPom");

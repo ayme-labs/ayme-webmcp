@@ -1,0 +1,13 @@
+{
+  "extends": ["//"],
+  "tags": ["app"],
+  "tasks": {
+    "build": {
+      "outputs": [".next/**", "!.next/cache/**"],
+      "cache": false
+    },
+    "typecheck": {
+      "dependsOn": ["build", "^typecheck"]
+    }
+  }
+}

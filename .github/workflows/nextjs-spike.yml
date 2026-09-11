@@ -1,0 +1,87 @@
+name: Next.js spike
+
+on:
+  push:
+    branches:
+      - codex/nextjs-turbopack-spike
+  workflow_dispatch:
+
+concurrency:
+  group: nextjs-spike-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/codex/nextjs-turbopack-spike'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # This throwaway-branch job commits only lockfile/formatting changes. It does
+    # not run for pull requests or write to main. Remove it before promotion.
+    permissions:
+      contents: write
+    env:
+      LEFTHOOK: "0"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+      - uses: jetify-com/devbox-install-action@v0.12.0
+        with:
+          enable-cache: true
+          disable-nix-access-token: true
+      - name: Resolve, lock and verify inside Devbox
+        run: |
+          devbox run -- bash <<'SCRIPT'
+          set -euo pipefail
+          pnpm install --no-frozen-lockfile
+          pnpm exec prettier --write \
+            apps/example-next \
+            packages/unplugin-webmcp/src/index.ts \
+            packages/unplugin-webmcp/src/transformPomModule.ts \
+            packages/unplugin-webmcp/src/turbopack-loader.ts \
+            packages/unplugin-webmcp/src/turbopack-loader.test.ts \
+            packages/unplugin-webmcp/src/__tests__/fixtures/turbopack \
+            packages/unplugin-webmcp/package.json \
+            packages/unplugin-webmcp/tsdown.config.ts \
+            .github/workflows/nextjs-spike.yml
+          git add -- pnpm-lock.yaml apps/example-next \
+            packages/unplugin-webmcp/src/index.ts \
+            packages/unplugin-webmcp/src/transformPomModule.ts \
+            packages/unplugin-webmcp/src/turbopack-loader.ts \
+            packages/unplugin-webmcp/src/turbopack-loader.test.ts \
+            packages/unplugin-webmcp/src/__tests__/fixtures/turbopack \
+            packages/unplugin-webmcp/package.json \
+            packages/unplugin-webmcp/tsdown.config.ts \
+            .github/workflows/nextjs-spike.yml
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              -c core.hooksPath=/dev/null \
+              commit -m 'chore: lock and format the Next.js spike'
+            # No force push: reject if somebody changed the branch during install.
+            git push origin HEAD:refs/heads/codex/nextjs-turbopack-spike
+          fi
+          pnpm install --frozen-lockfile
+          pnpm exec turbo run build --filter=@ayme-dev/unplugin-webmcp... --filter=@ayme-dev/webmcp-react...
+          pnpm --filter @ayme-dev/unplugin-webmcp test
+          pnpm --filter @ayme-dev/unplugin-webmcp typecheck
+          pnpm --filter @ayme-dev/unplugin-webmcp lint
+          pnpm --filter @ayme-dev/example-next build
+          pnpm --filter @ayme-dev/example-next typecheck
+          pnpm --filter @ayme-dev/example-next lint
+          pnpm --filter @ayme-dev/example-next exec playwright install --with-deps chromium
+          pnpm --filter @ayme-dev/example-next test:e2e
+          pnpm run format:check
+          pnpm run boundaries
+          SCRIPT
+      - name: Upload browser failure traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextjs-spike-results
+          path: apps/example-next/test-results
+          if-no-files-found: ignore
