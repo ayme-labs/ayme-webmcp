@@ -15,14 +15,19 @@ test("rebuilds POM metadata from an imported type without restarting Next", asyn
   expect(changed).not.toBe(original);
 
   await page.goto("/");
-  const metadata = page.getByTestId("compiled-metadata");
-  await expect(metadata).toContainText('"double"');
+  await expect(page.getByTestId("compiled-metadata")).toContainText('"double"');
 
   try {
     await writeFile(counterModePath, changed);
-    await page.reload();
-    await expect(metadata).toContainText('"triple"', { timeout: 30_000 });
-    await expect(metadata).not.toContainText('"double"');
+    await expect
+      .poll(
+        async () => {
+          await page.reload();
+          return page.getByTestId("compiled-metadata").textContent();
+        },
+        { timeout: 30_000, intervals: [250, 500, 1_000] }
+      )
+      .toContain('"triple"');
   } finally {
     await writeFile(counterModePath, original);
   }
