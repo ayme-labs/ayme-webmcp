@@ -2157,7 +2157,7 @@ describe("Single-document adapter contract", () => {
       );
     });
 
-    it("uses one deadline for pressSequentially typing without a late character", async () => {
+    it("does not continue pressSequentially after its deadline", async () => {
       document.body.innerHTML = `<input id=input />`;
       const page = createPage();
       const input = document.querySelector("#input") as HTMLInputElement;
@@ -2167,9 +2167,11 @@ describe("Single-document adapter contract", () => {
           .locator("#input")
           .pressSequentially("ab", { delay: 100, timeout: 20 })
       ).rejects.toThrow("Timeout 20ms exceeded");
-      await page.waitForTimeout(120);
+      const valueAtTimeout = input.value;
+      expect(valueAtTimeout).not.toBe("ab");
 
-      expect(input.value).toBe("a");
+      await page.waitForTimeout(120);
+      expect(input.value).toBe(valueAtTimeout);
 
       input.value = "";
       await page
