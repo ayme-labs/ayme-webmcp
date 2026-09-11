@@ -79,6 +79,7 @@ jobs:
       - name: Lint commits
         if: github.event_name == 'pull_request'
         run: pnpm run commitlint --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.event.pull_request.head.sha }}"
+      - run: pnpm run boundaries
       - name: Run affected package checks
         if: github.event_name == 'pull_request'
         env:
@@ -89,7 +90,6 @@ jobs:
         if: github.event_name != 'pull_request'
         run: pnpm exec turbo run build lint typecheck test test:e2e
       - run: pnpm run format:check
-      - run: pnpm run boundaries
       - name: Upload browser test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -114,6 +114,7 @@ jobs:
       - name: Install with Vue 3.2.0
         run: |
           pnpm --dir packages/webmcp-vue pkg set devDependencies.vue=3.2.0
+          pnpm --dir packages/webmcp-vue pkg set 'devDependencies["@vue/server-renderer"]=3.2.0'
           pnpm install --no-frozen-lockfile
       - name: Build core package and dependencies
         run: pnpm exec turbo run build --filter=@ayme-dev/webmcp

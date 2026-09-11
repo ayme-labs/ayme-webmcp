@@ -9,7 +9,7 @@
   "scripts": {
     "build": "turbo run build",
     "boundaries": "turbo boundaries",
-    "check": "pnpm run build && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run test:e2e && pnpm run format:check && pnpm run boundaries",
+    "check": "pnpm run boundaries && pnpm run build && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run test:e2e && pnpm run format:check",
     "prepare": "lefthook install",
     "hooks:install": "lefthook install",
     "commitlint": "commitlint --verbose",

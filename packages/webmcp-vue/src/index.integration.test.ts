@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { effectScope } from "vue";
 import { afterEach, expect, it, vi } from "vitest";
 
