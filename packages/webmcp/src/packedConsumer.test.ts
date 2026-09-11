@@ -26,6 +26,7 @@ const webmcpRoot = path.resolve(
 
 const PRIVATE_PACKAGES = [
   "@ayme-dev/playwright-browser",
+  "@ayme-dev/playwright-lite",
   "@ayme-dev/structural-observation",
 ];
 

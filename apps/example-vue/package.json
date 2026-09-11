@@ -12,10 +12,10 @@
     "typecheck": "vue-tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@ayme-dev/playwright-browser": "workspace:*",
     "@ayme-dev/webmcp": "workspace:*",
     "@ayme-dev/webmcp-vue": "workspace:*",
-    "vue": "^3.5.42"
+    "vue": "^3.5.42",
+    "@ayme-dev/playwright-lite": "github:ayme-labs/playwright-lite#5a66acf73a6ef24de4cb570e9f550ba96d298982"
   },
   "devDependencies": {
     "@ayme-dev/eslint-config": "workspace:*",

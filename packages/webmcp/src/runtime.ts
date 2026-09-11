@@ -1,4 +1,4 @@
-import { createPage } from "@ayme-dev/playwright-browser";
+import { createPage } from "./browserPage";
 import {
   constructPageObject,
   createAymeRuntime,

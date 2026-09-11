@@ -2,6 +2,7 @@ packages:
   - apps/*
   - packages/*
 allowBuilds:
+  "@ayme-dev/playwright-lite@https://codeload.github.com/ayme-labs/playwright-lite/tar.gz/5a66acf73a6ef24de4cb570e9f550ba96d298982": true
   esbuild: true
   lefthook: true
 minimumReleaseAgeExclude:
