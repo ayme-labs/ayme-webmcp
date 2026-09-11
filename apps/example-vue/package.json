@@ -15,7 +15,7 @@
     "@ayme-dev/webmcp": "workspace:*",
     "@ayme-dev/webmcp-vue": "workspace:*",
     "vue": "^3.5.42",
-    "@ayme-dev/playwright-lite": "github:ayme-labs/playwright-lite#44af2734713027f734dfdcdd8e92b51cad9a9652"
+    "@ayme-dev/playwright-lite": "github:ayme-labs/playwright-lite#c90da7139d51a8940fce8dcf22e04e9c7e88c1cd"
   },
   "devDependencies": {
     "@ayme-dev/eslint-config": "workspace:*",
