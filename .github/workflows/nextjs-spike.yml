@@ -18,16 +18,13 @@ jobs:
     if: github.ref == 'refs/heads/codex/nextjs-turbopack-spike'
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # Temporary lockfile formatting only. Remove write access after this run.
-    permissions:
-      contents: write
     env:
       LEFTHOOK: "0"
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.sha }}
+          persist-credentials: false
       - uses: jetify-com/devbox-install-action@v0.12.0
         with:
           enable-cache: true
@@ -37,24 +34,15 @@ jobs:
           devbox run -- bash <<'SCRIPT'
           set -euo pipefail
           pnpm install --frozen-lockfile
-          pnpm exec prettier --write pnpm-lock.yaml
-          git add -- pnpm-lock.yaml
-          if ! git diff --cached --quiet; then
-            git -c user.name='github-actions[bot]' \
-              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-              -c core.hooksPath=/dev/null \
-              commit -m 'chore: format the generated Next.js lockfile'
-            git push origin HEAD:refs/heads/codex/nextjs-turbopack-spike
-          fi
-          pnpm exec turbo run build --filter=@ayme-dev/unplugin-webmcp... --filter=@ayme-dev/webmcp-react...
+          pnpm exec turbo run build --filter=@ayme-dev/example-next... --filter=@ayme-dev/example-react...
           pnpm --filter @ayme-dev/unplugin-webmcp test
           pnpm --filter @ayme-dev/unplugin-webmcp typecheck
           pnpm --filter @ayme-dev/unplugin-webmcp lint
-          pnpm --filter @ayme-dev/example-next build
           pnpm --filter @ayme-dev/example-next typecheck
           pnpm --filter @ayme-dev/example-next lint
           pnpm --filter @ayme-dev/example-next exec playwright install --with-deps chromium
           pnpm --filter @ayme-dev/example-next test:e2e
+          pnpm --filter @ayme-dev/example-react test:e2e
           pnpm run format:check
           pnpm run boundaries
           SCRIPT
@@ -63,5 +51,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nextjs-spike-results
-          path: apps/example-next/test-results
+          path: |
+            apps/example-next/test-results
+            apps/example-react/test-results
           if-no-files-found: ignore

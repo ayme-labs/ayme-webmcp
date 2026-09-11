@@ -1,29 +1,24 @@
 # Next.js / Turbopack prototype
 
-This branch asks whether Ayme's existing POM compiler and React integration can
-work in a Next.js App Router app using Turbopack for development and production.
-It is a throwaway compiler spike, not a declaration of general Next.js support.
+This spike runs Ayme's existing POM compiler and React integration in a Next.js
+16.3.4 App Router app. Both development and production use Turbopack. It is a
+throwaway compiler experiment, not general Next.js support.
 
-Next.js is pinned to 16.3.4, the npm `latest` release checked on September 11, 2026. The app uses the existing `@ayme-dev/webmcp-react` package. There is no
-`webmcp-next` package, Vite process, webpack fallback or runtime redesign.
+There is no `webmcp-next` package, Vite process, webpack fallback or runtime
+redesign. The app uses `@ayme-dev/webmcp-react` unchanged.
 
 ## Run
 
 Start a Devbox shell at the repository root, then run:
 
 ```sh
-pnpm install --no-frozen-lockfile
+pnpm install --frozen-lockfile
 pnpm exec turbo run build --filter=@ayme-dev/example-next...
 pnpm --filter @ayme-dev/example-next dev
 ```
 
 Open http://127.0.0.1:4192. The counter supports a normal button click and a call
 through `usePageObject(CounterPage)`. It can be removed and remounted.
-
-The initial branch needs dependency resolution for the new workspace. After
-`pnpm-lock.yaml` includes `apps/example-next`, use `pnpm install --frozen-lockfile`.
-Do not hand-edit dependency hashes. The branch verification workflow also
-resolves and commits the lockfile before checking the app.
 
 ## What changed
 
@@ -62,9 +57,15 @@ Page Object to work through the React hook, and the same POM to work with real
 Playwright. They also exercise removal and remounting and reject browser errors.
 A working ordinary button alone is not a passing result.
 
-These are executable checks, not recorded passes. Local build and browser
-verification were blocked in the authoring environment by unavailable Devbox
-and network access. Consult the branch's Actions run for execution results.
+The initial [Actions run](https://github.com/ayme-labs/ayme-webmcp/actions/runs/34589251533)
+verified the production build, type checks, lint, 34 compiler-package tests and
+all four Next.js browser checks in Devbox with Node 24. That run stopped later
+on generated lockfile formatting, which has since been corrected.
+
+The [branch workflow](../../.github/workflows/nextjs-spike.yml) repeats these
+checks, tests the existing React/Vite example, checks formatting and checks
+package dependency direction. It uses the committed lockfile and has no write
+permission. Local execution was unavailable in the authoring environment.
 
 ## Deliberate limits
 
