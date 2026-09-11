@@ -1,0 +1,33 @@
+name: Prepare isolated PR 56 verification
+on:
+  push:
+    branches: [chore/56-presence-verification]
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: corepack enable
+      - name: Prepare offline workspace
+        run: |
+          mkdir -p "$RUNNER_TEMP/offline"
+          git archive 205a0e3193d09a672eb3ccf8e60498a5bdc39d75 | tar -x -C "$RUNNER_TEMP/offline"
+          cd "$RUNNER_TEMP/offline"
+          pnpm install --frozen-lockfile
+          mkdir -p .tools
+          cp "$(command -v node)" .tools/node
+          npm install --prefix .tools pnpm@11.24.0 --ignore-scripts
+          tar -czf "$RUNNER_TEMP/offline-pr56.tar.gz" .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: offline-pr56
+          path: ${{ runner.temp }}/offline-pr56.tar.gz
+          retention-days: 1
