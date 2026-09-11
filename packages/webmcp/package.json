@@ -49,7 +49,7 @@
     "tsdown": "^0.22.14",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11",
-    "@ayme-dev/playwright-lite": "github:ayme-labs/playwright-lite#5a66acf73a6ef24de4cb570e9f550ba96d298982"
+    "@ayme-dev/playwright-lite": "github:ayme-labs/playwright-lite#44af2734713027f734dfdcdd8e92b51cad9a9652"
   },
   "dependencies": {
     "@mcp-b/webmcp-types": "^5.0.1"
