@@ -302,7 +302,12 @@ export async function probePomReachability(locator: Locator): Promise<boolean> {
       if (!view) return false;
       for (let node: Element | null = element; node; node = parentElement(node))
         if (node.hasAttribute("inert")) return false;
-      const modal = [...document.querySelectorAll(":modal")].at(-1);
+      let modal: Element | undefined;
+      try {
+        modal = [...document.querySelectorAll(":modal")].at(-1);
+      } catch {
+        modal = undefined;
+      }
       if (modal && !contains(modal, element) && !contains(element, modal))
         return false;
 
@@ -348,8 +353,7 @@ export async function probePomReachability(locator: Locator): Promise<boolean> {
               left: box.left + ancestor.clientLeft * scaleX,
               top: box.top + ancestor.clientTop * scaleY,
               right:
-                box.left +
-                (ancestor.clientLeft + ancestor.clientWidth) * scaleX,
+                box.left + (ancestor.clientLeft + ancestor.clientWidth) * scaleX,
               bottom:
                 box.top + (ancestor.clientTop + ancestor.clientHeight) * scaleY,
             };

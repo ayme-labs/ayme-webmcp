@@ -182,6 +182,24 @@ describe("POM root reachability", () => {
     );
   });
 
+  it("treats an unsupported :modal selector as no modal", async () => {
+    document.body.innerHTML = '<section id="root">Visible</section>';
+    const original = Document.prototype.querySelectorAll;
+    Document.prototype.querySelectorAll = function (selectors: string) {
+      if (selectors === ":modal")
+        throw new DOMException("Unsupported selector", "SyntaxError");
+      return original.call(this, selectors);
+    } as typeof Document.prototype.querySelectorAll;
+
+    try {
+      await expect(
+        probePomReachability(createPage().locator("#root"))
+      ).resolves.toBe(true);
+    } finally {
+      Document.prototype.querySelectorAll = original;
+    }
+  });
+
   it("observes roots and obstruction inside open shadow DOM", async () => {
     document.body.innerHTML = '<div id="host"></div>';
     const shadow = document
