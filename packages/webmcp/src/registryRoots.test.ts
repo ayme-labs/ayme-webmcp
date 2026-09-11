@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createPage } from "@ayme-dev/playwright-browser";
+import { createPage } from "./browserPage";
 
 import {
   configureAymeRuntime,

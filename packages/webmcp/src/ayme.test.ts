@@ -7,7 +7,7 @@ const { captureAriaSnapshot, listRegisteredPomRoots } = vi.hoisted(() => ({
   listRegisteredPomRoots: vi.fn(),
 }));
 
-vi.mock("@ayme-dev/playwright-browser", () => ({ captureAriaSnapshot }));
+vi.mock("@ayme-dev/playwright-lite/internal", () => ({ captureAriaSnapshot }));
 vi.mock("./registry", () => ({ listRegisteredPomRoots }));
 
 import ayme, { ayme as namedAyme } from "./index";

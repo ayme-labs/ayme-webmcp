@@ -14,5 +14,3 @@ apps/example-next/next-env.d.ts
 apps/example-next/*.tsbuildinfo
 apps/example-vue/tests/vue-webmcp.spec.ts-snapshots/
 
-# Pinned upstream Playwright contract — keep byte-for-byte identical
-packages/playwright-browser/tests/upstream/*.spec.ts

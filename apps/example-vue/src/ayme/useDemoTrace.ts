@@ -1,11 +1,11 @@
 import { computed, ref } from "vue";
-import { createPage } from "@ayme-dev/playwright-browser";
+import { createRuntimeSession } from "@ayme-dev/webmcp/internal";
 import { withDemoFeedback, type TraceEntry } from "./withDemoFeedback";
 
 export function useDemoTrace() {
   const revision = ref(0);
   const entries = ref<TraceEntry[]>([]);
-  const page = withDemoFeedback(createPage(), {
+  const page = withDemoFeedback(createRuntimeSession().page, {
     onTrace(entry) {
       entries.value.push(entry);
       revision.value += 1;

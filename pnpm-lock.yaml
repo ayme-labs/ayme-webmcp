@@ -141,9 +141,9 @@ importers:
 
   apps/example-vue:
     dependencies:
-      "@ayme-dev/playwright-browser":
-        specifier: workspace:*
-        version: link:../../packages/playwright-browser
+      "@ayme-dev/playwright-lite":
+        specifier: github:ayme-labs/playwright-lite#5a66acf73a6ef24de4cb570e9f550ba96d298982
+        version: https://codeload.github.com/ayme-labs/playwright-lite/tar.gz/5a66acf73a6ef24de4cb570e9f550ba96d298982(@playwright/test@1.62.1)
       "@ayme-dev/webmcp":
         specifier: workspace:*
         version: link:../../packages/webmcp
@@ -228,52 +228,6 @@ importers:
         specifier: ^8.68.0
         version: 8.68.0(eslint@10.9.1(jiti@2.6.1))(typescript@6.0.3)
 
-  packages/playwright-browser:
-    dependencies:
-      yaml:
-        specifier: 2.9.0
-        version: 2.9.0
-    devDependencies:
-      "@ayme-dev/eslint-config":
-        specifier: workspace:*
-        version: link:../eslint-config
-      "@ayme-dev/typescript-config":
-        specifier: workspace:*
-        version: link:../typescript-config
-      "@playwright/test":
-        specifier: ^1.62.1
-        version: 1.62.1
-      "@types/formidable":
-        specifier: ^3.5.1
-        version: 3.5.1
-      "@types/node":
-        specifier: ^24.0.0
-        version: 24.13.3
-      "@vitest/browser-playwright":
-        specifier: ^4.1.11
-        version: 4.1.11(playwright@1.62.1)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.13)(yaml@2.9.0))(vitest@4.1.11)
-      eslint:
-        specifier: ^10.9.1
-        version: 10.9.1(jiti@2.6.1)
-      formidable:
-        specifier: ^3.5.4
-        version: 3.5.4
-      playwright:
-        specifier: ^1.62.1
-        version: 1.62.1
-      playwright-core:
-        specifier: github:ayme-labs/playwright#path:/packages/playwright-core&b25d782e3fbdf21abdae60e974e49b78ca07e828
-        version: https://codeload.github.com/ayme-labs/playwright/tar.gz/b25d782e3fbdf21abdae60e974e49b78ca07e828#path:/packages/playwright-core
-      tsdown:
-        specifier: ^0.22.14
-        version: 0.22.14(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.13)(typescript@6.0.3)(vue-tsc@3.3.11(typescript@6.0.3))
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@24.13.3)(@vitest/browser-playwright@4.1.11)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.13)(yaml@2.9.0))
-
   packages/typescript-config: {}
 
   packages/unplugin-webmcp:
@@ -322,9 +276,9 @@ importers:
       "@ayme-dev/eslint-config":
         specifier: workspace:*
         version: link:../eslint-config
-      "@ayme-dev/playwright-browser":
-        specifier: workspace:*
-        version: link:../playwright-browser
+      "@ayme-dev/playwright-lite":
+        specifier: github:ayme-labs/playwright-lite#5a66acf73a6ef24de4cb570e9f550ba96d298982
+        version: https://codeload.github.com/ayme-labs/playwright-lite/tar.gz/5a66acf73a6ef24de4cb570e9f550ba96d298982(@playwright/test@1.62.1)
       "@ayme-dev/typescript-config":
         specifier: workspace:*
         version: link:../typescript-config
@@ -441,6 +395,18 @@ packages:
         integrity: sha512-93Z1N+BQNXysodoicpOIyNh2drHfz/CTf9nnT0FEx72GJcIiwgydD7tGAr78j41LsYn3hlRn+LdGPuBLn1Bl8Q==,
       }
     engines: { node: ^22.13.0 || >=24.0.0 }
+
+  "@ayme-dev/playwright-lite@https://codeload.github.com/ayme-labs/playwright-lite/tar.gz/5a66acf73a6ef24de4cb570e9f550ba96d298982":
+    resolution:
+      {
+        gitHosted: true,
+        integrity: sha512-iWPxU5x36rqSyUY5OUnqKOjrS1Wdre8ront66Ij14kD+fPzSjJ/Ul4RxaXdKe+x0giCvaOi0ZX74+Dmu/fUrdA==,
+        tarball: https://codeload.github.com/ayme-labs/playwright-lite/tar.gz/5a66acf73a6ef24de4cb570e9f550ba96d298982,
+      }
+    version: 0.1.0
+    engines: { node: ">=20" }
+    peerDependencies:
+      "@playwright/test": ">=1.62.1 <1.63.0"
 
   "@babel/code-frame@7.29.7":
     resolution:
@@ -1440,12 +1406,6 @@ packages:
         integrity: sha512-XC0QsnnhVe7sLIWmYmdPw7x5P0h4W8vUU3Nv1ySgWXtvCz8NizoAEpGXA0sOYoJQV2Rl13LgURAHQ5cI5ILCSA==,
       }
 
-  "@paralleldrive/cuid2@2.3.1":
-    resolution:
-      {
-        integrity: sha512-XO7cAxhnTZl0Yggq6jOgjiOHhbgcO4NqFqwSmQpjK3b6TEE6Uj/jfSk6wzYyemh3+I0sHirKSetjQwn5cZktFw==,
-      }
-
   "@pkgjs/parseargs@0.11.0":
     resolution:
       {
@@ -1716,12 +1676,6 @@ packages:
     resolution:
       {
         integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==,
-      }
-
-  "@types/formidable@3.5.1":
-    resolution:
-      {
-        integrity: sha512-aFQijSGbD8JCeEST2LEbwR7faHynbt43lojLIcTM/QhB2U06h41ZVRFVEql+Z1xdL+aKGIzm69V/P/uSW9N6XA==,
       }
 
   "@types/json-schema@7.0.15":
@@ -2330,12 +2284,6 @@ packages:
       }
     engines: { node: ">=22" }
 
-  asap@2.0.6:
-    resolution:
-      {
-        integrity: sha512-BSHWgDSAiKs50o2Re8ppvp3seVHXSRM44cdSsT9FfNEUUZLOGWVCsiWaRPWM1Znn+mqZ1OfVZ3z3DWEzSp7hRA==,
-      }
-
   assertion-error@2.0.1:
     resolution:
       {
@@ -2563,12 +2511,6 @@ packages:
         integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==,
       }
     engines: { node: ">=8" }
-
-  dezalgo@1.0.4:
-    resolution:
-      {
-        integrity: sha512-rXSP0bf+5n0Qonsb+SVVfNfIsimO4HEtmnIpPHY8Q1UCzKlQrDMfdobr8nJOOsRgWCyMRqeSBQzmWUMq7zvVig==,
-      }
 
   dts-resolver@3.0.0:
     resolution:
@@ -2839,13 +2781,6 @@ packages:
         integrity: sha512-gIXjKqtFuWEgzFRJA9WCQeSJLZDjgJUOMCMzxtvFq/37KojM1BFGufqsCy0r4qSQmYLsZYMeyRqzIWOMup03sw==,
       }
     engines: { node: ">=14" }
-
-  formidable@3.5.4:
-    resolution:
-      {
-        integrity: sha512-YikH+7CUTOtP44ZTnUhR7Ic2UASBPOqmaRkRKxRbywPTe5VxF7RRCck4af9wutiZ/QKM5nME9Bie2fFaPz5Gug==,
-      }
-    engines: { node: ">=14.0.0" }
 
   fsevents@2.3.2:
     resolution:
@@ -3444,12 +3379,6 @@ packages:
       }
     engines: { node: ">=12.20.0" }
 
-  once@1.4.0:
-    resolution:
-      {
-        integrity: sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==,
-      }
-
   optionator@0.9.4:
     resolution:
       {
@@ -3548,18 +3477,6 @@ packages:
       {
         integrity: sha512-wPYSwEBJY9GHraISXqyqtx0na0LpO3XEX7jNDhntbex7tzUS7kLnZsOlFruFJB4Hi/rhDMjXGqHewDZ68nYZVw==,
       }
-    engines: { node: ">=20" }
-    hasBin: true
-
-  playwright-core@https://codeload.github.com/ayme-labs/playwright/tar.gz/b25d782e3fbdf21abdae60e974e49b78ca07e828#path:/packages/playwright-core:
-    resolution:
-      {
-        gitHosted: true,
-        integrity: sha512-X8l1teHrgonm+agU+H/px9Vd7xJixw3daqGXDwXV8lYP1PlIS2P8NE7by17vjcmtl9Hk4ON9MLYonn8L8a0HOQ==,
-        path: /packages/playwright-core,
-        tarball: https://codeload.github.com/ayme-labs/playwright/tar.gz/b25d782e3fbdf21abdae60e974e49b78ca07e828,
-      }
-    version: 1.62.1
     engines: { node: ">=20" }
     hasBin: true
 
@@ -4290,12 +4207,6 @@ packages:
       }
     engines: { node: ">=18" }
 
-  wrappy@1.0.2:
-    resolution:
-      {
-        integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==,
-      }
-
   ws@8.21.3:
     resolution:
       {
@@ -4399,6 +4310,10 @@ snapshots:
       css-tree: 3.2.1
       is-potential-custom-element-name: 1.0.1
       lru-cache: 11.5.2
+
+  "@ayme-dev/playwright-lite@https://codeload.github.com/ayme-labs/playwright-lite/tar.gz/5a66acf73a6ef24de4cb570e9f550ba96d298982(@playwright/test@1.62.1)":
+    dependencies:
+      "@playwright/test": 1.62.1
 
   "@babel/code-frame@7.29.7":
     dependencies:
@@ -4879,15 +4794,12 @@ snapshots:
   "@next/swc-win32-x64-msvc@16.3.4":
     optional: true
 
-  "@noble/hashes@1.8.0": {}
+  "@noble/hashes@1.8.0":
+    optional: true
 
   "@one-ini/wasm@0.1.1": {}
 
   "@oxc-project/types@0.146.0": {}
-
-  "@paralleldrive/cuid2@2.3.1":
-    dependencies:
-      "@noble/hashes": 1.8.0
 
   "@pkgjs/parseargs@0.11.0":
     optional: true
@@ -4989,10 +4901,6 @@ snapshots:
   "@types/esrecurse@4.3.1": {}
 
   "@types/estree@1.0.9": {}
-
-  "@types/formidable@3.5.1":
-    dependencies:
-      "@types/node": 24.13.3
 
   "@types/json-schema@7.0.15": {}
 
@@ -5382,8 +5290,6 @@ snapshots:
 
   argue-cli@3.1.0: {}
 
-  asap@2.0.6: {}
-
   assertion-error@2.0.1: {}
 
   balanced-match@1.0.2: {}
@@ -5495,11 +5401,6 @@ snapshots:
   defu@6.1.7: {}
 
   detect-libc@2.1.2: {}
-
-  dezalgo@1.0.4:
-    dependencies:
-      asap: 2.0.6
-      wrappy: 1.0.2
 
   dts-resolver@3.0.0: {}
 
@@ -5674,12 +5575,6 @@ snapshots:
     dependencies:
       cross-spawn: 7.0.6
       signal-exit: 4.1.0
-
-  formidable@3.5.4:
-    dependencies:
-      "@paralleldrive/cuid2": 2.3.1
-      dezalgo: 1.0.4
-      once: 1.4.0
 
   fsevents@2.3.2:
     optional: true
@@ -5990,10 +5885,6 @@ snapshots:
 
   obug@2.1.4: {}
 
-  once@1.4.0:
-    dependencies:
-      wrappy: 1.0.2
-
   optionator@0.9.4:
     dependencies:
       deep-is: 0.1.4
@@ -6046,9 +5937,6 @@ snapshots:
   picomatch@4.0.7: {}
 
   playwright-core@1.62.1: {}
-
-  playwright-core@https://codeload.github.com/ayme-labs/playwright/tar.gz/b25d782e3fbdf21abdae60e974e49b78ca07e828#path:/packages/playwright-core:
-    {}
 
   playwright@1.62.1:
     dependencies:
@@ -6474,8 +6362,6 @@ snapshots:
       string-width: 7.2.0
       strip-ansi: 7.2.0
 
-  wrappy@1.0.2: {}
-
   ws@8.21.3: {}
 
   xml-name-validator@5.0.0: {}
@@ -6484,7 +6370,8 @@ snapshots:
 
   y18n@5.0.8: {}
 
-  yaml@2.9.0: {}
+  yaml@2.9.0:
+    optional: true
 
   yargs-parser@22.0.0: {}
 
