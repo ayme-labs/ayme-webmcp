@@ -3,6 +3,7 @@ import { resolveLocatorElements } from "./locator";
 
 type Rect = { left: number; right: number; top: number; bottom: number };
 type Scroll = { element: Element; x: number; y: number };
+type ScrollAlignment = "current" | "center" | "start" | "end";
 
 /**
  * Observe a single root in the current layout without scrolling or input.
@@ -38,78 +39,87 @@ export async function probeLocatorReachability(
   };
 
   for (const bounds of element.getClientRects()) {
-    let rect: Rect | undefined = {
-      left: bounds.left,
-      right: bounds.right,
-      top: bounds.top,
-      bottom: bounds.bottom,
-    };
-    const scrolls: Scroll[] = [];
-    for (const ancestor of ancestors) {
-      if (ancestor === document.documentElement) break;
-      // Body overflow propagates to the viewport when the root has visible overflow.
-      if (
-        ancestor === document.body &&
-        htmlStyle.overflowX === "visible" &&
-        htmlStyle.overflowY === "visible"
-      )
-        continue;
-      const style = view.getComputedStyle(ancestor);
-      const box = ancestor.getBoundingClientRect();
-      const width = (ancestor as HTMLElement).offsetWidth || box.width;
-      const height = (ancestor as HTMLElement).offsetHeight || box.height;
-      const scaleX = width ? box.width / width : 1;
-      const scaleY = height ? box.height / height : 1;
-      const port = {
-        left: box.left + ancestor.clientLeft * scaleX,
-        top: box.top + ancestor.clientTop * scaleY,
-        right: box.left + (ancestor.clientLeft + ancestor.clientWidth) * scaleX,
-        bottom: box.top + (ancestor.clientTop + ancestor.clientHeight) * scaleY,
+    for (const alignment of [
+      "current",
+      "center",
+      "start",
+      "end",
+    ] as const satisfies readonly ScrollAlignment[]) {
+      let rect: Rect | undefined = {
+        left: bounds.left,
+        right: bounds.right,
+        top: bounds.top,
+        bottom: bounds.bottom,
       };
-      const scroll = projectIntoPort(
-        rect,
-        port,
-        ancestor,
-        style.overflowX,
-        style.overflowY,
-        scaleX,
-        scaleY
-      );
-      scrolls.push(scroll);
-      rect = clip(
-        rect,
-        port,
-        style.overflowX !== "visible",
-        style.overflowY !== "visible"
-      );
-      if (!rect) break;
-    }
-    if (!rect) continue;
-
-    const scroller = document.scrollingElement;
-    if (scroller && !fixedToViewport) {
-      const overflowX =
-        htmlStyle.overflowX === "visible"
-          ? (bodyStyle?.overflowX ?? "visible")
-          : htmlStyle.overflowX;
-      const overflowY =
-        htmlStyle.overflowY === "visible"
-          ? (bodyStyle?.overflowY ?? "visible")
-          : htmlStyle.overflowY;
-      scrolls.push(
-        projectIntoPort(
-          rect,
-          viewport,
-          scroller,
-          overflowX === "visible" ? "auto" : overflowX,
-          overflowY === "visible" ? "auto" : overflowY,
-          1,
-          1
+      const scrolls: Scroll[] = [];
+      for (const ancestor of ancestors) {
+        if (ancestor === document.documentElement) break;
+        // Body overflow propagates to the viewport when the root has visible overflow.
+        if (
+          ancestor === document.body &&
+          htmlStyle.overflowX === "visible" &&
+          htmlStyle.overflowY === "visible"
         )
-      );
+          continue;
+        const style = view.getComputedStyle(ancestor);
+        const box = ancestor.getBoundingClientRect();
+        const width = (ancestor as HTMLElement).offsetWidth || box.width;
+        const height = (ancestor as HTMLElement).offsetHeight || box.height;
+        const scaleX = width ? box.width / width : 1;
+        const scaleY = height ? box.height / height : 1;
+        const port = {
+          left: box.left + ancestor.clientLeft * scaleX,
+          top: box.top + ancestor.clientTop * scaleY,
+          right: box.left + (ancestor.clientLeft + ancestor.clientWidth) * scaleX,
+          bottom: box.top + (ancestor.clientTop + ancestor.clientHeight) * scaleY,
+        };
+        const scroll = projectIntoPort(
+          rect,
+          port,
+          ancestor,
+          style.overflowX,
+          style.overflowY,
+          scaleX,
+          scaleY,
+          alignment
+        );
+        scrolls.push(scroll);
+        rect = clip(
+          rect,
+          port,
+          style.overflowX !== "visible",
+          style.overflowY !== "visible"
+        );
+        if (!rect) break;
+      }
+      if (!rect) continue;
+
+      const scroller = document.scrollingElement;
+      if (scroller && !fixedToViewport) {
+        const overflowX =
+          htmlStyle.overflowX === "visible"
+            ? (bodyStyle?.overflowX ?? "visible")
+            : htmlStyle.overflowX;
+        const overflowY =
+          htmlStyle.overflowY === "visible"
+            ? (bodyStyle?.overflowY ?? "visible")
+            : htmlStyle.overflowY;
+        scrolls.push(
+          projectIntoPort(
+            rect,
+            viewport,
+            scroller,
+            overflowX === "visible" ? "auto" : overflowX,
+            overflowY === "visible" ? "auto" : overflowY,
+            1,
+            1,
+            alignment
+          )
+        );
+      }
+      rect = clip(rect, viewport, true, true);
+      if (rect && hasUnobstructedPoint(element, rect, scrolls)) return true;
     }
-    rect = clip(rect, viewport, true, true);
-    if (rect && hasUnobstructedPoint(element, rect, scrolls)) return true;
   }
   return false;
 }
@@ -175,7 +185,8 @@ function projectIntoPort(
   overflowX: string,
   overflowY: string,
   scaleX: number,
-  scaleY: number
+  scaleY: number,
+  alignment: ScrollAlignment
 ): Scroll {
   const style = element.ownerDocument.defaultView!.getComputedStyle(element);
   const reverseX =
@@ -189,7 +200,8 @@ function projectIntoPort(
     Math.max(0, element.scrollWidth - element.clientWidth),
     /^(auto|scroll|overlay)$/.test(overflowX),
     scaleX,
-    reverseX
+    reverseX,
+    alignment
   );
   const y = scrollDelta(
     rect.top,
@@ -200,7 +212,8 @@ function projectIntoPort(
     Math.max(0, element.scrollHeight - element.clientHeight),
     /^(auto|scroll|overlay)$/.test(overflowY),
     scaleY,
-    false
+    false,
+    alignment
   );
   rect.left += x;
   rect.right += x;
@@ -218,17 +231,19 @@ function scrollDelta(
   maximum: number,
   scrollable: boolean,
   scale: number,
-  reverse: boolean
+  reverse: boolean,
+  alignment: ScrollAlignment
 ): number {
-  if (
-    !scrollable ||
-    maximum === 0 ||
-    scale <= 0 ||
-    (end > portStart && start < portEnd)
-  )
+  if (!scrollable || maximum === 0 || scale <= 0 || alignment === "current")
     return 0;
-  const desired =
-    current + ((start + end) / 2 - (portStart + portEnd) / 2) / scale;
+
+  const offset =
+    alignment === "start"
+      ? start - portStart
+      : alignment === "end"
+        ? end - portEnd
+        : (start + end) / 2 - (portStart + portEnd) / 2;
+  const desired = current + offset / scale;
   const next = Math.max(
     reverse ? -maximum : 0,
     Math.min(reverse ? 0 : maximum, desired)
@@ -267,41 +282,108 @@ function hitElements(
     );
 }
 
+function projectedOffset(element: Element, scrolls: readonly Scroll[]) {
+  const { ancestors, fixedToViewport } = layoutAncestors(element);
+  let left = 0;
+  let top = 0;
+  for (const scroll of scrolls) {
+    if (scroll.element === element || !ancestors.includes(scroll.element))
+      continue;
+    if (
+      fixedToViewport &&
+      scroll.element === element.ownerDocument.scrollingElement
+    )
+      continue;
+    left += scroll.x;
+    top += scroll.y;
+  }
+  return { left, top };
+}
+
+function projectedSiblingOccluders(
+  element: Element,
+  scrolls: readonly Scroll[]
+): { bounds: DOMRect; left: number; top: number }[] {
+  const view = element.ownerDocument.defaultView!;
+  const NodeCtor = view.Node;
+  const occluders: { bounds: DOMRect; left: number; top: number }[] = [];
+
+  // ponytail: sibling branch boxes cover the practical moving-overlay case
+  // without reimplementing the browser's full stacking-context algorithm.
+  for (let branch = element; ; ) {
+    const parent = parentElement(branch);
+    if (!parent) break;
+    const branchStyle = view.getComputedStyle(branch);
+    const branchZ = zIndex(branchStyle);
+    for (const sibling of parent.children) {
+      if (sibling === branch) continue;
+      const style = view.getComputedStyle(sibling);
+      if (
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        style.visibility === "collapse" ||
+        style.pointerEvents === "none"
+      )
+        continue;
+      const siblingZ = zIndex(style);
+      const follows = Boolean(
+        branch.compareDocumentPosition(sibling) &
+          NodeCtor.DOCUMENT_POSITION_FOLLOWING
+      );
+      if (siblingZ < branchZ || (siblingZ === branchZ && !follows)) continue;
+      const { left, top } = projectedOffset(sibling, scrolls);
+      if (left === 0 && top === 0) continue;
+      occluders.push({ bounds: sibling.getBoundingClientRect(), left, top });
+    }
+    branch = parent;
+  }
+  return occluders;
+}
+
+function zIndex(style: CSSStyleDeclaration): number {
+  if (style.zIndex === "auto") return 0;
+  const value = Number(style.zIndex);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function containsPoint(
+  bounds: { left: number; right: number; top: number; bottom: number },
+  left: number,
+  top: number,
+  x: number,
+  y: number
+) {
+  return (
+    x >= bounds.left + left &&
+    x < bounds.right + left &&
+    y >= bounds.top + top &&
+    y < bounds.bottom + top
+  );
+}
+
 function hasUnobstructedPoint(
   element: Element,
   rect: Rect,
   scrolls: readonly Scroll[]
 ): boolean {
+  const projectedOccluders = projectedSiblingOccluders(element, scrolls);
   // ponytail: bounded hit sampling, not pixel-perfect occlusion. Extend the
   // samples or use a browser paint-query API if narrow exposed regions matter.
   for (const horizontal of [0.05, 0.5, 0.95]) {
     for (const vertical of [0.05, 0.5, 0.95]) {
       const x = rect.left + (rect.right - rect.left) * horizontal;
       const y = rect.top + (rect.bottom - rect.top) * vertical;
+      if (
+        projectedOccluders.some(({ bounds, left, top }) =>
+          containsPoint(bounds, left, top, x, y)
+        )
+      )
+        continue;
       for (const hit of hitElements(element.ownerDocument, x, y)) {
         if (contains(element, hit) || contains(hit, element)) return true;
-        const { ancestors, fixedToViewport } = layoutAncestors(hit);
-        let left = 0;
-        let top = 0;
-        for (const scroll of scrolls) {
-          if (scroll.element === hit || !ancestors.includes(scroll.element))
-            continue;
-          if (
-            fixedToViewport &&
-            scroll.element === element.ownerDocument.scrollingElement
-          )
-            continue;
-          left += scroll.x;
-          top += scroll.y;
-        }
+        const { left, top } = projectedOffset(hit, scrolls);
         const bounds = hit.getBoundingClientRect();
-        if (
-          x >= bounds.left + left &&
-          x < bounds.right + left &&
-          y >= bounds.top + top &&
-          y < bounds.bottom + top
-        )
-          break;
+        if (containsPoint(bounds, left, top, x, y)) break;
       }
     }
   }
