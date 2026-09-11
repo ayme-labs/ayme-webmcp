@@ -1,7 +1,8 @@
+import { createPage } from "@ayme-dev/playwright-browser";
 import { afterEach, describe, expect, it } from "vitest";
-import { createPage, probeLocatorReachability } from "./index";
+import { probePomReachability } from "./pomReachability";
 
-describe("locator reachability", () => {
+describe("POM root reachability", () => {
   afterEach(() => {
     document.body.innerHTML = "";
     document.body.removeAttribute("style");
@@ -13,11 +14,11 @@ describe("locator reachability", () => {
     document.body.innerHTML =
       '<section id="root">Information</section><button disabled>Disabled</button>';
     const page = createPage();
-    await expect(probeLocatorReachability(page.locator("#root"))).resolves.toBe(
+    await expect(probePomReachability(page.locator("#root"))).resolves.toBe(
       true
     );
     await expect(
-      probeLocatorReachability(page.locator("button"))
+      probePomReachability(page.locator("button"))
     ).resolves.toBe(true);
   });
 
@@ -28,7 +29,7 @@ describe("locator reachability", () => {
   ])("rejects a root with %s", async (style) => {
     document.body.innerHTML = `<div id="root" style="${style}">Hidden</div>`;
     await expect(
-      probeLocatorReachability(createPage().locator("#root"))
+      probePomReachability(createPage().locator("#root"))
     ).resolves.toBe(false);
   });
 
@@ -36,10 +37,10 @@ describe("locator reachability", () => {
     document.body.innerHTML =
       '<div class="root">One</div><div class="root">Two</div>';
     const page = createPage();
-    await expect(
-      probeLocatorReachability(page.locator("#missing"))
-    ).resolves.toBe(false);
-    await expect(probeLocatorReachability(page.locator(".root"))).resolves.toBe(
+    await expect(probePomReachability(page.locator("#missing"))).resolves.toBe(
+      false
+    );
+    await expect(probePomReachability(page.locator(".root"))).resolves.toBe(
       false
     );
   });
@@ -51,7 +52,7 @@ describe("locator reachability", () => {
       document.body.innerHTML = `<aside id="root" style="position:fixed;left:0;top:0;width:240px;height:200px;transform:${transform}">Sidebar</aside>`;
       const root = createPage().locator("#root");
       expect(await root.isVisible()).toBe(true);
-      await expect(probeLocatorReachability(root)).resolves.toBe(false);
+      await expect(probePomReachability(root)).resolves.toBe(false);
     }
   );
 
@@ -70,7 +71,7 @@ describe("locator reachability", () => {
       window.addEventListener(type, record, true);
     try {
       const root = createPage().locator("#root");
-      await expect(probeLocatorReachability(root)).resolves.toBe(true);
+      await expect(probePomReachability(root)).resolves.toBe(true);
       await new Promise((resolve) => requestAnimationFrame(resolve));
       expect({
         x: window.scrollX,
@@ -88,7 +89,7 @@ describe("locator reachability", () => {
     document.body.innerHTML =
       '<div id="outer" style="overflow:auto;width:300px;height:200px"><div style="height:600px"></div><div id="inner" style="overflow:auto;width:250px;height:150px"><div style="width:1200px;height:80px;display:flex;justify-content:flex-end"><section id="root" style="width:100px">Nested</section></div></div></div>';
     await expect(
-      probeLocatorReachability(createPage().locator("#root"))
+      probePomReachability(createPage().locator("#root"))
     ).resolves.toBe(true);
     for (const id of ["outer", "inner"]) {
       const element = document.getElementById(id)!;
@@ -101,7 +102,7 @@ describe("locator reachability", () => {
     async (overflow) => {
       document.body.innerHTML = `<div style="overflow:${overflow};height:100px;width:200px"><div style="height:300px"></div><div id="root">Clipped</div></div>`;
       await expect(
-        probeLocatorReachability(createPage().locator("#root"))
+        probePomReachability(createPage().locator("#root"))
       ).resolves.toBe(false);
     }
   );
@@ -110,7 +111,7 @@ describe("locator reachability", () => {
     document.body.innerHTML =
       '<div style="position:relative;overflow:auto;width:200px;height:100px"><div id="root" style="position:absolute;left:-300px;top:0;width:100px;height:50px">Unreachable</div><div style="width:1000px;height:1000px"></div></div>';
     await expect(
-      probeLocatorReachability(createPage().locator("#root"))
+      probePomReachability(createPage().locator("#root"))
     ).resolves.toBe(false);
   });
 
@@ -118,7 +119,7 @@ describe("locator reachability", () => {
     document.body.innerHTML =
       '<div style="height:2000px"></div><div style="transform:translateX(0);height:200px"><div id="root" style="position:fixed;top:0;left:0;width:100px;height:100px">Local fixed</div></div>';
     await expect(
-      probeLocatorReachability(createPage().locator("#root"))
+      probePomReachability(createPage().locator("#root"))
     ).resolves.toBe(true);
   });
 
@@ -126,16 +127,16 @@ describe("locator reachability", () => {
     document.body.innerHTML =
       '<section id="root" style="width:240px;height:200px">Sidebar</section><div id="overlay" style="position:fixed;inset:0;z-index:10"></div>';
     const root = createPage().locator("#root");
-    await expect(probeLocatorReachability(root)).resolves.toBe(false);
+    await expect(probePomReachability(root)).resolves.toBe(false);
     document.getElementById("overlay")!.remove();
-    await expect(probeLocatorReachability(root)).resolves.toBe(true);
+    await expect(probePomReachability(root)).resolves.toBe(true);
   });
 
   it("does not mistake a covered center for a fully obstructed root", async () => {
     document.body.innerHTML =
       '<section id="root" style="position:fixed;left:0;top:0;width:200px;height:200px">Sidebar</section><div style="position:fixed;left:80px;top:80px;width:40px;height:40px;z-index:10"></div>';
     await expect(
-      probeLocatorReachability(createPage().locator("#root"))
+      probePomReachability(createPage().locator("#root"))
     ).resolves.toBe(true);
   });
 
@@ -143,7 +144,7 @@ describe("locator reachability", () => {
     document.body.innerHTML =
       '<div style="height:2000px"></div><section id="root" style="height:100px">Below fold</section><div style="position:fixed;inset:0;z-index:10"></div>';
     await expect(
-      probeLocatorReachability(createPage().locator("#root"))
+      probePomReachability(createPage().locator("#root"))
     ).resolves.toBe(false);
   });
 
@@ -151,7 +152,7 @@ describe("locator reachability", () => {
     document.body.innerHTML =
       '<div style="height:1600px"></div><section id="root" style="height:120px">Below fold</section><div style="position:fixed;left:0;right:0;top:35%;height:30%;z-index:10"></div><div style="height:1600px"></div>';
     await expect(
-      probeLocatorReachability(createPage().locator("#root"))
+      probePomReachability(createPage().locator("#root"))
     ).resolves.toBe(true);
   });
 
@@ -159,7 +160,7 @@ describe("locator reachability", () => {
     document.body.innerHTML =
       '<div style="overflow:auto;height:200px;position:relative"><div style="height:500px"></div><div style="position:relative;height:100px"><section id="root" style="position:absolute;inset:0">Panel</section><div style="position:absolute;inset:0;z-index:10"></div></div></div>';
     await expect(
-      probeLocatorReachability(createPage().locator("#root"))
+      probePomReachability(createPage().locator("#root"))
     ).resolves.toBe(false);
   });
 
@@ -168,17 +169,17 @@ describe("locator reachability", () => {
       '<section id="root">Outside</section><dialog><section id="inside">Inside</section></dialog>';
     const page = createPage();
     document.getElementById("root")!.setAttribute("inert", "");
-    await expect(probeLocatorReachability(page.locator("#root"))).resolves.toBe(
+    await expect(probePomReachability(page.locator("#root"))).resolves.toBe(
       false
     );
     document.getElementById("root")!.removeAttribute("inert");
     document.querySelector("dialog")!.showModal();
-    await expect(probeLocatorReachability(page.locator("#root"))).resolves.toBe(
+    await expect(probePomReachability(page.locator("#root"))).resolves.toBe(
       false
     );
-    await expect(
-      probeLocatorReachability(page.locator("#inside"))
-    ).resolves.toBe(true);
+    await expect(probePomReachability(page.locator("#inside"))).resolves.toBe(
+      true
+    );
   });
 
   it("observes roots and obstruction inside open shadow DOM", async () => {
@@ -189,8 +190,8 @@ describe("locator reachability", () => {
     shadow.innerHTML =
       '<section id="root" style="height:100px">Shadow root</section><div id="overlay" style="position:fixed;inset:0;z-index:10"></div>';
     const root = createPage().locator("#root");
-    await expect(probeLocatorReachability(root)).resolves.toBe(false);
+    await expect(probePomReachability(root)).resolves.toBe(false);
     shadow.getElementById("overlay")!.remove();
-    await expect(probeLocatorReachability(root)).resolves.toBe(true);
+    await expect(probePomReachability(root)).resolves.toBe(true);
   });
 });

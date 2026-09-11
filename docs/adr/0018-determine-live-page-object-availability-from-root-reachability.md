@@ -12,6 +12,6 @@ Reachability is the contract; the probing mechanism is an implementation detail.
 
 Page Objects without a root retain registration-driven availability. No new root declaration, decorator, or consumer configuration is required.
 
-This replaces only the DOM-match availability criterion in ADR-0009. Its registry ownership, coalesced observation, change-only notifications, and disposal responsibilities remain accepted. The browser adapter owns reachability mechanics; the registry owns Page Object Availability. Publishers and structural capture consume that shared state.
+This replaces only the DOM-match availability criterion in ADR-0009. Its registry ownership, coalesced observation, change-only notifications, and disposal responsibilities remain accepted. The WebMCP layer owns Page Object Availability and reachability policy. Reachability is evaluated through the standard Playwright `Locator` interface; the browser adapter contract is not extended for this policy. Publishers and structural capture consume the registry's shared availability state.
 
 PR #52 remains a prototype reference. Its definition inventory, page-context API, Structural Ref actions, and trial-click policy are not dependencies of this decision.

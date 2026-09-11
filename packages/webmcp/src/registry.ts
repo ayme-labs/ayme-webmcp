@@ -14,9 +14,9 @@ import {
   createPage,
   isAymeLocator,
   resolveLocatorElements,
-  probeLocatorReachability,
 } from "@ayme-dev/playwright-browser";
 import type { Locator, Page } from "@playwright/test";
+import { probePomReachability } from "./pomReachability";
 
 export type PageObjectConstructor<T extends object = object> = new (
   page: Page
@@ -622,8 +622,7 @@ async function observeRoot(
   const elements = locatorElements(root);
   const element =
     count === 1 && elements.length === 1 ? elements[0] : undefined;
-  const reachable =
-    element !== undefined && (await probeLocatorReachability(root));
+  const reachable = element !== undefined && (await probePomReachability(root));
   const current = reachable ? locatorElements(root) : [];
   observations.push({
     path,
