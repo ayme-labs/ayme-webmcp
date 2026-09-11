@@ -1,16 +1,20 @@
 import type { Locator } from "@playwright/test";
 
+export type PomRootState = { present: boolean; available: boolean };
+
 /**
  * Observe one POM root without scrolling or sending input.
  * Scroll reachability describes the current layout, not content a scroll
  * handler might create.
  */
-export async function probePomReachability(locator: Locator): Promise<boolean> {
-  if ((await locator.count()) !== 1) return false;
-  if (!(await locator.isVisible())) return false;
-
+export async function probePomRootState(
+  locator: Locator
+): Promise<PomRootState> {
   try {
+    if ((await locator.count()) !== 1 || !(await locator.isVisible()))
+      return { present: false, available: false };
     return await locator.evaluate((element) => {
+      const absent = { present: false, available: false };
       type Rect = { left: number; right: number; top: number; bottom: number };
       type Scroll = { element: Element; x: number; y: number };
       type ScrollAlignment = "current" | "center" | "start" | "end";
@@ -170,6 +174,33 @@ export async function probePomReachability(locator: Locator): Promise<boolean> {
           : undefined;
       }
 
+      // ponytail: rectangular px/% inset clips only; other clip shapes need
+      // browser geometry support rather than a general CSS shape parser.
+      function insetClip(current: Element): Rect | undefined {
+        const style =
+          current.ownerDocument.defaultView!.getComputedStyle(current);
+        const inset = /^inset\(([^()]*)\)$/
+          .exec(style.clipPath)?.[1]
+          ?.split(" round ")[0];
+        if (!inset) return;
+        const values = inset.trim().split(/\s+/);
+        if (!values.every((value) => /^-?[\d.]+(?:px|%)?$/.test(value))) return;
+        const [top, right = top, bottom = top, left = right] = values;
+        const box = current.getBoundingClientRect();
+        const distance = (value: string, size: number, layoutSize: number) =>
+          value.endsWith("%")
+            ? (Number.parseFloat(value) * size) / 100
+            : Number.parseFloat(value) * (layoutSize ? size / layoutSize : 1);
+        const width = (current as HTMLElement).offsetWidth;
+        const height = (current as HTMLElement).offsetHeight;
+        return {
+          left: box.left + distance(left!, box.width, width),
+          right: box.right - distance(right!, box.width, width),
+          top: box.top + distance(top!, box.height, height),
+          bottom: box.bottom - distance(bottom!, box.height, height),
+        };
+      }
+
       function hitElements(
         root: Document | ShadowRoot,
         x: number,
@@ -286,7 +317,14 @@ export async function probePomReachability(locator: Locator): Promise<boolean> {
             )
               continue;
             for (const hit of hitElements(current.ownerDocument, x, y)) {
-              if (contains(current, hit) || contains(hit, current)) return true;
+              if (contains(current, hit)) return true;
+              // Ancestors are evidence only for a simulated scroll destination,
+              // never proof that the current root itself is exposed.
+              if (
+                scrolls.some(({ x, y }) => x !== 0 || y !== 0) &&
+                contains(hit, current)
+              )
+                return true;
               const { left, top } = projectedOffset(hit, scrolls);
               const bounds = hit.getBoundingClientRect();
               if (containsPoint(bounds, left, top, x, y)) break;
@@ -296,20 +334,36 @@ export async function probePomReachability(locator: Locator): Promise<boolean> {
         return false;
       }
 
-      if (!element.isConnected) return false;
+      if (!element.isConnected) return absent;
       const document = element.ownerDocument;
       const view = document.defaultView;
-      if (!view) return false;
-      for (let node: Element | null = element; node; node = parentElement(node))
-        if (node.hasAttribute("inert")) return false;
-      let modal: Element | undefined;
+      if (!view) return absent;
+      let blocked = false;
+      let modals: Element[];
       try {
-        modal = [...document.querySelectorAll(":modal")].at(-1);
+        modals = [...document.querySelectorAll(":modal")];
       } catch {
-        modal = undefined;
+        modals = [];
       }
-      if (modal && !contains(modal, element) && !contains(element, modal))
-        return false;
+      if (
+        modals.length &&
+        !modals.some(
+          (modal) => contains(modal, element) || contains(element, modal)
+        )
+      )
+        blocked = true;
+      for (
+        let node: Element | null = element;
+        node;
+        node = parentElement(node)
+      ) {
+        if (node.hasAttribute("inert")) {
+          blocked = true;
+          break;
+        }
+        // A modal escapes inherited inertness, but not its own inert attribute.
+        if (modals.includes(node)) break;
+      }
 
       const { ancestors, fixedToViewport } = layoutAncestors(element);
       const htmlStyle = view.getComputedStyle(document.documentElement);
@@ -321,6 +375,7 @@ export async function probePomReachability(locator: Locator): Promise<boolean> {
         bottom: document.documentElement.clientHeight,
       };
 
+      let present = false;
       for (const bounds of element.getClientRects()) {
         for (const alignment of [
           "current",
@@ -334,6 +389,9 @@ export async function probePomReachability(locator: Locator): Promise<boolean> {
             top: bounds.top,
             bottom: bounds.bottom,
           };
+          const ownClip = insetClip(element);
+          if (ownClip) rect = clip(rect, ownClip, true, true);
+          if (!rect) continue;
           const scrolls: Scroll[] = [];
           for (const ancestor of ancestors) {
             if (ancestor === document.documentElement) break;
@@ -376,6 +434,9 @@ export async function probePomReachability(locator: Locator): Promise<boolean> {
               style.overflowY !== "visible"
             );
             if (!rect) break;
+            const ancestorClip = insetClip(ancestor);
+            if (ancestorClip) rect = clip(rect, ancestorClip, true, true);
+            if (!rect) break;
           }
           if (!rect) continue;
 
@@ -403,12 +464,15 @@ export async function probePomReachability(locator: Locator): Promise<boolean> {
             );
           }
           rect = clip(rect, viewport, true, true);
-          if (rect && hasUnobstructedPoint(element, rect, scrolls)) return true;
+          if (!rect) continue;
+          present = true;
+          if (!blocked && hasUnobstructedPoint(element, rect, scrolls))
+            return { present: true, available: true };
         }
       }
-      return false;
+      return { present, available: false };
     });
   } catch {
-    return false;
+    return { present: false, available: false };
   }
 }

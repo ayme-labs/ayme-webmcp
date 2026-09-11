@@ -9,7 +9,8 @@ import {
 /** WebMCP retains captured refs and promotes the children of ref-less wrappers. */
 export function parseCapturedTree(
   yaml: string,
-  refFactory: SyntheticAriaRefFactory
+  refFactory: SyntheticAriaRefFactory,
+  excludedRefs: ReadonlySet<AriaRef> = new Set()
 ): StructuralTree {
   const temporaryRefs = new Set<AriaRef>();
   let counter = 0;
@@ -24,6 +25,7 @@ export function parseCapturedTree(
     },
   });
   const select = (node: StructuralNode): (StructuralNode | string)[] => {
+    if (excludedRefs.has(node.ref)) return [];
     const children = node.children.flatMap((child) =>
       typeof child === "string" ? [child] : select(child)
     );

@@ -1,6 +1,12 @@
 import { createPage } from "@ayme-dev/playwright-browser";
 import { afterEach, describe, expect, it } from "vitest";
-import { probePomReachability } from "./pomReachability";
+import { probePomRootState } from "./pomReachability";
+
+import type { Locator } from "@playwright/test";
+
+// Preserve the original availability matrix while testing presence separately.
+const probePomReachability = async (locator: Locator) =>
+  (await probePomRootState(locator)).available;
 
 describe("POM root reachability", () => {
   afterEach(() => {
@@ -214,5 +220,73 @@ describe("POM root reachability", () => {
     await expect(probePomReachability(root)).resolves.toBe(false);
     shadow.getElementById("overlay")!.remove();
     await expect(probePomReachability(root)).resolves.toBe(true);
+  });
+  it("keeps an obstructed root structurally present", async () => {
+    document.body.innerHTML =
+      '<section id="root" style="width:200px;height:100px">Panel</section><div style="position:fixed;inset:0;z-index:10"></div>';
+    await expect(
+      probePomRootState(createPage().locator("#root"))
+    ).resolves.toEqual({
+      present: true,
+      available: false,
+    });
+  });
+
+  it("uses modal opening order rather than DOM order", async () => {
+    document.body.innerHTML =
+      '<dialog id="first"><button id="active">Confirm</button></dialog><dialog id="second"><button id="blocked">Earlier dialog</button></dialog>';
+    document.querySelector<HTMLDialogElement>("#second")!.showModal();
+    document.querySelector<HTMLDialogElement>("#first")!.showModal();
+    const page = createPage();
+    await expect(probePomRootState(page.locator("#active"))).resolves.toEqual({
+      present: true,
+      available: true,
+    });
+    await expect(probePomRootState(page.locator("#blocked"))).resolves.toEqual({
+      present: true,
+      available: false,
+    });
+    document.querySelector<HTMLDialogElement>("#first")!.close();
+    await expect(probePomRootState(page.locator("#blocked"))).resolves.toEqual({
+      present: true,
+      available: true,
+    });
+  });
+
+  it("lets a modal escape inherited inertness but respects inert inside it", async () => {
+    document.body.innerHTML =
+      '<div inert><dialog id="modal"><section id="panel"><button id="root">Confirm</button></section></dialog></div>';
+    const modal = document.querySelector<HTMLDialogElement>("#modal")!;
+    modal.showModal();
+    const root = createPage().locator("#root");
+    await expect(probePomRootState(root)).resolves.toEqual({
+      present: true,
+      available: true,
+    });
+    modal.inert = true;
+    await expect(probePomRootState(root)).resolves.toEqual({
+      present: true,
+      available: false,
+    });
+    modal.inert = false;
+    document.querySelector<HTMLElement>("#panel")!.inert = true;
+    await expect(probePomRootState(root)).resolves.toEqual({
+      present: true,
+      available: false,
+    });
+  });
+
+  it("rejects a fully clipped root even when HTML is hit", async () => {
+    document.body.innerHTML =
+      '<button id="root" style="position:fixed;left:20px;top:20px;width:120px;height:80px;clip-path:inset(100%)">Clipped</button>';
+    const root = createPage().locator("#root");
+    expect(await root.isVisible()).toBe(true);
+    expect(document.elementFromPoint(40, 40)).not.toBe(
+      document.getElementById("root")
+    );
+    await expect(probePomRootState(root)).resolves.toEqual({
+      present: false,
+      available: false,
+    });
   });
 });

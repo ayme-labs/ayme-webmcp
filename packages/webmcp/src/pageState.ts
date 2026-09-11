@@ -9,7 +9,7 @@ import {
   type ProjectedStructuralProperty,
 } from "@ayme-dev/core/structural-observation";
 import type { ModelContextTool } from "@mcp-b/webmcp-types";
-import { listRegisteredPomRoots } from "./registry";
+import { getRegisteredPomStructure } from "./registry";
 
 import {
   placeCapturedRoots,
@@ -328,14 +328,38 @@ async function captureCurrentPageState(
   root: Element,
   refFactory: SyntheticAriaRefFactory
 ): Promise<CapturedPageState> {
-  const registrations = (await listRegisteredPomRoots()).filter(
+  const structure = await getRegisteredPomStructure();
+  const registrations = structure.roots.filter(
     (registration) =>
       registration.element.ownerDocument === root.ownerDocument &&
       root.contains(registration.element)
   );
   const capture = captureAriaSnapshot(root);
-  const retainedTree = parseCapturedTree(capture.distilledText, refFactory);
-  const fullTree = parseCapturedTree(capture.fullText, refFactory);
+  const absentRoots = new Set(structure.absentElements);
+  const excludedRefs = new Set<StructuralAriaRef>();
+  for (const [element, ref] of capture.refsByElement) {
+    for (let ancestor: Element | null = element; ancestor;) {
+      if (absentRoots.has(ancestor)) {
+        excludedRefs.add(AriaRefSchema.parse(ref));
+        break;
+      }
+      ancestor =
+        ancestor.assignedSlot ??
+        ancestor.parentElement ??
+        (ancestor.getRootNode() as ShadowRoot).host ??
+        null;
+    }
+  }
+  const retainedTree = parseCapturedTree(
+    capture.distilledText,
+    refFactory,
+    excludedRefs
+  );
+  const fullTree = parseCapturedTree(
+    capture.fullText,
+    refFactory,
+    excludedRefs
+  );
 
   const coalesced = coalesceByElement(registrations);
   const referenced: {

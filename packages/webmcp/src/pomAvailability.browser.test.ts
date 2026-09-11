@@ -70,7 +70,7 @@ describe("live Page Object availability", () => {
     document.body.innerHTML = "";
   });
 
-  it("removes tools and structural labels together when a root becomes unavailable", async () => {
+  it("distinguishes absent roots from present but obstructed roots", async () => {
     document.body.innerHTML =
       '<aside id="sidebar" style="display:none;width:240px;height:120px">Sidebar</aside>';
     class Shell {
@@ -101,7 +101,7 @@ describe("live Page Object availability", () => {
     );
     await probeRegisteredPomMembers();
     expect(names()).toEqual(["Shell.open"]);
-    expect((await ayme.getPageState()).text).not.toContain("Shell.sidebar");
+    expect((await ayme.getPageState()).text).toContain("Shell.sidebar");
 
     document.getElementById("overlay")!.remove();
     sidebar.setAttribute(
@@ -335,5 +335,148 @@ describe("live Page Object availability", () => {
     expect((await listRegisteredPomRoots()).map((root) => root.label)).toEqual([
       "FreshShell",
     ]);
+  });
+  it("omits an off-canvas subtree and its refs, then restores it when opened", async () => {
+    document.body.innerHTML =
+      '<aside id="sidebar" style="width:240px;height:120px">SIDEBAR CONTENT <button>Sidebar action</button></aside><main>MAIN CONTENT</main>';
+    class Shell {
+      sidebar = { root: page.locator("#sidebar"), close() {} };
+    }
+    registerCompiledPom(Shell, manifest("Shell", [child("sidebar")]));
+    createPageRegistration(Shell);
+    const before = await ayme.getPageState();
+    const ref = before.text.match(/(e\d+|s_\w+) Shell\.sidebar/)?.[1];
+    expect(ref).toBeDefined();
+    const sidebar = document.getElementById("sidebar")!;
+    sidebar.style.cssText =
+      "position:fixed;left:0;top:0;width:240px;height:120px;transform:translateX(-100%)";
+    const hidden = await ayme.getPageState();
+    expect(hidden.text).not.toContain("SIDEBAR CONTENT");
+    expect(hidden.text).not.toContain("Sidebar action");
+    expect(hidden.text).not.toContain("Shell.sidebar");
+    expect(hidden.text).toContain("MAIN CONTENT");
+    expect(names()).toEqual([]);
+    expect((await before.resolve(ref!))[0]?.status).toBe("unresolved");
+    sidebar.style.transform = "none";
+    const restored = await ayme.getPageState();
+    expect(restored.text).toContain("SIDEBAR CONTENT");
+    expect(restored.text).toContain("Shell.sidebar");
+    expect(names()).toEqual(["Shell.sidebar.close"]);
+  });
+
+  it("keeps modal-blocked content and POM labels while removing only its tools", async () => {
+    document.body.innerHTML =
+      '<section id="background">BACKGROUND CONTENT <button>Background action</button></section><dialog id="first"><button>Active confirmation</button></dialog><dialog id="second"><button>Earlier dialog</button></dialog>';
+    class Shell {
+      background = { root: page.locator("#background"), close() {} };
+      first = { root: page.locator("#first"), close() {} };
+      second = { root: page.locator("#second"), close() {} };
+    }
+    registerCompiledPom(
+      Shell,
+      manifest("Shell", [child("background"), child("first"), child("second")])
+    );
+    createPageRegistration(Shell);
+    document.querySelector<HTMLDialogElement>("#second")!.showModal();
+    document.querySelector<HTMLDialogElement>("#first")!.showModal();
+    const state = await ayme.getPageState();
+    for (const content of [
+      "BACKGROUND CONTENT",
+      "Background action",
+      "Shell.background",
+      "Shell.first",
+      "Shell.second",
+    ])
+      expect(state.text).toContain(content);
+    expect(names()).toEqual(["Shell.first.close"]);
+    document.querySelector<HTMLDialogElement>("#first")!.close();
+    await probeRegisteredPomMembers();
+    expect(names()).toEqual(["Shell.second.close"]);
+    document.querySelector<HTMLDialogElement>("#second")!.close();
+    await probeRegisteredPomMembers();
+    expect(names()).toEqual(["Shell.background.close"]);
+  });
+
+  it("excludes fully clipped POM content from the structural tree", async () => {
+    document.body.innerHTML =
+      '<section id="root" style="position:fixed;left:0;top:0;width:200px;height:100px;clip-path:inset(100%)">CLIPPED CONTENT <button>Clipped action</button></section><main>MAIN CONTENT</main>';
+    class Clipped {
+      root = page.locator("#root");
+      close() {}
+    }
+    registerCompiledPom(
+      Clipped,
+      manifest("Clipped", [], [action("close", "Clipped.close")])
+    );
+    createPageRegistration(Clipped);
+    const state = await ayme.getPageState();
+    expect(state.text).not.toContain("CLIPPED CONTENT");
+    expect(state.text).not.toContain("Clipped action");
+    expect(state.text).toContain("MAIN CONTENT");
+    expect(names()).toEqual([]);
+  });
+
+  it("captures and publishes while unrelated content keeps changing", async () => {
+    document.body.innerHTML =
+      '<section id="root">Panel</section><span id="ticker"></span>';
+    class SlowShell {
+      async panels() {
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        return [{ root: page.locator("#root"), close() {} }];
+      }
+    }
+    registerCompiledPom(
+      SlowShell,
+      manifest("SlowShell", [{ ...child("panels", true), access: "method" }])
+    );
+    createPageRegistration(SlowShell);
+    let ticks = 0;
+    const ticker = document.getElementById("ticker")!;
+    const timer = setInterval(() => {
+      ticker.textContent = String(++ticks);
+    }, 5);
+    const published: string[] = [];
+    let completed = false;
+    const result = Promise.all([
+      synchronizeWebMcpTools({
+        async registerTool(tool: { name: string }) {
+          published.push(tool.name);
+        },
+      }),
+      ayme.getPageState(),
+    ]).then((value) => {
+      completed = true;
+      return value;
+    });
+    try {
+      await expect.poll(() => completed).toBe(true);
+      const [, state] = await result;
+      expect(ticks).toBeGreaterThan(0);
+      expect(state.text).toContain("SlowShell.panels[0]");
+      expect(published).toEqual(["get_page_state", "SlowShell.panels.close"]);
+    } finally {
+      clearInterval(timer);
+      (await result)[0].dispose();
+    }
+  });
+
+  it("retains scroll-reachable content, labels and tools without scrolling", async () => {
+    document.body.innerHTML =
+      '<div style="height:2000px"></div><section id="root">BELOW FOLD CONTENT</section>';
+    class BelowFold {
+      root = page.locator("#root");
+      close() {}
+    }
+    registerCompiledPom(
+      BelowFold,
+      manifest("BelowFold", [], [action("close", "BelowFold.close")])
+    );
+    createPageRegistration(BelowFold);
+    const scroll = [window.scrollX, window.scrollY];
+    const state = await ayme.getPageState();
+    expect(state.text).toContain("BELOW FOLD CONTENT");
+    expect(state.text).toContain("BelowFold");
+    expect(names()).toEqual(["BelowFold.close"]);
+    expect([window.scrollX, window.scrollY]).toEqual(scroll);
   });
 });
