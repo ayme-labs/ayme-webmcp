@@ -38,6 +38,14 @@ export function derivePomManifests(
 ): PomManifest[] {
   const absoluteFileName = path.resolve(fileName);
   const program = createPomProgram(absoluteFileName, options);
+  return derivePomManifestsFromProgram(absoluteFileName, program);
+}
+
+export function derivePomManifestsFromProgram(
+  fileName: string,
+  program: ts.Program
+): PomManifest[] {
+  const absoluteFileName = path.resolve(fileName);
   const sourceFile = program.getSourceFile(absoluteFileName);
   if (!sourceFile)
     throw new Error(`Could not read POM source ${absoluteFileName}.`);
