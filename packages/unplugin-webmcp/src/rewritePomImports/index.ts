@@ -23,7 +23,8 @@ type ResolvedImport = {
 export function rewritePomImports(
   code: string,
   fileName: string,
-  options: PomCompilerOptions = {}
+  options: PomCompilerOptions = {},
+  existingProgram?: ts.Program
 ) {
   const sourceFile = ts.createSourceFile(
     fileName,
@@ -38,9 +39,11 @@ export function rewritePomImports(
   );
   if (candidates.length === 0) return code;
 
-  const program = createPomProgram(path.resolve(fileName), options, {
-    fallbackToUnconfigured: true,
-  });
+  const program =
+    existingProgram ??
+    createPomProgram(path.resolve(fileName), options, {
+      fallbackToUnconfigured: true,
+    });
   const checker = program.getTypeChecker();
   const replacements = candidates.flatMap((declaration) => {
     const replacement = replacementFor(
