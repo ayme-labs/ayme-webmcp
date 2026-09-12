@@ -39,7 +39,6 @@
   },
   "devDependencies": {
     "@ayme-dev/eslint-config": "workspace:*",
-    "@ayme-dev/playwright-browser": "workspace:*",
     "@ayme-dev/core": "workspace:*",
     "@ayme-dev/typescript-config": "workspace:*",
     "@types/node": "^24.0.0",
@@ -49,7 +48,8 @@
     "playwright": "^1.62.1",
     "tsdown": "^0.22.14",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "@ayme-dev/playwright-lite": "github:ayme-labs/playwright-lite#c68a2f92f96b82946c838bfa92a7841ebb03f8a0"
   },
   "dependencies": {
     "@mcp-b/webmcp-types": "^5.0.1"

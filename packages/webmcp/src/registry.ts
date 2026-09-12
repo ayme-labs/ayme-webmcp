@@ -10,11 +10,11 @@ import type {
   RegisteredPomTool,
   ToolManifest,
 } from "./contracts";
+import { createPage } from "./browserPage";
 import {
-  createPage,
-  isAymeLocator,
+  isPlaywrightLiteLocator,
   resolveLocatorElements,
-} from "@ayme-dev/playwright-browser";
+} from "@ayme-dev/playwright-lite/internal";
 import type { Locator, Page } from "@playwright/test";
 
 export type PageObjectConstructor<T extends object = object> = new (
@@ -870,7 +870,7 @@ function isCallable(value: unknown): value is (...args: unknown[]) => unknown {
 }
 
 function isLocator(value: unknown): value is Locator {
-  return isAymeLocator(value);
+  return isPlaywrightLiteLocator(value);
 }
 
 function locatorElements(locator: Locator): Element[] {
