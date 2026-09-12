@@ -1,4 +1,4 @@
-import { captureAriaSnapshot } from "@ayme-dev/playwright-browser";
+import { captureAriaSnapshot } from "@ayme-dev/playwright-lite/internal";
 import {
   AriaRefSchema,
   renderCompactStructuralNodeForest,

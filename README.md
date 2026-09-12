@@ -12,11 +12,14 @@ counter; the Vue example retains its full inspector demo.
 
 ## Browser page creation
 
-`createPage()` from `@ayme-dev/playwright-browser` takes no options. It creates
-a Playwright-compatible controller for the current browser document; it does
-not open a tab or create an isolated browser context. Configure supported
-timeouts through `page.setDefaultTimeout()` and
-`page.setDefaultNavigationTimeout()`.
+WebMCP bundles its browser controller from the exact-commit-pinned
+`@ayme-dev/playwright-lite` fork. Consumers do not install the Git dependency
+or build the runtime. It controls the current document, without opening a
+tab or creating an isolated browser context.
+
+Existing Vite plugin settings are passed to `createPage(options)` inside
+WebMCP. Browser Page construction remains lazy for server rendering.
+Page Object Models still use the standard Playwright Page and Locator types.
 
 The Vue example owns its trace collection, action pauses, and click cues in
 `apps/example-vue/src/ayme/withDemoFeedback.ts`. The wrapper preserves the
@@ -49,7 +52,7 @@ TypeScript 6, so that combination is not supported. Versions 1.63 and later
 require compatibility review.
 
 Compatibility covers the methods and options marked implemented in the
-[existing compatibility ledger](packages/playwright-browser/compatibility/api.ts),
+[existing compatibility ledger](https://github.com/ayme-labs/playwright-lite/blob/c68a2f92f96b82946c838bfa92a7841ebb03f8a0/compatibility/api.ts),
 subject to its limitations. The full Playwright `Page` and `Locator` declarations
 also expose unsupported operations; successful TypeScript compilation does not
 establish runtime support. Browser-executed POMs must not import Playwright runtime

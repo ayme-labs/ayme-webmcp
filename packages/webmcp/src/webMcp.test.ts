@@ -1,15 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { LOCATOR_BRAND } from "@ayme-dev/playwright-browser";
+const { testLocators } = vi.hoisted(() => ({
+  testLocators: new WeakSet<object>(),
+}));
+vi.mock("@ayme-dev/playwright-lite/internal", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@ayme-dev/playwright-lite/internal")
+  >()),
+  isPlaywrightLiteLocator: (value: unknown) =>
+    typeof value === "object" && value !== null && testLocators.has(value),
+  resolveLocatorElements: () => [],
+}));
 import type { Page } from "@playwright/test";
 
 function brandedLocator(overrides: Record<string, unknown> = {}) {
   const loc: Record<string | symbol, unknown> = { ...overrides };
-  loc[LOCATOR_BRAND] = Object.freeze({
-    ownerPage: {},
-    getSelector: () => "mock",
-    resolveElements: () => [],
-  });
+  testLocators.add(loc);
   return loc;
 }
 

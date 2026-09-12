@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import { isAymeLocator } from "@ayme-dev/playwright-browser";
+import { isPlaywrightLiteLocator } from "@ayme-dev/playwright-lite/internal";
 
 export type TraceEntry = {
   operation:
@@ -24,7 +24,7 @@ export function withDemoFeedback(
 
   function wrapResult(result: unknown): unknown {
     if (result === page) return wrap(page);
-    if (isAymeLocator(result)) return wrap(result as Locator);
+    if (isPlaywrightLiteLocator(result)) return wrap(result as Locator);
     if (Array.isArray(result)) return result.map(wrapResult);
     if (result instanceof Promise) return result.then(wrapResult);
     return result;
@@ -41,7 +41,7 @@ export function withDemoFeedback(
 
         return (...args: unknown[]) => {
           const operation = traceOperation(property);
-          if (!isAymeLocator(target) || !operation)
+          if (!isPlaywrightLiteLocator(target) || !operation)
             return wrapResult(member.apply(target, args));
 
           const locator = target as Locator;
