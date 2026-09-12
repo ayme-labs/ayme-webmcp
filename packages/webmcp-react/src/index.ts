@@ -10,6 +10,7 @@ import {
 } from "react";
 import {
   createRuntimeSession,
+  createServerPageObject,
   type AymePage,
   type PageObjectConstructor,
   type RuntimeSession,
@@ -61,13 +62,6 @@ export function useAymeWebMcp() {
   return { publicationStatus, retryPublication: runtime.retryPublication };
 }
 
-function serverPageObject<T extends object>(
-  model: PageObjectConstructor<T>
-): T {
-  const prototype = (model as unknown as { prototype: object }).prototype;
-  return Object.create(prototype) as T;
-}
-
 export function usePageObject<T extends object>(
   model: PageObjectConstructor<T>
 ): T {
@@ -77,7 +71,7 @@ export function usePageObject<T extends object>(
     runtime,
     instance:
       typeof window === "undefined"
-        ? serverPageObject(model)
+        ? createServerPageObject(model)
         : runtime.construct(model),
   }));
   if (retained.model !== model || retained.runtime !== runtime)

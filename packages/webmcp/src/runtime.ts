@@ -24,6 +24,13 @@ type Registration = {
   active?: { dispose(): void };
 };
 
+export function createServerPageObject<T extends object>(
+  model: PageObjectConstructor<T>
+): T {
+  const prototype = (model as unknown as { prototype: object }).prototype;
+  return Object.create(prototype) as T;
+}
+
 // Construction is inert. Frameworks start activity only when their owner commits.
 export function createRuntimeSession(page?: AymePage) {
   let resolvedPage = page;

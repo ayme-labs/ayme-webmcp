@@ -13,6 +13,7 @@ import {
 } from "vue";
 import {
   createRuntimeSession,
+  createServerPageObject,
   createPageRegistration,
   type AymePage,
   type RuntimeSession,
@@ -86,13 +87,6 @@ export function useAymeWebMcp(options: UseAymeWebMcpOptions = {}) {
   return consumeRuntime(inherited ?? ownRuntime(options.page));
 }
 
-function serverPageObject<T extends object>(
-  model: PageObjectConstructor<T>
-): T {
-  const prototype = (model as unknown as { prototype: object }).prototype;
-  return Object.create(prototype) as T;
-}
-
 export function usePageObject<T extends object>(
   model: PageObjectConstructor<T>
 ): T {
@@ -101,7 +95,7 @@ export function usePageObject<T extends object>(
       "usePageObject must be called within an active Vue effect scope"
     );
   // SSR renders event closures, but never constructs or registers a real POM.
-  if (typeof window === "undefined") return serverPageObject(model);
+  if (typeof window === "undefined") return createServerPageObject(model);
   const runtime = inheritedRuntime();
   if (runtime) {
     const instance = runtime.construct(model);
