@@ -1,7 +1,7 @@
 import { fileURLToPath, URL } from "node:url";
 import { PHASE_DEVELOPMENT_SERVER } from "next/constants.js";
 
-// Prototype only. There is deliberately no webpack configuration or fallback.
+// Certification fixture only. There is deliberately no webpack configuration or fallback.
 export default function nextConfig(phase) {
   return {
     reactStrictMode: true,
@@ -14,7 +14,16 @@ export default function nextConfig(phase) {
           condition: {
             all: ["browser", { not: "foreign" }, { content: /@WebMCP/ }],
           },
-          loaders: ["@ayme-dev/unplugin-webmcp/turbopack-loader"],
+          loaders: [
+            {
+              loader: "@ayme-dev/unplugin-webmcp/turbopack-loader",
+              options: {
+                tsconfigPath: fileURLToPath(
+                  new URL("./tsconfig.pom.json", import.meta.url)
+                ),
+              },
+            },
+          ],
           as: "*.js",
         },
       },
