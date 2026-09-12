@@ -1,7 +1,9 @@
-# Nuxt / Vue SSR prototype
+# Nuxt / Vue SSR certification fixture
 
-This example runs Nuxt 4.5.2 with the existing Vue adapter and Vite compiler
-plugin. It renders the counter on the server and hydrates it in the browser.
+This certification fixture runs Nuxt 4.5.2 with the existing Vue adapter and
+Vite compiler plugin. It renders the counter on the server and hydrates it in
+the browser. It exercises the integration; it is not a consumer setup guide.
+It does not establish general Nuxt support or a compatibility policy.
 There is no Nuxt-specific runtime package and no client-only wrapper.
 
 ## Run
@@ -66,9 +68,12 @@ The Vue package has DOM-free SSR tests for provider and standalone ownership,
 with publication enabled and disabled. The existing Vue/Vite example remains
 the CSR regression test.
 
+The fixture reads the internal registry only for E2E assertions. Consumer
+applications should use the public Vue integration instead.
+
 ## Limits
 
-This prototype covers ordinary Vue SSR and browser hydration on Node. It does
+This fixture covers ordinary Vue SSR and browser hydration on Node. It does
 not certify Nuxt islands, server-only components, edge deployment, prerendering,
 webpack, packaged-consumer installation, or POM hot replacement. Reload after
 editing POM code. No server-side Playwright execution is provided.

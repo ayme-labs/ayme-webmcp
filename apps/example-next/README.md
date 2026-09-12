@@ -1,9 +1,10 @@
-# Next.js / Turbopack prototype
+# Next.js / Turbopack certification fixture
 
-This spike runs Ayme's existing POM compiler and React integration in a Next.js
-16.3.4 App Router app. Both development and production use Turbopack. The Ayme
-React subtree is server-rendered, then the browser runtime activates after
-hydration. This is still a prototype, not general Next.js support.
+This certification fixture runs Ayme's POM compiler and React integration in a
+Next.js 16.3.4 App Router app. Both development and production use Turbopack.
+The Ayme React subtree is server-rendered, then the browser runtime activates
+after hydration. It exercises the integration; it is not a consumer setup guide
+or general Next.js support.
 
 There is no `webmcp-next` package, Vite process, webpack fallback or server-side
 Page Object runtime.
@@ -39,6 +40,10 @@ Turbopack loads the built package entry, not a source-file alias. The workspace
 root is explicit so linked Ayme packages resolve. Dev and production outputs
 use separate directories.
 
+`CompiledMetadata` reads the internal registry only so E2E tests can assert the
+compiler result. Consumer applications should use the public React integration,
+not this fixture-only instrumentation.
+
 The React runtime session creates its default browser page lazily. During a
 server render, `usePageObject` returns an unconstructed object with the POM
 prototype and does not register it. The provider can therefore render the same
@@ -66,9 +71,9 @@ to contain the new type metadata without restarting Next. The production suite
 repeats the stable rendering and execution checks against `next start`; the
 source-mutation check is development-only.
 
-The branch workflow also runs the existing React/Vite browser tests, package
-type checks, lint, formatting and dependency checks. It uses the committed
-lockfile and has no write permission.
+Main CI uses Turbo's affected graph to run relevant build, lint, typecheck,
+test, and development and production E2E tasks. It then runs repository format
+and boundary checks.
 
 ## Deliberate limits
 
