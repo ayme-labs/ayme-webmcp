@@ -9,7 +9,8 @@ import {
 /** WebMCP retains captured refs and promotes the children of ref-less wrappers. */
 export function parseCapturedTree(
   yaml: string,
-  refFactory: SyntheticAriaRefFactory
+  refFactory: SyntheticAriaRefFactory,
+  excludedRefs: ReadonlySet<AriaRef> = new Set()
 ): StructuralTree {
   const temporaryRefs = new Set<AriaRef>();
   let counter = 0;
@@ -23,11 +24,22 @@ export function parseCapturedTree(
       return ref;
     },
   });
-  const select = (node: StructuralNode): (StructuralNode | string)[] => {
+  const select = (
+    node: StructuralNode,
+    excludedParent = false
+  ): (StructuralNode | string)[] => {
+    const temporary = temporaryRefs.has(node.ref);
+    const excluded =
+      excludedRefs.has(node.ref) || (temporary && excludedParent);
     const children = node.children.flatMap((child) =>
-      typeof child === "string" ? [child] : select(child)
+      typeof child === "string"
+        ? excluded
+          ? []
+          : [child]
+        : select(child, excluded)
     );
-    return temporaryRefs.has(node.ref) ? children : [node.copy({ children })];
+    // A present child can escape its absent wrapper, for example a top-layer dialog.
+    return temporary || excluded ? children : [node.copy({ children })];
   };
   const roots =
     parsed.root.role === "fragment" && parsed.root.ref === "s_root"

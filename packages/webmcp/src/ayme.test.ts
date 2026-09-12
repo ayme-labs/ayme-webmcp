@@ -8,7 +8,12 @@ const { captureAriaSnapshot, listRegisteredPomRoots } = vi.hoisted(() => ({
 }));
 
 vi.mock("@ayme-dev/playwright-lite/internal", () => ({ captureAriaSnapshot }));
-vi.mock("./registry", () => ({ listRegisteredPomRoots }));
+vi.mock("./registry", () => ({
+  getRegisteredPomStructure: async () => ({
+    roots: await listRegisteredPomRoots(),
+    absentElements: [],
+  }),
+}));
 
 import ayme, { ayme as namedAyme } from "./index";
 import { AriaRefSchema } from "@ayme-dev/core/structural-observation";

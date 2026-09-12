@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { testLocators } = vi.hoisted(() => ({
+const { locatorElements, testLocators } = vi.hoisted(() => ({
+  locatorElements: new WeakMap<object, Element[]>(),
   testLocators: new WeakSet<object>(),
 }));
 vi.mock("@ayme-dev/playwright-lite/internal", async (importOriginal) => ({
@@ -9,13 +10,14 @@ vi.mock("@ayme-dev/playwright-lite/internal", async (importOriginal) => ({
   >()),
   isPlaywrightLiteLocator: (value: unknown) =>
     typeof value === "object" && value !== null && testLocators.has(value),
-  resolveLocatorElements: () => [],
+  resolveLocatorElements: (value: object) => locatorElements.get(value) ?? [],
 }));
 import type { Page } from "@playwright/test";
 
 function brandedLocator(overrides: Record<string, unknown> = {}) {
   const loc: Record<string | symbol, unknown> = { ...overrides };
   testLocators.add(loc);
+  locatorElements.set(loc, [{ isConnected: true } as Element]);
   return loc;
 }
 
@@ -134,6 +136,7 @@ describe("WebMCP publisher", () => {
     expect(registrations.map(({ tool }) => tool.name)).toEqual([
       "get_page_state",
       "addItem",
+      "ItemsPage.items.archive",
     ]);
 
     await vi.runOnlyPendingTimersAsync();
@@ -277,9 +280,14 @@ describe("WebMCP publisher", () => {
   it("aborts publication while initial registration is pending", async () => {
     let finishRegistration: (() => void) | undefined;
     let registrationSignal: AbortSignal | undefined;
+    let started!: () => void;
+    const registrationStarted = new Promise<void>((resolve) => {
+      started = resolve;
+    });
     const registerTool = vi.fn(
       async (_tool: PublishedTool, options: { signal: AbortSignal }) => {
         registrationSignal = options.signal;
+        started();
         await new Promise<void>((resolve) => {
           finishRegistration = resolve;
         });
@@ -293,7 +301,7 @@ describe("WebMCP publisher", () => {
       { registerTool },
       { signal: controller.signal }
     );
-    await flushPublisher();
+    await registrationStarted;
 
     controller.abort();
     expect(registrationSignal?.aborted).toBe(true);
