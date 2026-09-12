@@ -59,7 +59,7 @@
             - e60:
               - e61 term: Browser runtime
               - e62 definition: DOM-backed
-          - e63 paragraph: Registered 2 WebMCP tools and watching for changes.
+          - e63 paragraph: Registered 4 WebMCP tools and watching for changes.
         - e64 region:
           - e65:
             - e66:
@@ -110,7 +110,7 @@
             - e112:
               - e113:
                 - e114 code: ListPage.addItem
-                - e115: WebMCP registered
+                - e115: WebMCP available
               - e116 paragraph: Add a new item to the list.
               - e117:
                 - e119:
@@ -198,7 +198,7 @@
               - e201:
                 - e202:
                   - e203 code: ListPage.items.archive
-                  - e204: WebMCP registered
+                  - e204: WebMCP available
                 - e205 paragraph: Archive this list item.
                 - e206:
                   - e207:
@@ -212,7 +212,7 @@
               - e215:
                 - e216:
                   - e217 code: ListPage.items.rename
-                  - e218: WebMCP registered
+                  - e218: WebMCP available
                 - e219 paragraph: Rename this list item.
                 - e220:
                   - e221:

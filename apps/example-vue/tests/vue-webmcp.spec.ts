@@ -627,8 +627,24 @@ test("demonstrates the list app and invokes the generated POM tools from the deb
   await expect(
     archiveDialogCard.locator('[data-member-name="confirmArchiveButton"]')
   ).toContainText("present");
+  await expect(addTool).toContainText("WebMCP available");
+  await expect(
+    addTool.getByRole("button", { name: "Invoke tool" })
+  ).toBeEnabled();
+  for (const tool of [archiveTool, renameTool]) {
+    await expect(tool).toContainText("WebMCP unavailable");
+    await expect(
+      tool.getByRole("button", { name: "Invoke tool" })
+    ).toBeDisabled();
+  }
   await page.getByRole("button", { name: "Confirm archive" }).click();
   await expect(page.locator(".archived-label")).toHaveCount(3);
+  for (const tool of [archiveTool, renameTool]) {
+    await expect(tool).toContainText("WebMCP available");
+    await expect(
+      tool.getByRole("button", { name: "Invoke tool" })
+    ).toBeEnabled();
+  }
   await expect(
     archiveDialogCard.locator('[data-member-name="root"]')
   ).toContainText("absent");
