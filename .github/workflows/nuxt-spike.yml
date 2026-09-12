@@ -1,0 +1,72 @@
+name: Nuxt spike
+
+on:
+  push:
+    branches:
+      - codex/nuxt-ssr-spike
+  workflow_dispatch:
+
+concurrency:
+  group: nuxt-spike-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/codex/nuxt-ssr-spike'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      LEFTHOOK: "0"
+      NUXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: jetify-com/devbox-install-action@v0.12.0
+        with:
+          enable-cache: true
+          disable-nix-access-token: true
+      - name: Verify build and packages inside Devbox
+        run: |
+          devbox run -- bash <<'SCRIPT'
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          pnpm run format:check
+          pnpm run boundaries
+          pnpm exec turbo run build --filter=@ayme-dev/example-nuxt... --filter=@ayme-dev/example-vue... --filter=@ayme-dev/example-react...
+          pnpm --filter @ayme-dev/webmcp test
+          pnpm --filter @ayme-dev/webmcp-react test
+          pnpm --filter @ayme-dev/webmcp-vue test
+          pnpm --filter @ayme-dev/webmcp-vue typecheck
+          pnpm --filter @ayme-dev/webmcp-vue lint
+          pnpm --filter @ayme-dev/unplugin-webmcp test
+          pnpm --filter @ayme-dev/unplugin-webmcp typecheck
+          pnpm --filter @ayme-dev/unplugin-webmcp lint
+          pnpm --filter @ayme-dev/example-nuxt typecheck
+          pnpm --filter @ayme-dev/example-nuxt lint
+          pnpm --filter @ayme-dev/example-nuxt exec playwright install --with-deps chromium
+          SCRIPT
+      - name: Verify SSR and CSR in the browser
+        run: |
+          devbox run -- bash <<'SCRIPT'
+          set -euo pipefail
+          status=0
+          pnpm --filter @ayme-dev/example-nuxt test:e2e:prod || status=1
+          pnpm --filter @ayme-dev/example-nuxt test:e2e:dev || status=1
+          pnpm --filter @ayme-dev/example-vue test:e2e || status=1
+          pnpm --filter @ayme-dev/example-react test:e2e || status=1
+          exit "$status"
+          SCRIPT
+      - name: Upload browser failure traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuxt-spike-results
+          path: |
+            apps/example-nuxt/test-results
+            apps/example-vue/test-results
+            apps/example-react/test-results
+          if-no-files-found: ignore

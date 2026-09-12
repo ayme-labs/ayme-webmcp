@@ -29,8 +29,10 @@ function inheritedRuntime() {
 
 function ownRuntime(page?: AymePage) {
   const runtime = createRuntimeSession(page);
-  const stop = runtime.start();
-  onScopeDispose(stop);
+  if (typeof window !== "undefined") {
+    const stop = runtime.start();
+    onScopeDispose(stop);
+  }
   if (getCurrentInstance()) provide(runtimeKey, runtime);
   return runtime;
 }
@@ -84,6 +86,13 @@ export function useAymeWebMcp(options: UseAymeWebMcpOptions = {}) {
   return consumeRuntime(inherited ?? ownRuntime(options.page));
 }
 
+function serverPageObject<T extends object>(
+  model: PageObjectConstructor<T>
+): T {
+  const prototype = (model as unknown as { prototype: object }).prototype;
+  return Object.create(prototype) as T;
+}
+
 export function usePageObject<T extends object>(
   model: PageObjectConstructor<T>
 ): T {
@@ -91,6 +100,8 @@ export function usePageObject<T extends object>(
     throw new Error(
       "usePageObject must be called within an active Vue effect scope"
     );
+  // SSR renders event closures, but never constructs or registers a real POM.
+  if (typeof window === "undefined") return serverPageObject(model);
   const runtime = inheritedRuntime();
   if (runtime) {
     const instance = runtime.construct(model);

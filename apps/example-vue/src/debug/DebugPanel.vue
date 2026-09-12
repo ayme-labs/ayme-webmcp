@@ -8,7 +8,10 @@ import type {
   PomMemberObservation,
   RegisteredPomTool,
 } from "@ayme-dev/webmcp";
-import type { RegisteredPom } from "@ayme-dev/webmcp/internal";
+import {
+  listRegisteredPomTools,
+  type RegisteredPom,
+} from "@ayme-dev/webmcp/internal";
 
 type ToolArguments = Record<string, JsonValue>;
 
@@ -61,6 +64,11 @@ const activeTab = ref<"app-model" | "page-state">("app-model");
 const executionHistory = shallowRef<ToolExecution[]>([]);
 const toolInputValues = reactive<Record<string, ToolArguments>>({});
 let nextExecutionId = 1;
+
+const availablePomTools = computed(() => {
+  if (!props.registeredPoms.length) return new Map<string, RegisteredPomTool>();
+  return new Map(listRegisteredPomTools().map((tool) => [tool.name, tool]));
+});
 
 const pomClassCards = computed(() => {
   const cards = new Map<string, PomClassCard>();
@@ -424,6 +432,9 @@ function instanceCountSummary(card: PomClassCard) {
 }
 
 async function invokeTool(tool: RegisteredPomTool) {
+  const activeTool = availablePomTools.value.get(tool.name);
+  if (!activeTool) return;
+  tool = activeTool;
   const startedAt = Date.now();
   props.resetTrace();
   const execution: ToolExecution = {
@@ -645,7 +656,14 @@ function errorMessage(error: unknown) {
             >
               <div class="tool-heading">
                 <code>{{ tool.name }}</code>
-                <span>WebMCP registered</span>
+                <span>
+                  WebMCP
+                  {{
+                    availablePomTools.has(tool.name)
+                      ? "available"
+                      : "unavailable"
+                  }}
+                </span>
               </div>
               <p>{{ tool.description }}</p>
 
@@ -689,7 +707,11 @@ function errorMessage(error: unknown) {
                   </div>
                 </div>
                 <p v-else class="no-parameters">No arguments required.</p>
-                <button class="primary-button invoke-button" type="submit">
+                <button
+                  class="primary-button invoke-button"
+                  type="submit"
+                  :disabled="!availablePomTools.has(tool.name)"
+                >
                   Invoke tool
                 </button>
               </form>

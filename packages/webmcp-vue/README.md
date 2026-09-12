@@ -43,7 +43,7 @@ import App from "./App.vue";
 </template>
 ```
 
-The provider creates a Page for the current document. To supply a custom or decorated Page, create it once in the root setup and pass `:page="customPage"`. Keep that Page fixed while mounted; remount the provider and its consumers to change it. Wrappers must preserve the browser adapter's locator metadata for Ayme observation. Playwright `Page` type compatibility alone does not guarantee observation support.
+In the browser, the provider creates a Page for the current document. To supply a custom or decorated Page, create it once in the root setup and pass `:page="customPage"`. Keep that Page fixed while mounted; remount the provider and its consumers to change it. Wrappers must preserve the browser adapter's locator metadata for Ayme observation. Playwright `Page` type compatibility alone does not guarantee observation support.
 
 Hooks in `App` and its descendants consume the provider:
 
@@ -71,7 +71,7 @@ const { publicationStatus, retryPublication } = useAymeWebMcp({
 const pom = usePageObject(ListPage);
 ```
 
-Omit the options to use the default Page. The standalone owner starts immediately in the Vue scope and provides its runtime to descendant components. It also continues to support `effectScope()` usage and Page Object registration in the owner's own setup.
+Omit the options to use the default Page. In the browser, the standalone owner starts immediately in the Vue scope and provides its runtime to descendant components. It also continues to support `effectScope()` usage and Page Object registration in the owner's own setup.
 
 | Call                                                | Behavior                                                              |
 | --------------------------------------------------- | --------------------------------------------------------------------- |
@@ -82,7 +82,19 @@ Omit the options to use the default Page. The standalone owner starts immediatel
 
 Ancestor lookup follows the component tree. It does not find a provider rendered below the calling component, or automatically share a runtime between unrelated `effectScope()` calls. Call standalone root setup once in its scope. A second active owner is rejected, including nested providers. Only the creator disposes the runtime. Descendant consumer cleanup removes its own subscriptions and Page Object registrations.
 
-`usePageObject(Model)` returns the concrete instance and disposes its registration with its Vue scope. Constructors should only initialize fields and compose locators; invoke actions later. A remount creates a new instance. The hooks require an active Vue effect scope.
+In the browser, `usePageObject(Model)` returns the concrete instance and disposes its registration with its Vue scope. Constructors should only initialize fields and compose locators; invoke actions later. A remount creates a new instance. The hooks require an active Vue effect scope.
+
+## Server rendering and Nuxt
+
+The provider and composables can run during Vue server rendering. They do not construct Page Objects, start the browser runtime, observe the DOM, or publish tools on the server. Each render creates its own inert runtime session; no live browser registration is shared between requests.
+
+On the server, `usePageObject(Model)` returns an unconstructed object with the model's prototype. This allows rendering to reference prototype methods in event closures without running the constructor. Do not read locators or constructor-initialized fields, or execute POM actions, during server rendering. Custom browser Pages must also be created only in the browser, not in unguarded server setup.
+
+Browser setup constructs and registers the real Page Object during hydration. Existing browser ownership, `effectScope()` support, and disposal behavior are unchanged. No client-only wrapper is needed around the application UI.
+
+The Vite plugin skips its POM source transform for SSR while retaining shared build configuration. Keep publication settings consistent between server and browser builds: the initial status is `waiting` when publication is enabled and `disabled` otherwise. Only the browser attempts publication.
+
+The [Nuxt example](../../apps/example-nuxt) shows the existing Vue provider and Vite plugin in an SSR app, including configuration for the built runtime packages and the POM TypeScript project. Its tests run against both Nuxt development and the production Node server. This prototype does not certify Nuxt islands, edge deployment, prerendering, or server-side POM execution.
 
 ## Framework parity and example
 

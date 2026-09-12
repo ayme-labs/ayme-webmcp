@@ -36,10 +36,11 @@
     }
   },
   "devDependencies": {
-    "jsdom": "^30.0.1",
     "@ayme-dev/eslint-config": "workspace:*",
     "@ayme-dev/typescript-config": "workspace:*",
+    "@vue/server-renderer": "^3.5.42",
     "eslint": "^10.9.1",
+    "jsdom": "^30.0.1",
     "tsdown": "^0.22.14",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11",
