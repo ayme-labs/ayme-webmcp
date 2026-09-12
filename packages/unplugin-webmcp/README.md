@@ -6,7 +6,7 @@ The documented consumer integration is Vite.
 ## Vite setup
 
 Install this package as a development dependency alongside
-[the core package](https://github.com/ayme-labs/ayme-webmcp/blob/main/packages/webmcp/README.md).
+[the core package](https://github.com/ayme-labs/ayme/blob/main/packages/webmcp/README.md).
 Add the plugin alongside your existing framework plugins:
 
 ```ts
@@ -42,9 +42,9 @@ aymeWebMcp({
 ```
 
 Config loading supports Playwright 1.62.x. See
-[Playwright settings](https://github.com/ayme-labs/ayme-webmcp#playwright-settings)
+[Playwright settings](https://github.com/ayme-labs/ayme#playwright-settings)
 for selection, overrides, and supported fields.
 
 ## Coding agent skill
 
-> Install the `ayme` skill from https://github.com/ayme-labs/ayme-webmcp/tree/main/skills/ayme into this project's skill directory, including its references. Then use it to set up Ayme WebMCP here.
+> Install the `ayme` skill from https://github.com/ayme-labs/ayme/tree/main/skills/ayme into this project's skill directory, including its references. Then use it to set up Ayme WebMCP here.

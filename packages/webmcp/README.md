@@ -14,9 +14,9 @@ npm install -D @ayme-dev/unplugin-webmcp @playwright/test@~1.62.1
 ```
 
 Use your project's package manager. Configure the
-[compiler integration](https://github.com/ayme-labs/ayme-webmcp/blob/main/packages/unplugin-webmcp/README.md),
+[compiler integration](https://github.com/ayme-labs/ayme/blob/main/packages/unplugin-webmcp/README.md),
 then follow the framework integration README, currently
-[Vue](https://github.com/ayme-labs/ayme-webmcp/blob/main/packages/webmcp-vue/README.md).
+[Vue](https://github.com/ayme-labs/ayme/blob/main/packages/webmcp-vue/README.md).
 Internal adapter packages are bundled; consumers do not install them separately.
 
 ## Expose an action
@@ -62,4 +62,4 @@ client also requires the driver and publication setup.
 
 Copy this request into your coding agent:
 
-> Install the `ayme` skill from https://github.com/ayme-labs/ayme-webmcp/tree/main/skills/ayme into this project's skill directory, including its references. Then use it to set up Ayme WebMCP here.
+> Install the `ayme` skill from https://github.com/ayme-labs/ayme/tree/main/skills/ayme into this project's skill directory, including its references. Then use it to set up Ayme WebMCP here.

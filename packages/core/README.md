@@ -2,6 +2,24 @@
 
 MIT structural observation for browser and Node.js consumers. The package provides compiled ESM and TypeScript declarations through two exports:
 
+```sh
+npm install --save-exact @ayme-dev/core@alpha
+```
+
+The package is in alpha. Pin its exact version because releases may contain breaking changes without notice.
+
+## Publishing
+
+npm requires a package to exist before it can trust a GitHub Actions publisher. An npm maintainer for the `@ayme-dev` scope must publish the first alpha from a clean `main` checkout:
+
+```sh
+pnpm --filter @ayme-dev/core test:package
+cd packages/core
+npm publish --tag alpha
+```
+
+Then configure the package's [trusted publisher](https://docs.npmjs.com/trusted-publishers/) for GitHub owner `ayme-labs`, repository `ayme`, and workflow `publish-core.yml`, with direct publishing allowed. For later alphas, bump the prerelease version on `main` and manually run the `Publish core alpha` workflow.
+
 ```ts
 import {
   StructuralTree,

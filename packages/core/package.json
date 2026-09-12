@@ -1,6 +1,6 @@
 {
   "name": "@ayme-dev/core",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.0",
   "type": "module",
   "exports": {
     "./structural-observation": {
@@ -43,7 +43,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/ayme-labs/ayme-webmcp.git",
+    "url": "git+https://github.com/ayme-labs/ayme.git",
     "directory": "packages/core"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
