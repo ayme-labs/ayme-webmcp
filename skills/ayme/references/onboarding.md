@@ -1,11 +1,11 @@
 # Onboarding
 
 1. Inspect the project's package manager, bundler, framework, and existing POMs.
-2. Read the [core README](https://github.com/ayme-labs/ayme-webmcp/blob/main/packages/webmcp/README.md)
+2. Read the [core README](https://github.com/ayme-labs/ayme/blob/main/packages/webmcp/README.md)
    for installation and explicit action exposure. Reuse an existing action.
-3. Read the [compiler README](https://github.com/ayme-labs/ayme-webmcp/blob/main/packages/unplugin-webmcp/README.md)
+3. Read the [compiler README](https://github.com/ayme-labs/ayme/blob/main/packages/unplugin-webmcp/README.md)
    for build setup. For Vue lifecycle wiring, read the
-   [Vue README](https://github.com/ayme-labs/ayme-webmcp/blob/main/packages/webmcp-vue/README.md).
+   [Vue README](https://github.com/ayme-labs/ayme/blob/main/packages/webmcp-vue/README.md).
    Other framework integrations are not documented yet; report that gap rather
    than adapting internal runtime APIs into an unsupported setup.
 4. Follow [Browser setup](browser-setup.md) to choose native WebMCP or a local

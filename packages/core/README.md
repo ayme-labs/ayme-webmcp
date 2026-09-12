@@ -18,7 +18,7 @@ cd packages/core
 npm publish --tag alpha
 ```
 
-Then configure the package's [trusted publisher](https://docs.npmjs.com/trusted-publishers/) for GitHub owner `ayme-labs`, repository `ayme-webmcp`, and workflow `publish-core.yml`, with direct publishing allowed. For later alphas, bump the prerelease version on `main` and manually run the `Publish core alpha` workflow.
+Then configure the package's [trusted publisher](https://docs.npmjs.com/trusted-publishers/) for GitHub owner `ayme-labs`, repository `ayme`, and workflow `publish-core.yml`, with direct publishing allowed. For later alphas, bump the prerelease version on `main` and manually run the `Publish core alpha` workflow.
 
 ```ts
 import {

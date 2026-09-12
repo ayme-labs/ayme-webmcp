@@ -10,9 +10,9 @@ npm install -D @ayme-dev/unplugin-webmcp @playwright/test@~1.62.1
 ```
 
 Packages are not published yet; use supplied tarballs before release.
-Configure the [Vite plugin](https://github.com/ayme-labs/ayme-webmcp/blob/main/packages/unplugin-webmcp/README.md)
+Configure the [Vite plugin](https://github.com/ayme-labs/ayme/blob/main/packages/unplugin-webmcp/README.md)
 alongside `@vitejs/plugin-vue`, and annotate your POM as shown in the
-[core README](https://github.com/ayme-labs/ayme-webmcp/blob/main/packages/webmcp/README.md).
+[core README](https://github.com/ayme-labs/ayme/blob/main/packages/webmcp/README.md).
 
 ## Vite setup
 
@@ -93,8 +93,8 @@ The [Vue example](../../apps/example-vue) retains standalone setup and external 
 Register each root POM in the component that owns its lifetime. Child POMs in compiled member metadata are discovered recursively; action return values do not register independent roots.
 
 For Chrome or a coding agent connection, follow the skill's
-[browser setup reference](https://github.com/ayme-labs/ayme-webmcp/blob/main/skills/ayme/references/browser-setup.md).
+[browser setup reference](https://github.com/ayme-labs/ayme/blob/main/skills/ayme/references/browser-setup.md).
 
 ## Coding agent skill
 
-> Install the `ayme` skill from https://github.com/ayme-labs/ayme-webmcp/tree/main/skills/ayme into this project's skill directory, including its references. Then use it to set up Ayme WebMCP here.
+> Install the `ayme` skill from https://github.com/ayme-labs/ayme/tree/main/skills/ayme into this project's skill directory, including its references. Then use it to set up Ayme WebMCP here.

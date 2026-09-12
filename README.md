@@ -31,7 +31,7 @@ Start with the [core package README](packages/webmcp/README.md) for consumer set
 
 ## Coding agent skill
 
-> Install the `ayme` skill from https://github.com/ayme-labs/ayme-webmcp/tree/main/skills/ayme into this project's skill directory, including its references. Then use it to set up Ayme WebMCP here.
+> Install the `ayme` skill from https://github.com/ayme-labs/ayme/tree/main/skills/ayme into this project's skill directory, including its references. Then use it to set up Ayme WebMCP here.
 
 ## Playwright compatibility
 
