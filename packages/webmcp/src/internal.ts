@@ -7,6 +7,7 @@ export {
   configureAymeRuntime,
   createAymeRuntime,
   createPageRegistration,
+  listRegisteredPomTools,
   listRegisteredPomTargets,
   listRegisteredPoms,
   probeRegisteredPomMembers,
